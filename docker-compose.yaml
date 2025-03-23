@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080" # Expose port 8080 for local access
+    volumes:
+      - ./frontend:/frontend # Mount the frontend directory for local development
+      - ./backend:/backend # Mount the backend directory for local development
+    environment:
+      - GIN_MODE=debug # Set the Gin mode for Go if using Gin framework

@@ -1,0 +1,34 @@
+### IDEs ###
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+### GO ###
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+__debug_bin*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+### Frontend ###
+frontend/dist/**
+!frontend/dist/.gitkeep
+frontend/node_modules/
+frontend/*.log
+frontend/.env
+.pnpm-store
+
+
+### Other ##
+/.env

@@ -1,0 +1,106 @@
+/* General reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #2d2d2d;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  #root {
+    width: 100%;  /* Take up full width of the viewport */
+    height: 100%; /* Take up full height of the viewport */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .app-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  
+  .status-panel {
+    width: 25%; /* 25% of the screen width */
+    padding: 20px;
+    background-color: #444;
+    margin-left: 20px;
+    border-radius: 8px;
+    height: 100vh; /* Make sure the panel height fills the screen */
+    position: absolute; /* Position it on top of the map */
+    top: 0;
+    right: 0;
+    z-index: 10; /* Ensure the panel stays on top */
+    overflow-y: auto; /* Allow scrolling if content overflows */
+  }
+  
+  .status-panel h2 {
+    text-align: center;
+  }
+  
+  .status-panel ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .status-panel li {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+  }
+  
+  .status-panel .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-left: 10px;
+  }
+  
+  .status-up {
+    background-color: green;
+  }
+  
+  .status-down {
+    background-color: red;
+  }
+  
+  #map-container > * {
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Ensuring the React Simple Maps takes up the full space */
+  .react-simple-maps {
+    width: 100%;
+    height: 100%;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 10px;
+  }
+  
+  .green-dot {
+    background-color: green;
+  }
+  
+  .red-dot {
+    background-color: red;
+  }
