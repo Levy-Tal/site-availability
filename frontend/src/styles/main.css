@@ -92,6 +92,16 @@
     background-color: red;
   }
   
+  .status-panel .resize-handle {
+    position: absolute;
+    top: 0;
+    left: -5px;
+    width: 10px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 1;
+  }
+  
   .status {
     display: flex;
     align-items: center;
