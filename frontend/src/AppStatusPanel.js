@@ -9,14 +9,13 @@ export const AppStatusPanel = ({ site, apps }) => {
       <ul>
         {appsInSite.map((app) => (
           <li key={app.name}>
-            <div>{app.name}</div>
+            <div className="app-name">{app.name}</div>
             <div
-              className={`status ${
+              className={`status-indicator ${
                 app.status === "up" ? "status-up" : "status-down"
               }`}
             >
-              <span className={`status-dot ${app.status === "up" ? "green-dot" : "red-dot"}`}></span>
-              {app.status === "up" ? "✔️ Up" : "❌ Down"}
+              {app.status === "up" ? "Up" : "Down"}
             </div>
           </li>
         ))}

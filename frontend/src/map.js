@@ -43,11 +43,11 @@ export const MapComponent = ({ locations, onSiteClick }) => {
                       outline: "none", // Disable the outline
                     },
                     hover: {
-                      fill: "#F53", // Hover effect
+                      fill: "#D6D6DA", // Hover effect
                       outline: "none", // Disable hover outline
                     },
                     pressed: {
-                      fill: "#F53", // Clicked effect
+                      fill: "#D6D6DA", // Clicked effect
                       outline: "none", // Disable clicked outline
                     },
                   }}

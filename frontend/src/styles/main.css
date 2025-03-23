@@ -36,46 +36,79 @@
   
   
   .status-panel {
-    width: 25%; /* 25% of the screen width */
-    padding: 20px;
-    background-color: #444;
-    margin-left: 20px;
-    border-radius: 8px;
-    height: 100vh; /* Make sure the panel height fills the screen */
-    position: absolute; /* Position it on top of the map */
+    position: fixed;
     top: 0;
     right: 0;
-    z-index: 10; /* Ensure the panel stays on top */
-    overflow-y: auto; /* Allow scrolling if content overflows */
+    width: 25%;
+    height: 100%;
+    padding: 20px;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
+    background-color: #D6D6DA;
+    color: #333;
+    overflow-y: auto;
   }
   
   .status-panel h2 {
-    text-align: center;
+    margin-bottom: 20px;
+    font-size: 24px;
   }
   
   .status-panel ul {
-    list-style-type: none;
+    list-style: none;
     padding: 0;
   }
   
   .status-panel li {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    margin: 10px 0;
+    padding: 10px 0;
+    border-bottom: 1px solid #D6D6DA;
   }
   
-  .status-panel .status-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-left: 10px;
+  .status-panel li:last-child {
+    border-bottom: none;
   }
   
-  .status-up {
+  .status-panel .app-name {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .status-panel .status-indicator {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #fff;
+    font-weight: bold;
+  }
+  
+  .status-panel .status-up {
     background-color: green;
   }
   
-  .status-down {
+  .status-panel .status-down {
+    background-color: red;
+  }
+  
+  .status {
+    display: flex;
+    align-items: center;
+  }
+  
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .green-dot {
+    background-color: green;
+  }
+  
+  .red-dot {
     background-color: red;
   }
   
@@ -88,19 +121,4 @@
   .react-simple-maps {
     width: 100%;
     height: 100%;
-  }
-  .status-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 10px;
-  }
-  
-  .green-dot {
-    background-color: green;
-  }
-  
-  .red-dot {
-    background-color: red;
   }
