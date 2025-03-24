@@ -10,17 +10,18 @@ function App() {
   const [isPanelOpen, setIsPanelOpen] = useState(false); // Track panel visibility
 
   useEffect(() => {
-    // Mock the fetchAppStatuses until the API is available
+    // Mock the fetchAppStatuses until the API is available , , 34.788745
+
     const mockData = {
       locations: [
-        { name: "New York", Latitude: 40.7128, Longitude: -74.0060 },
-        { name: "San Francisco", Latitude: 37.7749, Longitude: -122.4194 },
-        { name: "London", Latitude: 51.5074, Longitude: -0.1278 },
+        { name: "Hadera", Latitude: 32.446235, Longitude: 34.903852 },
+        { name: "Jerusalem", Latitude: 31.782904, Longitude: 35.214774 },
+        { name: "Beer Sheva", Latitude: 31.245381, Longitude: 34.788745 },
       ],
       apps: [
-        { name: "App1", location: "New York", status: "up" },
-        { name: "App2", location: "San Francisco", status: "down" },
-        { name: "App3", location: "London", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App2", location: "Jerusalem", status: "down" },
+        { name: "App3", location: "Beer Sheva", status: "up" },
       ],
     };
     setLocations(mockData.locations);

@@ -2,17 +2,22 @@ import React, { useState, useEffect } from "react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 
 // Configuration constants
-const ZOOM_ADJUSTMENT_FACTOR = 1; // 15% more zoom
+const ZOOM_ADJUSTMENT_FACTOR = 1; // Adjust zoom factor
 const MIN_ZOOM = 2; // Minimum zoom level
-const MAX_ZOOM = 4; // Maximum zoom level
-const HORIZONTAL_MIN_PERCENTAGE = 0.25; // 10% of the total longitude
-const HORIZONTAL_MAX_PERCENTAGE = 0.75; // 90% of the total longitude
+const MAX_ZOOM = 10; // Maximum zoom level
+const HORIZONTAL_MIN_PERCENTAGE = 0.25; // 25% of the total longitude
+const HORIZONTAL_MAX_PERCENTAGE = 0.75; // 75% of the total longitude
+
+// Marker size configuration (fixed size)
+const MARKER_SIZE = MIN_ZOOM; // Fixed marker size in pixels
 
 export const MapComponent = ({ locations, onSiteClick }) => {
   const geoUrl = "/data/countries-50m.json"; // Your GeoJSON file path
 
-  const [zoom, setZoom] = useState(MIN_ZOOM); // Initial zoom level
+  const [zoom, setZoom] = useState(1); // Initial zoom level
+  const [scaleFactor, setScaleFactor] = useState(1); // Track scale factor
   const [center, setCenter] = useState([0, 0]); // Initial center
+  const [scale, setScale] = useState(1500); // Initial scale
 
   // Function to calculate the bounding box and apply restrictions
   const calculateBounds = (locations) => {
@@ -27,12 +32,12 @@ export const MapComponent = ({ locations, onSiteClick }) => {
       [[Infinity, Infinity], [-Infinity, -Infinity]]
     );
 
-    // Restrict the bounding box horizontally between 10% and 90% of the screen width
+    // Restrict the bounding box horizontally between 25% and 75% of the screen width
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    const minLongitude = (bounds[0][0] + bounds[1][0]) * HORIZONTAL_MIN_PERCENTAGE;  // 10% of the total longitude width
-    const maxLongitude = (bounds[0][0] + bounds[1][0]) * HORIZONTAL_MAX_PERCENTAGE;  // 90% of the total longitude width
+    const minLongitude = (bounds[0][0] + bounds[1][0]) * HORIZONTAL_MIN_PERCENTAGE;
+    const maxLongitude = (bounds[0][0] + bounds[1][0]) * HORIZONTAL_MAX_PERCENTAGE;
     const minLatitude = bounds[0][1];
     const maxLatitude = bounds[1][1];
 
@@ -61,16 +66,17 @@ export const MapComponent = ({ locations, onSiteClick }) => {
     // Adjust zoom level
     const zoomFactor = Math.max(MIN_ZOOM, Math.min(scale * ZOOM_ADJUSTMENT_FACTOR, MAX_ZOOM));
 
-    return { restrictedCenter, zoomFactor };
+    return { restrictedCenter, zoomFactor, scale };
   };
 
   useEffect(() => {
     if (locations.length > 0) {
       const { restrictedBounds, width, height } = calculateBounds(locations);
-      const { restrictedCenter, zoomFactor } = calculateZoomAndCenter(restrictedBounds, width, height);
+      const { restrictedCenter, zoomFactor, scale } = calculateZoomAndCenter(restrictedBounds, width, height);
 
-      setCenter(restrictedCenter);
-      setZoom(zoomFactor);
+      setCenter(restrictedCenter); // Set initial center, but don't reset it on zoom
+      setZoom(zoomFactor); // Set initial zoom
+      setScale(scale * 100); // Multiply scale by 10 to make it look normal
     }
   }, [locations]);
 
@@ -78,6 +84,12 @@ export const MapComponent = ({ locations, onSiteClick }) => {
   if (!locations || locations.length === 0) {
     return <div>Loading map...</div>;
   }
+
+  // Handle zoom and move events
+  const handleMove = ({ x, y, k, dragging }) => {
+    console.log("Moving:", x, y, k, dragging);
+    setScaleFactor(k); // Update scale factor based on zoom
+  };
 
   return (
     <div
@@ -88,14 +100,38 @@ export const MapComponent = ({ locations, onSiteClick }) => {
         position: "relative",
         overflow: "hidden",
       }}
-      onWheel={(event) => {
-        const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
-        setZoom((prevZoom) => Math.max(MIN_ZOOM, Math.min(prevZoom * zoomFactor, MAX_ZOOM)));
-        event.preventDefault();
+      // Add event listener to prevent default with passive: false
+      ref={(div) => {
+        if (div) {
+          div.addEventListener(
+            "wheel",
+            (event) => {
+              const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
+              setZoom((prevZoom) => Math.max(0.5, Math.min(prevZoom * zoomFactor, 10)));
+              event.preventDefault(); // Prevent default behavior
+            },
+            { passive: false } // Important to set passive: false
+          );
+        }
       }}
     >
-      <ComposableMap>
-        <ZoomableGroup center={center} zoom={zoom}>
+      <ComposableMap
+        projectionConfig={{
+          scale: scale, // Use the dynamically calculated scale (with -10 multiplication)
+        }}
+      >
+        <ZoomableGroup
+          center={center} // Keep the center as is, don't adjust it on zoom
+          zoom={zoom} // Use zoom value from state
+          onMove={handleMove} // Use single handler for move event
+          onMoveStart={({ coordinates, zoom }) => {
+            console.log("Movement started:", coordinates, zoom);
+          }}
+          onMoveEnd={({ coordinates, zoom }) => {
+            setScaleFactor(zoom);
+            console.log("Movement ended:", coordinates, zoom);
+          }}
+        >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
               geographies.map((geo) => (
@@ -126,7 +162,8 @@ export const MapComponent = ({ locations, onSiteClick }) => {
               coordinates={[site.Longitude, site.Latitude]}
               onClick={() => onSiteClick(site)}
             >
-              <circle r={5} fill="red" />
+              {/* Fixed size circle based on the scale factor */}
+              <circle r={3/scaleFactor} fill="blue" />
             </Marker>
           ))}
         </ZoomableGroup>
