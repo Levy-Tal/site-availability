@@ -1,134 +1,140 @@
 /* General reset */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #2d2d2d;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  #root {
-    width: 100%;  /* Take up full width of the viewport */
-    height: 100%; /* Take up full height of the viewport */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .app-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  
-  .status-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 25%;
-    height: 100%;
-    padding: 20px;
-    border-radius: 8px 0 0 8px;
-    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
-    background-color: #D6D6DA;
-    color: #333;
-    overflow-y: auto;
-  }
-  
-  .status-panel h2 {
-    margin-bottom: 20px;
-    font-size: 24px;
-  }
-  
-  .status-panel ul {
-    list-style: none;
-    padding: 0;
-  }
-  
-  .status-panel li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #D6D6DA;
-  }
-  
-  .status-panel li:last-child {
-    border-bottom: none;
-  }
-  
-  .status-panel .app-name {
-    font-weight: bold;
-    margin-right: 10px;
-  }
-  
-  .status-panel .status-indicator {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 5px;
-    color: #fff;
-    font-weight: bold;
-  }
-  
-  .status-panel .status-up {
-    background-color: green;
-  }
-  
-  .status-panel .status-down {
-    background-color: red;
-  }
-  
-  .status-panel .resize-handle {
-    position: absolute;
-    top: 0;
-    left: -5px;
-    width: 10px;
-    height: 100%;
-    cursor: ew-resize;
-    z-index: 1;
-  }
-  
-  .status {
-    display: flex;
-    align-items: center;
-  }
-  
-  .status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 8px;
-  }
-  
-  .green-dot {
-    background-color: green;
-  }
-  
-  .red-dot {
-    background-color: red;
-  }
-  
-  #map-container > * {
-    width: 100%;
-    height: 100%;
-  }
-  
-  /* Ensuring the React Simple Maps takes up the full space */
-  .react-simple-maps {
-    width: 100%;
-    height: 100%;
-  }
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', sans-serif; /* Updated to modern font */
+  background-color: #2d2d2d;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;  /* Take up full width of the viewport */
+  height: 100%; /* Take up full height of the viewport */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.status-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 25%;
+  height: 100%;
+  padding: 20px;
+  border-radius: 8px 0 0 8px;
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
+  background-color: #D6D6DA; /* Retained original color */
+  color: #333;
+  overflow-y: auto;
+}
+
+.status-panel h2 {
+  margin-bottom: 20px;
+  font-size: 18px; /* Modernized text size */
+  font-weight: bold;
+  color: #FF9800; /* Amber color */
+  font-family: 'Roboto', sans-serif;
+}
+
+.status-panel ul {
+  list-style: none;
+  padding: 0;
+}
+
+.status-panel li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #D6D6DA;
+}
+
+.status-panel li:last-child {
+  border-bottom: none;
+}
+
+.status-panel .app-name {
+  font-weight: bold;
+  font-size: 14px;
+  color: #333; /* Dark gray color */
+  font-family: 'Roboto', sans-serif;
+}
+
+.status-panel .status-indicator {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 12px;
+  color: #fff;
+  font-family: 'Roboto', sans-serif;
+}
+
+.status-panel .status-up {
+  background-color: #4CAF50; /* Green for up */
+}
+
+.status-panel .status-down {
+  background-color: #F44336; /* Red for down */
+}
+
+.status-panel .resize-handle {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.green-dot {
+  background-color: #4CAF50; /* Green for up status */
+}
+
+.red-dot {
+  background-color: #F44336; /* Red for down status */
+}
+
+#map-container > * {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensuring the React Simple Maps takes up the full space */
+.react-simple-maps {
+  width: 100%;
+  height: 100%;
+}

@@ -20,6 +20,15 @@ function App() {
       ],
       apps: [
         { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "down" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
+        { name: "App1", location: "Hadera", status: "up" },
         { name: "App2", location: "Jerusalem", status: "down" },
         { name: "App3", location: "Beer Sheva", status: "up" },
       ],
@@ -42,7 +51,7 @@ function App() {
   return (
     <div className="app-container">
       {/* Ensure the map is visible */}
-      <MapComponent locations={locations} onSiteClick={handleSiteClick} />
+      <MapComponent locations={locations} onSiteClick={handleSiteClick} apps={apps}/>
       
       {/* Render the panel only if it's open */}
       {isPanelOpen && selectedSite && (

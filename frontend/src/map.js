@@ -4,7 +4,7 @@ import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "re
 const INITIAL_ZOOM = 5;
 const DEFAULT_SCALE = 1000;
 
-export const MapComponent = ({ locations, onSiteClick }) => {
+export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const geoUrl = "/data/countries-50m.json";
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [center, setCenter] = useState([0, 0]);
@@ -71,12 +71,33 @@ export const MapComponent = ({ locations, onSiteClick }) => {
               ))
             }
           </Geographies>
-          {locations.map((site) => (
-            <Marker key={site.name} coordinates={[site.Longitude, site.Latitude]} onClick={() => onSiteClick(site)}>
-              <text x={0} y={-2} fill="#fff" fontSize={5} textAnchor="middle" fontWeight="bold" style={{ textShadow: "1px 1px 2px rgba(0, 0, 0, 0.5)" }}>{site.name}</text>
-              <circle r={1} fill="blue" />
-            </Marker>
-          ))}
+          {locations.map((site) => {
+            const appsInSite = apps.filter((app) => app.location === site.name);
+            const allAppsUp = appsInSite.every((app) => app.status === "up");
+            const anyAppDown = appsInSite.some((app) => app.status === "down");
+
+            const color = allAppsUp ? "#4CAF50" : anyAppDown ? "#F44336" : "#FF9800"; // Modern colors
+
+            return (
+              <Marker key={site.name} coordinates={[site.Longitude, site.Latitude]} onClick={() => onSiteClick(site)}>
+                <text
+                  x={0}
+                  y={-2}
+                  fill={color}
+                  fontSize={3} // Retained original text size
+                  textAnchor="middle"
+                  fontWeight="bold"
+                  style={{
+                    textShadow: "0px 0px 2px rgba(0, 0, 0, 0.5)",
+                    fontFamily: "'Roboto', sans-serif",
+                  }}
+                >
+                  {site.name}
+                </text>
+                <circle r={1} fill={color} opacity={0.8} style={{ transition: "all 0.3s ease" }} />
+              </Marker>
+            );
+          })}
         </ZoomableGroup>
       </ComposableMap>
     </div>
