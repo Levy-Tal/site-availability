@@ -1,12 +1,23 @@
-version: "3.7"
+version: "3.8"
 
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080" # Expose port 8080 for local access
+  #  app:
+  #    build:
+  #      context: .
+  #      dockerfile: Dockerfile
+  #    environment:
+  #      - CONFIG_FILE=/app/config.yaml
+  #    volumes:
+  #      - ./config.yaml:/app/config.yaml
+  #    ports:
+  #      - "8080:8080"
+  #    depends_on:
+  #      - prometheus
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
     volumes:
-      - ./frontend:/frontend # Mount the frontend directory for local development
-      - ./backend:/backend # Mount the backend directory for local development
-    environment:
-      - GIN_MODE=debug # Set the Gin mode for Go if using Gin framework
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"

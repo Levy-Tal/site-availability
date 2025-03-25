@@ -18,7 +18,7 @@ var (
 	cacheMutex     sync.RWMutex
 )
 
-// GetAppStatus returns the status of all apps
+// GetAppStatus returns the status of all apps in the cache
 func GetAppStatus(w http.ResponseWriter, r *http.Request) {
 	cacheMutex.RLock()
 	defer cacheMutex.RUnlock()

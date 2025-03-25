@@ -1,76 +1,164 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"site-avilability/config"
-	"site-avilability/handlers" // Make sure this import exists
-	"site-avilability/prometheus"
+	"site-availability/config"
+	"site-availability/handlers"
+	"site-availability/scraping"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var appStatuses map[string]handlers.AppStatus // Global variable to store app statuses
+var (
+	serverUptime = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "server_uptime_seconds",
+			Help: "Total uptime of the server in seconds",
+		},
+	)
+)
 
 func main() {
-	// Load configuration from the YAML file
-	cfg, err := config.LoadConfig("config.yaml")
+	// Load configuration
+	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Parse ScrapeInterval into a time.Duration
+	// Initialize Prometheus metrics
+	initPrometheusMetrics()
+
+	// Start background status fetcher
+	startBackgroundStatusFetcher(cfg)
+
+	// Setup HTTP routes and handlers
+	setupRoutes()
+
+	// Start server and handle shutdown gracefully
+	startServer()
+}
+
+// Load configuration file
+func loadConfig() (*config.Config, error) {
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		configFile = "config.yaml"
+	}
+
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// Initialize Prometheus metrics
+func initPrometheusMetrics() {
+	prometheus.MustRegister(serverUptime)
+	go func() {
+		for range time.Tick(time.Second) {
+			serverUptime.Inc()
+		}
+	}()
+}
+
+// Setup HTTP routes and handlers
+func setupRoutes() {
+	http.HandleFunc("/api/status", handlers.GetAppStatus)
+	http.HandleFunc("/healthz", livenessProbe)
+	http.HandleFunc("/readyz", readinessProbe)
+	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/", http.FileServer(http.Dir("./static")))
+}
+
+// Start the background status fetcher
+func startBackgroundStatusFetcher(cfg *config.Config) {
 	scrapeInterval, err := time.ParseDuration(cfg.ScrapeInterval)
 	if err != nil {
 		log.Fatalf("Failed to parse ScrapeInterval: %v", err)
 	}
 
-	// Initialize the app statuses map
-	appStatuses = make(map[string]handlers.AppStatus)
+	go func() {
+		ticker := time.NewTicker(scrapeInterval)
+		defer ticker.Stop()
 
-	// Set up API routes
-	http.HandleFunc("/api/status", handlers.GetAppStatus)
+		checker := &scraping.DefaultPrometheusChecker{}
 
-	// Start background task to fetch app status every ScrapeInterval
-	go startBackgroundStatusFetcher(scrapeInterval, cfg)
+		for {
+			select {
+			case <-ticker.C:
+				log.Println("Fetching app statuses...")
 
-	// Serve React build files
-	http.Handle("/", http.FileServer(http.Dir("./static")))
+				// Update app statuses
+				for _, app := range cfg.Apps {
+					status := scraping.CheckAppStatus(app, checker)
+					handlers.UpdateAppStatusCache(app.Name, status)
+				}
 
-	// Start the HTTP server
+				log.Println("App statuses updated.")
+			}
+		}
+	}()
+}
+
+// Start the HTTP server and handle graceful shutdown
+func startServer() {
+	port := getServerPort()
+
+	srv := &http.Server{Addr: port}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		log.Printf("Server starting on %s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	<-sigChan
+	gracefulShutdown(srv)
+}
+
+// Get server port from environment variable or default to ":8080"
+func getServerPort() string {
 	port := ":8080"
 	if os.Getenv("PORT") != "" {
 		port = os.Getenv("PORT")
 	}
-
-	log.Printf("Server starting on %s", port)
-	err = http.ListenAndServe(port, nil)
-	if err != nil {
-		log.Fatalf("Server failed: %v", err)
-	}
+	return port
 }
 
-// Fetch and update app statuses in the background
-func startBackgroundStatusFetcher(scrapeInterval time.Duration, cfg *config.Config) {
-	ticker := time.NewTicker(scrapeInterval)
-	defer ticker.Stop()
+// Gracefully shut down the server
+func gracefulShutdown(srv *http.Server) {
+	log.Println("Shutdown signal received, shutting down gracefully...")
 
-	// Default Prometheus checker
-	checker := &prometheus.DefaultPrometheusChecker{}
-
-	for {
-		select {
-		case <-ticker.C:
-			log.Println("Fetching app statuses...")
-
-			// Update app statuses
-			for _, app := range cfg.Apps {
-				status := prometheus.CheckAppStatus(app, checker)
-				handlers.UpdateAppStatusCache(app.Name, status)
-			}
-
-			log.Println("App statuses updated.")
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
+
+	log.Println("Server exited gracefully")
+}
+
+// Liveness probe handler
+func livenessProbe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
+// Readiness probe handler
+func readinessProbe(w http.ResponseWriter, r *http.Request) {
+	// Here you can add checks to ensure the service is ready
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("READY"))
 }

@@ -1,20 +1,17 @@
-package prometheus
+package scraping
 
 import (
-	"site-avilability/config"
+	"site-availability/config"
 	"testing"
 )
 
 func TestCheckAppStatus(t *testing.T) {
 	// Define a mock App for testing
 	app := config.App{
-		Name:     "app1",
-		Location: "site1",
-		Metric:   "up{instance=\"app1\"}",
-		Prometheus: []string{
-			"prometheus1.app.url",
-			"prometheus2.app.url",
-		},
+		Name:       "app1",
+		Location:   "site1",
+		Metric:     "up{instance=\"app1\"}",
+		Prometheus: "prometheus1.app.url",
 	}
 
 	// Initialize the PrometheusChecker

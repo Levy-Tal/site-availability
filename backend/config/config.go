@@ -1,8 +1,8 @@
 package config
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -21,24 +21,24 @@ type Location struct {
 }
 
 type App struct {
-	Name       string   `yaml:"name"`
-	Location   string   `yaml:"location"`
-	Metric     string   `yaml:"Metric"`
-	Prometheus []string `yaml:"Prometheus"`
+	Name       string `yaml:"name"`
+	Location   string `yaml:"location"`
+	Metric     string `yaml:"Metric"`
+	Prometheus string `yaml:"Prometheus"`
 }
 
 // LoadConfig loads the YAML configuration from a file
 func LoadConfig(filePath string) (*Config, error) {
 	config := &Config{}
-	yamlFile, err := ioutil.ReadFile(filePath)
+	yamlFile, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Fatalf("Error reading config file: %v", err)
+		log.Printf("Error reading config file: %v", err)
 		return nil, err
 	}
 
 	err = yaml.Unmarshal(yamlFile, config)
 	if err != nil {
-		log.Fatalf("Error unmarshalling config file: %v", err)
+		log.Printf("Error unmarshalling config file: %v", err)
 		return nil, err
 	}
 

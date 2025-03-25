@@ -1,7 +1,15 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 export const AppStatusPanel = ({ site, apps }) => {
   const panelRef = useRef(null);
+  const [filteredApps, setFilteredApps] = useState([]);
+
+  useEffect(() => {
+    setFilteredApps([]); // Clear apps before setting new ones
+    setTimeout(() => {
+      setFilteredApps(apps.filter((app) => app.location === site.name));
+    }, 0);
+  }, [site, apps]);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -34,8 +42,6 @@ export const AppStatusPanel = ({ site, apps }) => {
     };
   }, []);
 
-  const appsInSite = apps.filter((app) => app.location === site.name);
-
   return (
     <div className="status-panel" ref={panelRef} style={{ fontFamily: "'Roboto', sans-serif", fontSize: "14px", color: "#333" }}>
       <div className="resize-handle"></div>
@@ -43,7 +49,7 @@ export const AppStatusPanel = ({ site, apps }) => {
         {site.name}
       </h2>
       <ul>
-        {appsInSite.map((app) => (
+        {filteredApps.map((app) => (
           <li key={app.name} style={{ marginBottom: "10px" }}>
             <div
               className="app-name"
@@ -57,9 +63,7 @@ export const AppStatusPanel = ({ site, apps }) => {
               {app.name}
             </div>
             <div
-              className={`status-indicator ${
-                app.status === "up" ? "status-up" : "status-down"
-              }`}
+              className={`status-indicator ${app.status === "up" ? "status-up" : "status-down"}`}
               style={{
                 fontFamily: "'Roboto', sans-serif",
                 fontWeight: "bold",
