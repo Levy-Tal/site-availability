@@ -3,8 +3,6 @@ import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "re
 
 const INITIAL_ZOOM = 5;
 const DEFAULT_SCALE = 1000;
-const HORIZONTAL_MIN_PERCENTAGE = 0.25;
-const HORIZONTAL_MAX_PERCENTAGE = 0.75;
 
 export const MapComponent = ({ locations, onSiteClick }) => {
   const geoUrl = "/data/countries-50m.json";
@@ -54,8 +52,6 @@ export const MapComponent = ({ locations, onSiteClick }) => {
     }
   }, [locations]);
 
-  if (!locations.length) return <div>Loading map...</div>;
-
   return (
     <div id="map-container" style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}>
       <ComposableMap projectionConfig={{ scale }}>
@@ -77,7 +73,8 @@ export const MapComponent = ({ locations, onSiteClick }) => {
           </Geographies>
           {locations.map((site) => (
             <Marker key={site.name} coordinates={[site.Longitude, site.Latitude]} onClick={() => onSiteClick(site)}>
-              <circle r={1 } fill="blue" />
+              <text x={0} y={-2} fill="#fff" fontSize={5} textAnchor="middle" fontWeight="bold" style={{ textShadow: "1px 1px 2px rgba(0, 0, 0, 0.5)" }}>{site.name}</text>
+              <circle r={1} fill="blue" />
             </Marker>
           ))}
         </ZoomableGroup>
