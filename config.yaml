@@ -1,0 +1,28 @@
+scrape_interval: 60s
+locations:
+- name: “Hadera”
+  Latitude: 32.446235
+  Longitude: 34.903852
+- name: “Jerusalem”
+  Latitude: 31.782904
+  Longitude: 35.214774
+- name: “Beer Sheva”
+  Latitude: 31.245381
+  Longitude: 34.788745
+apps:
+- name: app1
+  location: Hadera
+  metric: up{instance=“app1”}
+  prometheus: prometheus1.app.url
+- name: app2
+  location: Jerusalem
+  metric: up{instance=“app1”}
+  prometheus: prometheus1.app.url
+- name: app3
+  location: Jerusalem
+  metric: up{instance=“app1”}
+  prometheus: prometheus1.app.url
+- name: app4
+  location: Beer Sheva
+  metric: up{instance=“app1”}
+  prometheus: prometheus1.app.url
