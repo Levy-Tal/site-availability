@@ -1,4 +1,4 @@
-scrape_interval: 60s
+scrape_interval: 10s
 locations:
 - name: “Hadera”
   Latitude: 32.446235
@@ -12,17 +12,17 @@ locations:
 apps:
 - name: app1
   location: Hadera
-  metric: up{instance=“app1”}
-  prometheus: prometheus1.app.url
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://localhost:9090/
 - name: app2
   location: Jerusalem
-  metric: up{instance=“app1”}
-  prometheus: prometheus1.app.url
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://localhost:9090/
 - name: app3
   location: Jerusalem
-  metric: up{instance=“app1”}
-  prometheus: prometheus1.app.url
+  metric: up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://localhost:9090/
 - name: app4
   location: Beer Sheva
-  metric: up{instance=“app1”}
-  prometheus: prometheus1.app.url
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://localhost:9090/

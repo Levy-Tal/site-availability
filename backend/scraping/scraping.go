@@ -4,32 +4,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"site-availability/config"
 	"site-availability/handlers"
 	"time"
 )
 
-// DefaultPrometheusChecker implements the Prometheus status checking
-type DefaultPrometheusChecker struct{}
-
-// PrometheusResponse represents the response structure from Prometheus
+// PrometheusResponse represents the structure of the Prometheus API response.
 type PrometheusResponse struct {
 	Status string `json:"status"`
 	Data   struct {
-		Result []struct {
-			Value []interface{} `json:"value"`
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric map[string]string `json:"metric"`
+			Value  []interface{}     `json:"value"` // Timestamp and metric value
 		} `json:"result"`
 	} `json:"data"`
 }
 
-// Check checks the status of the app from Prometheus using the URL from App.Prometheus and the PromQL query from App.Metric.
-func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery string) (int, error) {
-	// Create the Prometheus API URL with the PromQL query
-	url := fmt.Sprintf("%s/api/v1/query?query=%s", prometheusURL, promQLQuery)
+// DefaultPrometheusChecker checks Prometheus metrics.
+type DefaultPrometheusChecker struct{}
 
-	// Perform the HTTP request to Prometheus
-	client := &http.Client{Timeout: 10 * time.Second} // Set a timeout for the request
-	resp, err := client.Get(url)
+// Check queries Prometheus and extracts the metric value.
+func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery string) (int, error) {
+	// Properly encode the query
+	encodedQuery := url.QueryEscape(promQLQuery)
+
+	// Construct the full URL
+	fullURL := fmt.Sprintf("%s/api/v1/query?query=%s", prometheusURL, encodedQuery)
+
+	// Perform the HTTP request
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(fullURL)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query Prometheus: %v", err)
 	}
@@ -41,18 +47,28 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 		return 0, fmt.Errorf("failed to decode Prometheus response: %v", err)
 	}
 
-	// Check the status based on the Prometheus response
+	// Check if the response is successful
 	if promResp.Status != "success" {
-		return 0, fmt.Errorf("Prometheus query failed: %s", promResp.Status)
+		return 0, fmt.Errorf("prometheus query %s failed: %s", promQLQuery, promResp.Status)
 	}
 
-	// If there are results, the app is considered "up", otherwise it's "down"
-	if len(promResp.Data.Result) > 0 {
-		return 1, nil // Status is "up"
+	// If there are no results, consider the app "down"
+	if len(promResp.Data.Result) == 0 {
+		return 0, fmt.Errorf("prometheus query %s did not return any result", promQLQuery)
 	}
 
-	// If no result, consider the app "down"
-	return 0, nil // Status is "down"
+	// Extract the metric value (second element in `value` array)
+	value, ok := promResp.Data.Result[0].Value[1].(string)
+	if !ok {
+		return 0, fmt.Errorf("unexpected response format: value is not a string")
+	}
+
+	// Convert value to integer (assuming "1" means up and "0" means down)
+	if value == "1" {
+		return 1, nil // App is "up"
+	}
+
+	return 0, nil // App is "down"
 }
 
 // CheckAppStatus now accepts a PrometheusChecker interface

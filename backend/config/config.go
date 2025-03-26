@@ -9,22 +9,22 @@ import (
 
 // Config structure defines the config.yaml structure
 type Config struct {
-	ScrapeInterval string     `yaml:"ScrapeInterval"`
-	Locations      []Location `yaml:"Locations"`
-	Apps           []App      `yaml:"Apps"`
+	ScrapeInterval string     `yaml:"scrape_interval"`
+	Locations      []Location `yaml:"locations"`
+	Apps           []App      `yaml:"apps"`
 }
 
 type Location struct {
 	Name      string  `yaml:"name"`
-	Latitude  float64 `yaml:"Latitude"`
-	Longitude float64 `yaml:"Longitude"`
+	Latitude  float64 `yaml:"latitude"`
+	Longitude float64 `yaml:"longitude"`
 }
 
 type App struct {
 	Name       string `yaml:"name"`
 	Location   string `yaml:"location"`
-	Metric     string `yaml:"Metric"`
-	Prometheus string `yaml:"Prometheus"`
+	Metric     string `yaml:"metric"`
+	Prometheus string `yaml:"prometheus"`
 }
 
 // LoadConfig loads the YAML configuration from a file
