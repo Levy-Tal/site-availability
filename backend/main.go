@@ -26,9 +26,12 @@ var (
 	)
 )
 
+var cfg *config.Config // Global configuration variable
+
 func main() {
 	// Load configuration
-	cfg, err := loadConfig()
+	var err error
+	cfg, err = loadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -37,7 +40,7 @@ func main() {
 	initPrometheusMetrics()
 
 	// Start background status fetcher
-	startBackgroundStatusFetcher(cfg)
+	startBackgroundStatusFetcher()
 
 	// Setup HTTP routes and handlers
 	setupRoutes()
@@ -72,39 +75,44 @@ func initPrometheusMetrics() {
 
 // Setup HTTP routes and handlers
 func setupRoutes() {
-	http.HandleFunc("/api/status", handlers.GetAppStatus)
+	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) { handlers.GetAppStatus(w, r, cfg) })
 	http.HandleFunc("/healthz", livenessProbe)
 	http.HandleFunc("/readyz", readinessProbe)
 	http.Handle("/metrics", promhttp.Handler())
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 }
 
-// Start the background status fetcher
-func startBackgroundStatusFetcher(cfg *config.Config) {
+func startBackgroundStatusFetcher() {
 	scrapeInterval, err := time.ParseDuration(cfg.ScrapeInterval)
 	if err != nil {
 		log.Fatalf("Failed to parse ScrapeInterval: %v", err)
 	}
-
 	go func() {
+		// Create a ticker with the desired scrape interval
 		ticker := time.NewTicker(scrapeInterval)
 		defer ticker.Stop()
 
 		checker := &scraping.DefaultPrometheusChecker{}
 
-		for {
-			select {
-			case <-ticker.C:
-				log.Println("Fetching app statuses...")
+		// Use for-range to listen to the ticker channel
+		for range ticker.C {
+			log.Println("Fetching app statuses...")
 
-				// Update app statuses
-				for _, app := range cfg.Apps {
-					status := scraping.CheckAppStatus(app, checker)
-					handlers.UpdateAppStatusCache(app.Name, status)
-				}
+			var newStatuses []handlers.AppStatus
 
-				log.Println("App statuses updated.")
+			// Update app statuses
+			for _, app := range cfg.Apps {
+				// Get the status using the CheckAppStatus function, which returns an AppStatus struct
+				appStatus := scraping.CheckAppStatus(app, checker)
+
+				// Append the updated AppStatus to the newStatuses slice
+				newStatuses = append(newStatuses, appStatus)
 			}
+
+			// Update the cache with the new statuses
+			handlers.UpdateAppStatus(newStatuses)
+
+			log.Println("App statuses updated.")
 		}
 	}()
 }

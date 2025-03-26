@@ -32,3 +32,5 @@ frontend/.env
 
 ### Other ##
 /.env
+
+backend/static

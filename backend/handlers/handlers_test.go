@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"site-availability/config"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,10 +12,12 @@ import (
 // Mock the status cache
 func TestGetAppStatus(t *testing.T) {
 	// Initialize the cache with mock data
-	UpdateAppStatusCache("app 1", AppStatus{
-		Name:     "app 1",
-		Location: "site a",
-		Status:   "up",
+	UpdateAppStatus([]AppStatus{
+		{
+			Name:     "app 1",
+			Location: "site a",
+			Status:   "up",
+		},
 	})
 
 	// Set up the HTTP request
@@ -23,15 +26,33 @@ func TestGetAppStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Mock config (for locations)
+	cfg := &config.Config{
+		Locations: []config.Location{
+			{Name: "site a", Latitude: 0.0, Longitude: 0.0},
+		},
+	}
+
 	// Record the response
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetAppStatus)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		GetAppStatus(w, r, cfg)
+	})
 	handler.ServeHTTP(rr, req)
 
 	// Check the response status code
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Check if the response contains the expected app status
-	expected := `{"app 1":{"name":"app 1","location":"site a","status":"up"}}`
+	expected := `{
+		"locations": [
+			{"name": "site a", "latitude": 0, "longitude": 0}
+		],
+		"apps": [
+			{"name": "app 1", "location": "site a", "status": "up"}
+		]
+	}`
+
+	// Use JSONEq to compare the expected and actual response bodies
 	assert.JSONEq(t, expected, rr.Body.String())
 }

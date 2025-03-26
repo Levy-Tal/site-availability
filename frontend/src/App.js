@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MapComponent } from "./map";
 import { AppStatusPanel } from "./AppStatusPanel";
-import { fetchAppStatuses } from "./fetchAppStatuses";
+import { fetchAppStatuses } from "./api/appStatusAPI";
 import "./styles/main.css";
 
 function App() {

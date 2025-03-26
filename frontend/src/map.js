@@ -17,10 +17,10 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
     return locations.reduce(
       (acc, loc) => ({
-        minLon: Math.min(acc.minLon, loc.Longitude),
-        minLat: Math.min(acc.minLat, loc.Latitude),
-        maxLon: Math.max(acc.maxLon, loc.Longitude),
-        maxLat: Math.max(acc.maxLat, loc.Latitude),
+        minLon: Math.min(acc.minLon, loc.longitude),
+        minLat: Math.min(acc.minLat, loc.latitude),
+        maxLon: Math.max(acc.maxLon, loc.longitude),
+        maxLat: Math.max(acc.maxLat, loc.latitude),
       }),
       { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity }
     );
@@ -79,7 +79,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             const color = allAppsUp ? "#4CAF50" : anyAppDown ? "#F44336" : "#FF9800"; // Modern colors
 
             return (
-              <Marker key={site.name} coordinates={[site.Longitude, site.Latitude]} onClick={() => onSiteClick(site)}>
+              <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
                 <text
                   x={0}
                   y={-2}

@@ -15,9 +15,9 @@ type Config struct {
 }
 
 type Location struct {
-	Name      string  `yaml:"name"`
-	Latitude  float64 `yaml:"latitude"`
-	Longitude float64 `yaml:"longitude"`
+	Name      string  `yaml:"name" json:"name"`
+	Latitude  float64 `yaml:"latitude" json:"latitude"`
+	Longitude float64 `yaml:"longitude" json:"longitude"`
 }
 
 type App struct {
