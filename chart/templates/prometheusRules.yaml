@@ -1,0 +1,47 @@
+{{- if .Values.prometheusRules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "site-availability.fullname" . }}-alertrules
+  labels:
+    release: "prometheus"
+spec:
+  groups:
+    - name: site-availability-alerts
+      rules:
+        - alert: S3ReadAvailabilityIssue
+          expr: s3_read_availability == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: '{{ "{{" }} $labels.bucket }} read availability issue'
+            description: 'The S3 read availability for the bucket {{ "{{" }} $labels.bucket }} is down for more than 5 minutes.'
+        
+        - alert: S3WriteAvailabilityIssue
+          expr: s3_write_availability == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: '{{ "{{" }} $labels.bucket }} write availability issue'
+            description: 'The S3 write availability for the bucket {{ "{{" }} $labels.bucket }} is down for more than 5 minutes.'
+        
+        - alert: HighS3ReadTime
+          expr: s3_read_time_millis > 500
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ "{{" }} $labels.bucket }} high read time'
+            description: 'The S3 read time for the bucket {{ "{{" }} $labels.bucket }} has exceeded 500ms for more than 10 minutes.'
+        
+        - alert: HighS3WriteTime
+          expr: s3_write_time_millis > 500
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ "{{" }} $labels.bucket }} high write time'
+            description: 'The S3 write time for the bucket {{ "{{" }} $labels.bucket }} has exceeded 500ms for more than 10 minutes.'
+{{- end }}

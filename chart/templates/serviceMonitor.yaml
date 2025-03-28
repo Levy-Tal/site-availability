@@ -1,0 +1,21 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "site-availability.fullname" . }}-servicemonitor
+  labels:
+    release: "prometheus"
+    {{- include "site-availability.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "site-availability.fullname" . }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.scrapeInterval | default "10s" }}
+      scrapeTimeout: 5s
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}

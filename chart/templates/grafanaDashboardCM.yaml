@@ -1,0 +1,20 @@
+{{- if .Values.grafanaDashboards.enabled }}
+{{- $dashboards := .Files.Glob "dashboard/*.json" -}}
+{{- range $index, $dashboard := $dashboards -}}
+{{- with $ }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+{{- $fileName := split "/" $index }}
+  name: {{ include "site-availability.fullname" . }}-{{ $fileName._1 | trimSuffix ".json" }}-dashboard
+  labels:
+  labels:
+    {{- include "site-availability.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  {{ include "site-availability.fullname" . }}-{{ .Release.Namespace}}-{{ $fileName._1}}: |
+    {{ .Files.Get $index | indent 4 }}
+---
+{{- end }}
+{{- end }}
+{{- end }}
