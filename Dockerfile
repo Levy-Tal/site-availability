@@ -1,29 +1,24 @@
-# Build React frontend using latest Node.js
+# Build React frontend
 FROM node:18 AS frontend-builder
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install
+RUN npm install --omit=dev
 COPY frontend/ ./
 RUN npm run build
 
-# Build Go backend using latest Go version
-FROM golang:1.20 AS backend-builder
+# Build Go backend
+FROM golang:1.23 AS backend-builder
 WORKDIR /backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
-RUN go build -o app .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o site-availability .
 
-# Final image to serve both frontend and backend
-FROM golang:1.20
-
-# Set working directory
+# Final minimal image using scratch
+FROM scratch
 WORKDIR /app
-
-# Copy Go app and React build
+COPY --from=backend-builder /backend/site-availability /app/site-availability
 COPY --from=frontend-builder /frontend/build /app/static
-COPY --from=backend-builder /backend/app /app/
-
-# Expose port
+USER 65532
 EXPOSE 8080
-CMD ["./app"]
+ENTRYPOINT ["/app/site-availability"]

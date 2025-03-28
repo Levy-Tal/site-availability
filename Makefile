@@ -12,8 +12,8 @@ build:  ## Build the frontend and backend
 	@export CONFIG_FILE=../config.yaml
 	@cd backend && go run main.go
 
-docker: build  ## Build the Docker image
+docker:   ## Build the Docker image
 	@docker build -t myapp .
 
-run: docker  ## Run the app using Docker Compose
+run:   ## Run the app using Docker Compose
 	@docker-compose up --build

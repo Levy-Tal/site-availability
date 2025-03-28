@@ -81,6 +81,25 @@ func setupRoutes() {
 	http.Handle("/metrics", promhttp.Handler())
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 }
+func statusFetcher(checker *scraping.DefaultPrometheusChecker) {
+	log.Println("Fetching app statuses...")
+
+	var newStatuses []handlers.AppStatus
+
+	// Update app statuses
+	for _, app := range cfg.Apps {
+		// Get the status using the CheckAppStatus function, which returns an AppStatus struct
+		appStatus := scraping.CheckAppStatus(app, checker)
+
+		// Append the updated AppStatus to the newStatuses slice
+		newStatuses = append(newStatuses, appStatus)
+	}
+
+	// Update the cache with the new statuses
+	handlers.UpdateAppStatus(newStatuses)
+
+	log.Println("App statuses updated.")
+}
 
 func startBackgroundStatusFetcher() {
 	scrapeInterval, err := time.ParseDuration(cfg.ScrapeInterval)
@@ -93,26 +112,10 @@ func startBackgroundStatusFetcher() {
 		defer ticker.Stop()
 
 		checker := &scraping.DefaultPrometheusChecker{}
-
+		statusFetcher(checker)
 		// Use for-range to listen to the ticker channel
 		for range ticker.C {
-			log.Println("Fetching app statuses...")
-
-			var newStatuses []handlers.AppStatus
-
-			// Update app statuses
-			for _, app := range cfg.Apps {
-				// Get the status using the CheckAppStatus function, which returns an AppStatus struct
-				appStatus := scraping.CheckAppStatus(app, checker)
-
-				// Append the updated AppStatus to the newStatuses slice
-				newStatuses = append(newStatuses, appStatus)
-			}
-
-			// Update the cache with the new statuses
-			handlers.UpdateAppStatus(newStatuses)
-
-			log.Println("App statuses updated.")
+		  statusFetcher(checker)
 		}
 	}()
 }
@@ -164,9 +167,14 @@ func livenessProbe(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-// Readiness probe handler
 func readinessProbe(w http.ResponseWriter, r *http.Request) {
-	// Here you can add checks to ensure the service is ready
+	if handlers.IsAppStatusCacheEmpty() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte("NOT READY"))
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("READY"))
 }
+

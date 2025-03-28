@@ -74,3 +74,11 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 	}
 	return locations
 }
+
+// IsAppStatusCacheEmpty checks if the app status cache is empty
+func IsAppStatusCacheEmpty() bool {
+	cacheMutex.RLock()
+	defer cacheMutex.RUnlock()
+	return len(appStatusCache) == 0
+}
+
