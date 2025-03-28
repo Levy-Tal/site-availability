@@ -34,3 +34,4 @@ frontend/.env
 /.env
 
 backend/static
+fromtend/build
