@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 
-const INITIAL_ZOOM = 5;
-const DEFAULT_SCALE = 1000;
+const INITIAL_ZOOM = 1;
+const MAX_ZOOM = 8;
+const MIN_SCALE = 250;
+const MAX_SCALE = 3000;
 
 export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const geoUrl = "/data/countries-50m.json";
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [center, setCenter] = useState([0, 0]);
-  const [scale, setScale] = useState(DEFAULT_SCALE);
+  const [scale, setScale] = useState(MIN_SCALE);
+  const [loading, setLoading] = useState(true);
+  const [baseSize, setBaseSize] = useState(0);
   const hasInitialized = useRef(false);
 
-  // Calculate bounding box
   const calculateBounds = (locations) => {
     if (!locations.length) return null;
-
     return locations.reduce(
       (acc, loc) => ({
         minLon: Math.min(acc.minLon, loc.longitude),
@@ -26,31 +28,61 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
     );
   };
 
-  // Calculate optimal zoom, center, and scale
   const calculateMapSettings = (bounds, width, height) => {
     const centerLon = (bounds.minLon + bounds.maxLon) / 2;
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
-    const lonRange = bounds.maxLon - bounds.minLon;
-    const zoomFactor = INITIAL_ZOOM;
-    const scaleFactor = Math.max(width / lonRange, DEFAULT_SCALE);
-    return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor };
+    const lonRange = Math.max(bounds.maxLon - bounds.minLon, 1);
+  
+    let scaleFactor, zoomFactor, baseSize;
+  
+    if (lonRange > 200) { //size of the world
+      scaleFactor = 300;
+      zoomFactor = 1;
+      baseSize = 1;
+    } else if (lonRange > 50) { // size of continent 
+      scaleFactor = 400;
+      zoomFactor = 3;
+      baseSize = 1;
+    } else if (lonRange > 1) { //size of big countries
+      scaleFactor = 500;
+      zoomFactor = 3;
+      baseSize = 1;
+    } else { //size of small countries
+      scaleFactor = 1500;
+      zoomFactor = 5;
+      baseSize = 0;
+    }
+  
+    console.log("width:", width);
+    console.log("lonRange:", lonRange);
+    console.log("scaleFactor:", scaleFactor);
+    console.log("zoomFactor:", zoomFactor);
+  
+    return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor ,baseSize: baseSize};
   };
+  
 
   useEffect(() => {
     if (locations.length > 0 && !hasInitialized.current) {
       const width = window.innerWidth;
       const height = window.innerHeight;
       const bounds = calculateBounds(locations);
-
+      const base = 0;
       if (bounds) {
-        const { center, zoom, scale } = calculateMapSettings(bounds, width, height);
+        const { center, zoom, scale ,baseSize} = calculateMapSettings(bounds, width, height , base);
         setCenter(center);
         setZoom(zoom);
         setScale(scale);
-        hasInitialized.current = true; // Prevent re-calculating after first load
+        setBaseSize(baseSize);
+        hasInitialized.current = true;
+        setLoading(false); // Show the map only after initialization
       }
     }
   }, [locations]);
+
+  if (loading) {
+    return <div style={{ width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>Loading map...</div>;
+  }
 
   return (
     <div id="map-container" style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}>
@@ -76,15 +108,15 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             const allAppsUp = appsInSite.every((app) => app.status === "up");
             const anyAppDown = appsInSite.some((app) => app.status === "down");
 
-            const color = allAppsUp ? "#4CAF50" : anyAppDown ? "#F44336" : "#FF9800"; // Modern colors
+            const color = allAppsUp ? "#4CAF50" : anyAppDown ? "#F44336" : "#FF9800";
 
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
                 <text
                   x={0}
-                  y={-2}
+                  y={-(2+baseSize)}
                   fill={color}
-                  fontSize={3} // Retained original text size
+                  fontSize={3+baseSize}
                   textAnchor="middle"
                   fontWeight="bold"
                   style={{
@@ -94,7 +126,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                 >
                   {site.name}
                 </text>
-                <circle r={1} fill={color} opacity={0.8} style={{ transition: "all 0.3s ease" }} />
+                <circle r={1+baseSize} fill={color} opacity={0.8} style={{ transition: "all 0.3s ease" }} />
               </Marker>
             );
           })}

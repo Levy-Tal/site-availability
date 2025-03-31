@@ -98,17 +98,36 @@ resources:
 
 # Node and affinity settings for pod scheduling
 nodeSelector: {}
+
 tolerations: []
+
 affinity: {}
 
 # Volumes and mounts
 extraVolumeMounts: []
+
 extraVolumes: []
 
 serviceMonitor:
   enabled: true
   scrapeInterval: 10s
+
 prometheusRules:
   enabled: true
+
 grafanaDashboards:
   enabled: true
+
+externalSecrets: []
+#  - name: my-secret-1
+#    namespace: default
+#    refreshInterval: "1h"
+#    secretStore:
+#      name: aws-secret-store
+#    targetName: my-k8s-secret-1
+#    creationPolicy: Owner
+#    data:
+#      - secretKey: db-password
+#        remoteKey: production/db-password
+#      - secretKey: api-key
+#        remoteKey: production/api-key
