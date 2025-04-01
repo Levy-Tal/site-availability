@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: levytal/site-availability
     environment:
       - CONFIG_FILE=/app/config.yaml
     volumes:

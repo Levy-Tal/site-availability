@@ -22,6 +22,11 @@ type PrometheusResponse struct {
 	} `json:"data"`
 }
 
+// PrometheusChecker defines an interface for checking Prometheus metrics.
+type PrometheusChecker interface {
+	Check(prometheusURL string, promQLQuery string) (int, error)
+}
+
 // DefaultPrometheusChecker checks Prometheus metrics.
 type DefaultPrometheusChecker struct{}
 
@@ -72,10 +77,9 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 }
 
 // CheckAppStatus now accepts a PrometheusChecker interface
-func CheckAppStatus(app config.App, checker *DefaultPrometheusChecker) handlers.AppStatus {
+func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatus {
 	// Check status using the provided checker
 	var status string
-	// Using the Prometheus URL (app.Prometheus) and PromQL query (app.Metric)
 	statusCode, err := checker.Check(app.Prometheus, app.Metric)
 	if err != nil {
 		status = "down"

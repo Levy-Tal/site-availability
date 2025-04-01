@@ -7,6 +7,9 @@ help:  ## Show available commands
 	@echo "Available commands:"
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+test:  ## Run tests
+	@cd backend && go test ./...
+
 build:  ## Build the frontend and backend
 	@npm run build --prefix frontend
 	@rm -rf backend/static
@@ -21,7 +24,7 @@ docker:   ## Build the Docker image
 run:   ## Run the app using Docker Compose
 	@docker-compose up --build
 
-release:    ## make release TAG=1.0.0
+release:    ## Create release. Example: make release TAG=1.0.0
 	@mkdir -p $(RELEASE_DIR)
 	@rm -rf $(RELEASE_DIR)/*
 	@echo "Building Docker image with tag: $(TAG)"

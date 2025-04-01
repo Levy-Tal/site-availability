@@ -13,21 +13,19 @@ func TestLoadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tempFile.Name())
+	defer os.Remove(tempFile.Name()) // Ensure cleanup
 
-	// Write a sample config content
-	configContent := `
-ScrapeInterval: "60s"
-Locations:
+	// Write a sample config content (fixed YAML structure)
+	configContent := `scrape_interval: "60s"
+locations:
   - name: "site a"
-    Latitude: 32.43843612145413
-    Longitude: 34.899453546836334
-Apps:
+    latitude: 32.43843612145413
+    longitude: 34.899453546836334
+apps:
   - name: "app 1"
     location: "site a"
-    Metric: "up{instance=\"app1\"}"
-    Prometheus:
-      - "prometheus1.app.url"
+    metric: "up{instance=\"app1\"}"
+    prometheus: "prometheus1.app.url"
 `
 	_, err = tempFile.WriteString(configContent)
 	if err != nil {
@@ -46,6 +44,9 @@ Apps:
 	assert.Equal(t, "60s", cfg.ScrapeInterval)
 	assert.Len(t, cfg.Locations, 1)
 	assert.Len(t, cfg.Apps, 1)
+	assert.Equal(t, "site a", cfg.Locations[0].Name)
+	assert.Equal(t, "app 1", cfg.Apps[0].Name)
+	assert.Equal(t, "prometheus1.app.url", cfg.Apps[0].Prometheus)
 }
 
 func TestLoadConfig_InvalidFile(t *testing.T) {

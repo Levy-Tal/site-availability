@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Mock the status cache
 func TestGetAppStatus(t *testing.T) {
 	// Initialize the cache with mock data
 	UpdateAppStatus([]AppStatus{
@@ -22,9 +21,7 @@ func TestGetAppStatus(t *testing.T) {
 
 	// Set up the HTTP request
 	req, err := http.NewRequest("GET", "/api/status", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	// Mock config (for locations)
 	cfg := &config.Config{
@@ -43,16 +40,9 @@ func TestGetAppStatus(t *testing.T) {
 	// Check the response status code
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	// Check if the response contains the expected app status
-	expected := `{
-		"locations": [
-			{"name": "site a", "latitude": 0, "longitude": 0}
-		],
-		"apps": [
-			{"name": "app 1", "location": "site a", "status": "up"}
-		]
-	}`
+	// Expected JSON response
+	expected := `{"locations":[{"name":"site a","latitude":0.0,"longitude":0.0}],"apps":[{"name":"app 1","location":"site a","status":"up"}]}`
 
-	// Use JSONEq to compare the expected and actual response bodies
-	assert.JSONEq(t, expected, rr.Body.String())
+	// Compare expected and actual JSON response
+	assert.JSONEq(t, expected, rr.Body.String(), "Response JSON does not match expected output")
 }
