@@ -35,3 +35,4 @@ frontend/.env
 
 backend/static
 fromtend/build
+release

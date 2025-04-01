@@ -1,4 +1,7 @@
-.PHONY: help build docker run
+RELEASE_DIR=release
+HELM_CHART_PATH=chart
+
+.PHONY: help build docker run release
 
 help:  ## Show available commands
 	@echo "Available commands:"
@@ -13,7 +16,21 @@ build:  ## Build the frontend and backend
 	@cd backend && go run main.go
 
 docker:   ## Build the Docker image
-	@docker build -t myapp .
+	@docker build -t levytal/site-availability .
 
 run:   ## Run the app using Docker Compose
 	@docker-compose up --build
+
+release:    ## make release TAG=1.0.0
+	@mkdir -p $(RELEASE_DIR)
+	@rm -rf $(RELEASE_DIR)/*
+	@echo "Building Docker image with tag: $(TAG)"
+	docker build -t levytal/site-availability:$(TAG) .
+	@echo "Saving Docker image to tar..."
+	docker save levytal/site-availability:$(TAG) -o $(RELEASE_DIR)/site-availability-$(TAG).tar
+	@echo "Updating Helm Chart.yaml version..."
+	sed -i 's/^version:.*/version: $(TAG)/' $(HELM_CHART_PATH)/Chart.yaml
+	sed -i 's/^appVersion:.*/appVersion: "$(TAG)"/' $(HELM_CHART_PATH)/Chart.yaml
+	@echo "Updating Helm chart version..."
+	helm package $(HELM_CHART_PATH) --version $(TAG) -d $(RELEASE_DIR)
+
