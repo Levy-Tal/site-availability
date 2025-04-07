@@ -2,46 +2,64 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ include "site-availability.fullname" . }}-alertrules
+  name: {{ include "site-availability.fullname" . }}-rules
   labels:
     release: "prometheus"
 spec:
   groups:
-    - name: site-availability-alerts
+    - name: go-runtime-alerts
       rules:
-        - alert: S3ReadAvailabilityIssue
-          expr: s3_read_availability == 0
+        - alert: HighGoroutines
+          expr: go_goroutines > 1000
           for: 5m
           labels:
-            severity: critical
+            severity: warning
           annotations:
-            summary: '{{ "{{" }} $labels.bucket }} read availability issue'
-            description: 'The S3 read availability for the bucket {{ "{{" }} $labels.bucket }} is down for more than 5 minutes.'
-        
-        - alert: S3WriteAvailabilityIssue
-          expr: s3_write_availability == 0
+            summary: "High number of goroutines"
+            description: "The number of goroutines ({{ "{{" }} $value {{ "}}" }}) has exceeded 1000 for over 5 minutes."
+
+        - alert: HighGCDuration
+          expr: go_gc_duration_seconds{quantile="0.99"} > 0.1
           for: 5m
           labels:
-            severity: critical
+            severity: warning
           annotations:
-            summary: '{{ "{{" }} $labels.bucket }} write availability issue'
-            description: 'The S3 write availability for the bucket {{ "{{" }} $labels.bucket }} is down for more than 5 minutes.'
-        
-        - alert: HighS3ReadTime
-          expr: s3_read_time_millis > 500
+            summary: "High GC duration"
+            description: "Go GC duration (99th percentile) is greater than 100ms for over 5 minutes."
+
+        - alert: HighMemoryAllocation
+          expr: go_memstats_alloc_bytes > 500000000
           for: 10m
           labels:
             severity: warning
           annotations:
-            summary: '{{ "{{" }} $labels.bucket }} high read time'
-            description: 'The S3 read time for the bucket {{ "{{" }} $labels.bucket }} has exceeded 500ms for more than 10 minutes.'
-        
-        - alert: HighS3WriteTime
-          expr: s3_write_time_millis > 500
-          for: 10m
+            summary: "High memory allocation"
+            description: "Memory allocated by Go runtime is greater than 500MB for over 10 minutes."
+
+        - alert: ApproachingMaxFileDescriptors
+          expr: process_open_fds / process_max_fds > 0.8
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High file descriptor usage"
+            description: "Process is using more than 80% of its file descriptors."
+
+        - alert: ShortUptime
+          expr: server_uptime_seconds < 300
+          for: 1m
           labels:
             severity: warning
           annotations:
-            summary: '{{ "{{" }} $labels.bucket }} high write time'
-            description: 'The S3 write time for the bucket {{ "{{" }} $labels.bucket }} has exceeded 500ms for more than 10 minutes.'
+            summary: "Server recently restarted"
+            description: "The server uptime is less than 5 minutes."
+
+        - alert: HighThreadCount
+          expr: go_threads > 100
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High thread count"
+            description: "Go runtime is using more than 100 threads for over 5 minutes."
 {{- end }}

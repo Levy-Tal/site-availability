@@ -1,0 +1,198 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "type": "dashboard",
+          "name": "Annotations & Alerts",
+          "enabled": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          }
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "panels": [
+      {
+        "type": "timeseries",
+        "title": "Goroutines",
+        "id": 1,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "go_goroutines",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 1,
+              "showPoints": "auto"
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Heap Allocation",
+        "id": 2,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "go_memstats_alloc_bytes",
+            "refId": "B"
+          }
+        ],
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "color": { "mode": "palette-classic" },
+            "custom": { "drawStyle": "line", "lineWidth": 1 }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "GC Duration (50th percentile)",
+        "id": 3,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "go_gc_duration_seconds{quantile=\"0.5\"}",
+            "refId": "C"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 6, "w": 6, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": { "mode": "palette-classic" },
+            "custom": { "drawStyle": "line", "lineWidth": 1 }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Next GC Threshold",
+        "id": 4,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "go_memstats_next_gc_bytes",
+            "refId": "D"
+          }
+        ],
+        "gridPos": { "x": 6, "y": 6, "w": 6, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "color": { "mode": "palette-classic" },
+            "custom": { "drawStyle": "line", "lineWidth": 1 }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Open File Descriptors",
+        "id": 5,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "process_open_fds",
+            "refId": "E"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 12, "w": 6, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": { "drawStyle": "line", "lineWidth": 1 }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Network Receive Bytes",
+        "id": 6,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "process_network_receive_bytes_total",
+            "refId": "F"
+          }
+        ],
+        "gridPos": { "x": 6, "y": 12, "w": 6, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "color": { "mode": "palette-classic" },
+            "custom": { "drawStyle": "line", "lineWidth": 1 }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Server Uptime",
+        "id": 7,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "server_uptime_seconds",
+            "refId": "G"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": { "mode": "palette-classic" },
+            "custom": { "drawStyle": "line", "lineWidth": 1 }
+          },
+          "overrides": []
+        }
+      }
+    ],
+    "schemaVersion": 39,
+    "title": "Go Runtime Metrics Dashboard",
+    "uid": "go-runtime-dashboard",
+    "version": 1
+  }
+  

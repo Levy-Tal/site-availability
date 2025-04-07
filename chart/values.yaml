@@ -25,31 +25,31 @@ extraSecretNameForEnvFrom: []
 # if you want to use the chart for config file
 configFile:
   enabled: true
-  content:
-    scrape_interval: 10s
-    locations:
-    - name: Hadera
-      latitude: 32.446235
-      longitude: 34.903852
-    - name: Jerusalem
-      latitude: 31.782904
-      longitude: 35.214774
-    - name: Beer Sheva
-      latitude: 31.245381
-      longitude: 34.788745
-    apps:
-    - name: app1
-      location: Hadera
-      metric: up{instance="app:8080", job="app"}
-      prometheus: http://prometheus:9090/
-    - name: app3
-      location: Jerusalem
-      metric: up{instance="localhost:9090", job="prometheus"}
-      prometheus: http://prometheus:9090/
-    - name: app4
-      location: Beer Sheva
-      metric: up{instance="app:8080", job="app"}
-      prometheus: http://prometheus:9090/
+  content: ""
+#    scrape_interval: 10s
+#    locations:
+#    - name: Hadera
+#      latitude: 32.446235
+#      longitude: 34.903852
+#    - name: Jerusalem
+#      latitude: 31.782904
+#      longitude: 35.214774
+#    - name: Beer Sheva
+#      latitude: 31.245381
+#      longitude: 34.788745
+#    apps:
+#    - name: app1
+#      location: Hadera
+#      metric: up{instance="app:8080", job="app"}
+#      prometheus: http://prometheus:9090/
+#    - name: app3
+#      location: Jerusalem
+#      metric: up{instance="localhost:9090", job="prometheus"}
+#      prometheus: http://prometheus:9090/
+#    - name: app4
+#      location: Beer Sheva
+#      metric: up{instance="app:8080", job="app"}
+#      prometheus: http://prometheus:9090/
 
 # if you want to use configMap for the config file
 
@@ -109,14 +109,14 @@ extraVolumeMounts: []
 extraVolumes: []
 
 serviceMonitor:
-  enabled: true
+  enabled: false
   scrapeInterval: 10s
 
 prometheusRules:
-  enabled: true
+  enabled: false
 
 grafanaDashboards:
-  enabled: true
+  enabled: false
 
 externalSecrets: []
 #  - name: my-secret-1

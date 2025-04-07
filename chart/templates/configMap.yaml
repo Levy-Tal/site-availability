@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-config
+  name: {{ include "site-availability.fullname" . }}
 data:
   config.yaml: |
     {{ .Values.configFile.content | toYaml | nindent 4 }}

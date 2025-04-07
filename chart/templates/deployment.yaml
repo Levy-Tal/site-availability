@@ -85,7 +85,7 @@ spec:
         {{- if .Values.configFile.enabled }}
         - name: config-volume
           configMap:
-            name: {{ .Release.Name }}-config
+            name: {{ include "site-availability.fullname" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}

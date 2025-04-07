@@ -1,5 +1,5 @@
 {{- if .Values.grafanaDashboards.enabled }}
-{{- $dashboards := .Files.Glob "dashboard/*.json" -}}
+{{- $dashboards := .Files.Glob "grafana-dashboards/*.json" -}}
 {{- range $index, $dashboard := $dashboards -}}
 {{- with $ }}
 apiVersion: v1

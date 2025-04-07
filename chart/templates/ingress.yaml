@@ -8,6 +8,7 @@ metadata:
   labels:
     {{- include "site-availability.labels" . | nindent 4 }}
 spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
   rules:
     {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
