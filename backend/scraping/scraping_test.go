@@ -1,23 +1,31 @@
 package scraping
 
 import (
+	"os"
+	"path/filepath"
 	"site-availability/config"
 	"testing"
 )
 
-// MockPrometheusChecker implements PrometheusChecker for testing.
+// --------------------
+// Mock implementation
+// --------------------
+
 type MockPrometheusChecker struct {
 	mockResponse int
 	mockError    error
 }
 
-// Check simulates a Prometheus response.
 func (m *MockPrometheusChecker) Check(prometheusURL string, promQLQuery string) (int, error) {
 	if m.mockError != nil {
 		return 0, m.mockError
 	}
 	return m.mockResponse, nil
 }
+
+// --------------------
+// CheckAppStatus tests
+// --------------------
 
 func TestCheckAppStatus_Up(t *testing.T) {
 	mockChecker := &MockPrometheusChecker{mockResponse: 1, mockError: nil}
@@ -76,11 +84,46 @@ func TestCheckAppStatus_Error(t *testing.T) {
 	}
 }
 
-// ErrMockFailure is a mock error for testing.
 var ErrMockFailure = &MockError{}
 
 type MockError struct{}
 
 func (e *MockError) Error() string {
 	return "mock error"
+}
+
+// --------------------
+// InitCertificate tests
+// --------------------
+
+func TestInitCertificate_Success(t *testing.T) {
+	// Create a temporary valid CA cert file
+	tmpFile := filepath.Join(t.TempDir(), "test-ca.pem")
+	certContent := `-----BEGIN CERTIFICATE-----
+MIID...FAKE...CERTIFICATE...CONTENT...==
+-----END CERTIFICATE-----`
+	if err := os.WriteFile(tmpFile, []byte(certContent), 0644); err != nil {
+		t.Fatalf("Failed to write temp cert: %v", err)
+	}
+
+	// Set the env var to point to our temp cert
+	os.Setenv("TEST_CA_CERT_PATH", tmpFile)
+	defer os.Unsetenv("TEST_CA_CERT_PATH")
+
+	// Should not panic or error (we can't easily assert the internal pool)
+	InitCertificate("TEST_CA_CERT_PATH")
+}
+
+func TestInitCertificate_EmptyEnv(t *testing.T) {
+	os.Unsetenv("EMPTY_CA_ENV")
+	InitCertificate("EMPTY_CA_ENV") // Should silently skip
+}
+
+func TestInitCertificate_FileNotExist(t *testing.T) {
+	// Set a non-existent path
+	os.Setenv("INVALID_CA_PATH", "/non/existent/path.pem")
+	defer os.Unsetenv("INVALID_CA_PATH")
+
+	// Should log error but not crash
+	InitCertificate("INVALID_CA_PATH")
 }

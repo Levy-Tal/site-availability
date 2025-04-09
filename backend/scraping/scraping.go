@@ -1,15 +1,67 @@
 package scraping
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"site-availability/config"
 	"site-availability/handlers"
 	"site-availability/logging"
+	"strings"
 	"time"
 )
+
+var customHTTPClient *http.Client
+
+// initCertificate loads CA certificates from the file paths listed in the given environment variable name.
+// The environment variable value may contain multiple file paths separated by ":".
+func InitCertificate(envVarName string) {
+	caPath := os.Getenv(envVarName)
+	if caPath == "" {
+		logging.Logger.WithField("env", envVarName).Info("Env var not set. Using default HTTP client.")
+		customHTTPClient = &http.Client{Timeout: 10 * time.Second}
+		return
+	}
+
+	caCertPool := x509.NewCertPool()
+	paths := strings.Split(caPath, ":")
+
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+
+		certData, err := ioutil.ReadFile(path)
+		if err != nil {
+			logging.Logger.WithError(err).WithField("path", path).Error("Failed to read CA certificate")
+			continue
+		}
+
+		if ok := caCertPool.AppendCertsFromPEM(certData); !ok {
+			logging.Logger.WithField("path", path).Error("Failed to append CA certificate to pool")
+		}
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: false, // Only set true if you know what you're doing
+	}
+
+	customHTTPClient = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	logging.Logger.WithField("env", envVarName).Info("Custom CA certificates loaded successfully")
+}
 
 // PrometheusResponse represents the structure of the Prometheus API response.
 type PrometheusResponse struct {
@@ -42,7 +94,12 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 		"source": "scraping.Check",
 	}).Debug("Querying Prometheus")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := customHTTPClient
+	if client == nil {
+		// fallback if initCertificate was never called
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+
 	resp, err := client.Get(fullURL)
 	if err != nil {
 		logging.Logger.WithError(err).WithField("url", fullURL).Error("Failed to query Prometheus")
