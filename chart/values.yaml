@@ -18,6 +18,8 @@ fullnameOverride: ""
 # Environment variables for the exporter container
 env:
   CONFIG_FILE: /app/config.yaml
+#  CUSTOM_CA_PATH: /app/ca.crt
+
 # Secret references to be passed as environment variables
 extraSecretNameForEnvFrom: []
 
@@ -104,9 +106,16 @@ tolerations: []
 affinity: {}
 
 # Volumes and mounts
-extraVolumeMounts: []
-
 extraVolumes: []
+#- name: ca
+#  secret:
+#    secretName: ca-secret
+#    defaultMode: 0644
+
+extraVolumeMounts: []
+#- name: ca
+#  mountPath: /app/ca.crt
+#  subPath: ca.crt
 
 serviceMonitor:
   enabled: false
