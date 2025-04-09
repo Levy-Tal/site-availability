@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"site-availability/config"
+	"site-availability/logging"
 	"sync"
 )
 
@@ -31,45 +32,67 @@ var (
 
 // UpdateAppStatus updates the appStatusCache
 func UpdateAppStatus(newStatuses []AppStatus) {
+	logging.Logger.WithField("count", len(newStatuses)).Info("Updating app status cache")
+
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
-	appStatusCache = make(map[string]AppStatus) // Reset the cache
+	appStatusCache = make(map[string]AppStatus)
 	for _, app := range newStatuses {
+		logging.Logger.WithFields(map[string]interface{}{
+			"app":      app.Name,
+			"status":   app.Status,
+			"location": app.Location,
+		}).Debug("Caching app status")
 		appStatusCache[app.Name] = app
 	}
 }
 
+// GetAppStatus handles the /api/status endpoint
 func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /api/status request")
+
 	cacheMutex.RLock()
 	defer cacheMutex.RUnlock()
 
-	// Convert appStatusCache map to slice
 	var apps []AppStatus
 	for _, status := range appStatusCache {
 		apps = append(apps, status)
 	}
 
-	// Construct response with preloaded config
 	response := StatusResponse{
-		Locations: convertToHandlersLocation(cfg.Locations), // Convert Locations to StatusResponse format
+		Locations: convertToHandlersLocation(cfg.Locations),
 		Apps:      apps,
 	}
 
-	// Encode response as JSON
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode status response")
 		http.Error(w, "Failed to encode status", http.StatusInternalServerError)
+		return
 	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"apps":      len(response.Apps),
+		"locations": len(response.Locations),
+	}).Debug("Status response sent")
 }
 
-// Helper function to convert config.Locations to handlers.Location
+// convertToHandlersLocation converts config.Locations to handlers.Location
 func convertToHandlersLocation(configLocations []config.Location) []Location {
+	logging.Logger.Debug("Converting config locations to handler format")
+
 	var locations []Location
 	for _, loc := range configLocations {
+		logging.Logger.WithFields(map[string]interface{}{
+			"name":      loc.Name,
+			"latitude":  loc.Latitude,
+			"longitude": loc.Longitude,
+		}).Debug("Processing location")
+
 		locations = append(locations, Location{
-			Name:      loc.Name,      // Convert Name to lowercase if needed
-			Latitude:  loc.Latitude,  // Copy latitude
-			Longitude: loc.Longitude, // Copy longitude
+			Name:      loc.Name,
+			Latitude:  loc.Latitude,
+			Longitude: loc.Longitude,
 		})
 	}
 	return locations
@@ -77,8 +100,12 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 
 // IsAppStatusCacheEmpty checks if the app status cache is empty
 func IsAppStatusCacheEmpty() bool {
+	logging.Logger.Debug("Checking if app status cache is empty")
+
 	cacheMutex.RLock()
 	defer cacheMutex.RUnlock()
-	return len(appStatusCache) == 0
-}
+	empty := len(appStatusCache) == 0
 
+	logging.Logger.WithField("empty", empty).Debug("Checking if app status cache is empty")
+	return empty
+}

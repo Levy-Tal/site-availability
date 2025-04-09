@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"site-availability/config"
 	"site-availability/handlers"
+	"site-availability/logging"
 	"time"
 )
 
@@ -32,61 +33,79 @@ type DefaultPrometheusChecker struct{}
 
 // Check queries Prometheus and extracts the metric value.
 func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery string) (int, error) {
-	// Properly encode the query
 	encodedQuery := url.QueryEscape(promQLQuery)
-
-	// Construct the full URL
 	fullURL := fmt.Sprintf("%s/api/v1/query?query=%s", prometheusURL, encodedQuery)
 
-	// Perform the HTTP request
+	logging.Logger.WithFields(map[string]interface{}{
+		"url":    fullURL,
+		"metric": promQLQuery,
+		"source": "scraping.Check",
+	}).Debug("Querying Prometheus")
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(fullURL)
 	if err != nil {
+		logging.Logger.WithError(err).WithField("url", fullURL).Error("Failed to query Prometheus")
 		return 0, fmt.Errorf("failed to query Prometheus: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Decode the Prometheus API response
 	var promResp PrometheusResponse
 	if err := json.NewDecoder(resp.Body).Decode(&promResp); err != nil {
+		logging.Logger.WithError(err).Error("Failed to decode Prometheus response")
 		return 0, fmt.Errorf("failed to decode Prometheus response: %v", err)
 	}
 
-	// Check if the response is successful
 	if promResp.Status != "success" {
+		logging.Logger.WithField("status", promResp.Status).Error("Prometheus query did not succeed")
 		return 0, fmt.Errorf("prometheus query %s failed: %s", promQLQuery, promResp.Status)
 	}
 
-	// If there are no results, consider the app "down"
 	if len(promResp.Data.Result) == 0 {
+		logging.Logger.WithField("metric", promQLQuery).Warn("Prometheus query returned no results")
 		return 0, fmt.Errorf("prometheus query %s did not return any result", promQLQuery)
 	}
 
-	// Extract the metric value (second element in `value` array)
 	value, ok := promResp.Data.Result[0].Value[1].(string)
 	if !ok {
+		logging.Logger.Error("Unexpected response format: metric value is not a string")
 		return 0, fmt.Errorf("unexpected response format: value is not a string")
 	}
 
-	// Convert value to integer (assuming "1" means up and "0" means down)
+	logging.Logger.WithFields(map[string]interface{}{
+		"value":  value,
+		"metric": promQLQuery,
+	}).Debug("Prometheus metric value retrieved")
+
 	if value == "1" {
-		return 1, nil // App is "up"
+		return 1, nil
 	}
 
-	return 0, nil // App is "down"
+	return 0, nil
 }
 
 // CheckAppStatus now accepts a PrometheusChecker interface
 func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatus {
-	// Check status using the provided checker
-	var status string
+	logging.Logger.WithFields(map[string]interface{}{
+		"app":        app.Name,
+		"location":   app.Location,
+		"prometheus": app.Prometheus,
+		"metric":     app.Metric,
+	}).Debug("Checking application status")
+
 	statusCode, err := checker.Check(app.Prometheus, app.Metric)
+
+	status := "down"
 	if err != nil {
-		status = "down"
+		logging.Logger.WithFields(map[string]interface{}{
+			"app":   app.Name,
+			"error": err.Error(),
+		}).Warn("Application status check failed")
 	} else if statusCode == 1 {
 		status = "up"
+		logging.Logger.WithField("app", app.Name).Debug("Application is UP")
 	} else {
-		status = "down"
+		logging.Logger.WithField("app", app.Name).Debug("Application is DOWN")
 	}
 
 	return handlers.AppStatus{

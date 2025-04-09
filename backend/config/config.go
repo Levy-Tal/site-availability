@@ -1,9 +1,10 @@
 package config
 
 import (
-	"log"
 	"os"
+	"site-availability/logging"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -29,18 +30,26 @@ type App struct {
 
 // LoadConfig loads the YAML configuration from a file
 func LoadConfig(filePath string) (*Config, error) {
+	logging.Logger.WithField("file", filePath).Info("Loading configuration file")
+
 	config := &Config{}
 	yamlFile, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Printf("Error reading config file: %v", err)
+		logging.Logger.WithError(err).WithField("file", filePath).Error("Failed to read configuration file")
 		return nil, err
 	}
 
 	err = yaml.Unmarshal(yamlFile, config)
 	if err != nil {
-		log.Printf("Error unmarshalling config file: %v", err)
+		logging.Logger.WithError(err).WithField("file", filePath).Error("Failed to parse configuration YAML")
 		return nil, err
 	}
+
+	logging.Logger.WithFields(logrus.Fields{
+		"scrape_interval": config.ScrapeInterval,
+		"locations":       len(config.Locations),
+		"apps":            len(config.Apps),
+	}).Debug("Configuration loaded successfully")
 
 	return config, nil
 }

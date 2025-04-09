@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-	"time"
-
 	"site-availability/config"
 	"site-availability/handlers"
+	"site-availability/logging"
 	"site-availability/scraping"
+	"syscall"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -24,28 +24,25 @@ var (
 			Help: "Total uptime of the server in seconds",
 		},
 	)
+
+	cfg *config.Config // Global configuration variable
 )
 
-var cfg *config.Config // Global configuration variable
-
 func main() {
-	// Load configuration
+	// Attempt to initialize the logger, and fall back to Go's log package if it fails
+	if err := logging.Init(); err != nil {
+		log.Fatalf("Logger initialization failed: %v", err)
+	}
+
 	var err error
 	cfg, err = loadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		logging.Logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize Prometheus metrics
 	initPrometheusMetrics()
-
-	// Start background status fetcher
 	startBackgroundStatusFetcher()
-
-	// Setup HTTP routes and handlers
 	setupRoutes()
-
-	// Start server and handle shutdown gracefully
 	startServer()
 }
 
@@ -55,17 +52,21 @@ func loadConfig() (*config.Config, error) {
 	if configFile == "" {
 		configFile = "config.yaml"
 	}
+	logging.Logger.Infof("Loading configuration from %s", configFile)
 
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Debugf("Configuration loaded: %+v", cfg)
 	return cfg, nil
 }
 
 // Initialize Prometheus metrics
 func initPrometheusMetrics() {
 	prometheus.MustRegister(serverUptime)
+	logging.Logger.Info("Prometheus metrics registered")
+
 	go func() {
 		for range time.Tick(time.Second) {
 			serverUptime.Inc()
@@ -75,49 +76,62 @@ func initPrometheusMetrics() {
 
 // Setup HTTP routes and handlers
 func setupRoutes() {
-	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) { handlers.GetAppStatus(w, r, cfg) })
-	http.HandleFunc("/healthz", livenessProbe)
-	http.HandleFunc("/readyz", readinessProbe)
+	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /api/status request")
+		handlers.GetAppStatus(w, r, cfg)
+	})
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /healthz probe")
+		livenessProbe(w, r)
+	})
+	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /readyz probe")
+		readinessProbe(w, r)
+	})
 	http.Handle("/metrics", promhttp.Handler())
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-}
-func statusFetcher(checker *scraping.DefaultPrometheusChecker) {
-	log.Println("Fetching app statuses...")
 
-	var newStatuses []handlers.AppStatus
-
-	// Update app statuses
-	for _, app := range cfg.Apps {
-		// Get the status using the CheckAppStatus function, which returns an AppStatus struct
-		appStatus := scraping.CheckAppStatus(app, checker)
-
-		// Append the updated AppStatus to the newStatuses slice
-		newStatuses = append(newStatuses, appStatus)
-	}
-
-	// Update the cache with the new statuses
-	handlers.UpdateAppStatus(newStatuses)
-
-	log.Println("App statuses updated.")
+	logging.Logger.Info("HTTP routes configured")
 }
 
+// Start the background status fetcher
 func startBackgroundStatusFetcher() {
 	scrapeInterval, err := time.ParseDuration(cfg.ScrapeInterval)
 	if err != nil {
-		log.Fatalf("Failed to parse ScrapeInterval: %v", err)
+		logging.Logger.Fatalf("Failed to parse ScrapeInterval: %v", err)
 	}
+	logging.Logger.Infof("Starting background status fetcher with interval: %s", scrapeInterval)
+
 	go func() {
-		// Create a ticker with the desired scrape interval
 		ticker := time.NewTicker(scrapeInterval)
 		defer ticker.Stop()
 
 		checker := &scraping.DefaultPrometheusChecker{}
 		statusFetcher(checker)
-		// Use for-range to listen to the ticker channel
+
 		for range ticker.C {
-		  statusFetcher(checker)
+			statusFetcher(checker)
 		}
 	}()
+}
+
+// Fetch the application statuses
+func statusFetcher(checker *scraping.DefaultPrometheusChecker) {
+	logging.Logger.Info("Running status fetcher...")
+	var newStatuses []handlers.AppStatus
+
+	for _, app := range cfg.Apps {
+		logging.Logger.Debugf("Checking app status: name=%s, url=%s", app.Name, app.Prometheus)
+
+		appStatus := scraping.CheckAppStatus(app, checker)
+
+		logging.Logger.Debugf("App status fetched: name=%s, status=%s", appStatus.Name, appStatus.Status)
+
+		newStatuses = append(newStatuses, appStatus)
+	}
+
+	handlers.UpdateAppStatus(newStatuses)
+	logging.Logger.Info("App statuses updated.")
 }
 
 // Start the HTTP server and handle graceful shutdown
@@ -129,9 +143,9 @@ func startServer() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Server starting on %s", port)
+		logging.Logger.Infof("Server starting on %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed: %v", err)
+			logging.Logger.Fatalf("Server failed: %v", err)
 		}
 	}()
 
@@ -141,24 +155,26 @@ func startServer() {
 
 // Get server port from environment variable or default to ":8080"
 func getServerPort() string {
-	port := ":8080"
-	if os.Getenv("PORT") != "" {
-		port = os.Getenv("PORT")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = ":8080"
 	}
+	logging.Logger.Infof("Server will listen on %s", port)
 	return port
 }
 
 // Gracefully shut down the server
 func gracefulShutdown(srv *http.Server) {
-	log.Println("Shutdown signal received, shutting down gracefully...")
+	logging.Logger.Info("Shutdown signal received, shutting down gracefully...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
-	}
 
-	log.Println("Server exited gracefully")
+	if err := srv.Shutdown(ctx); err != nil {
+		logging.Logger.Errorf("Server forced to shutdown: %v", err)
+	} else {
+		logging.Logger.Info("Server exited gracefully")
+	}
 }
 
 // Liveness probe handler
@@ -167,8 +183,10 @@ func livenessProbe(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+// Readiness probe handler
 func readinessProbe(w http.ResponseWriter, r *http.Request) {
 	if handlers.IsAppStatusCacheEmpty() {
+		logging.Logger.Warn("Readiness probe failed: App status cache is empty")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte("NOT READY"))
 		return
@@ -177,4 +195,3 @@ func readinessProbe(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("READY"))
 }
-
