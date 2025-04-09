@@ -22,7 +22,9 @@ docker:   ## Build the Docker image
 	@docker build -t levytal/site-availability .
 
 run:   ## Run the app using Docker Compose
-	@docker-compose up --build
+	@docker compose up -d --build
+down:   ## Run the app using Docker Compose
+	@docker compose down
 
 release:    ## Create release. Example: make release TAG=1.0.0
 	@mkdir -p $(RELEASE_DIR)
