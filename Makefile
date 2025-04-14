@@ -15,8 +15,7 @@ build:  ## Build the frontend and backend
 	@rm -rf backend/static
 	@mkdir -p backend/static
 	@mv frontend/build/* backend/static/
-	@export CONFIG_FILE="../config.yaml"
-	@cd backend && go run main.go
+	@export CONFIG_FILE="../config.yaml" && cd backend && go run main.go
 
 docker:   ## Build the Docker image
 	@docker build -t levytal/site-availability .

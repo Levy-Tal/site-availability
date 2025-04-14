@@ -31,7 +31,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const calculateMapSettings = (bounds, width, height) => {
     const centerLon = (bounds.minLon + bounds.maxLon) / 2;
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
-    const lonRange = Math.max(bounds.maxLon - bounds.minLon, 1);
+    const lonRange = bounds.maxLon - bounds.minLon;
   
     let scaleFactor, zoomFactor, baseSize;
   
@@ -47,8 +47,16 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
       scaleFactor = 500;
       zoomFactor = 3;
       baseSize = 1;
-    } else { //size of small countries
+    } else if (lonRange > 0.5) { //size of small countries
       scaleFactor = 1500;
+      zoomFactor = 5;
+      baseSize = 0;
+    } else if (lonRange > 0.1) { //size of small countries
+      scaleFactor = 3000;
+      zoomFactor = 5;
+      baseSize = 0;
+    } else { //size of small countries
+      scaleFactor = 20000;
       zoomFactor = 5;
       baseSize = 0;
     }
