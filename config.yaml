@@ -54,3 +54,19 @@ apps:
   location: Beer Sheva
   metric: up{instance="app:8080", job="app"}
   prometheus: http://prometheus:9090/
+- name: app2
+  location: Hadera
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheusss:9090/
+- name: app5
+  location: Jerusalem
+  metric: 1 - up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheus:9090/
+- name: app6
+  location: Beer Sheva
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheus:9090/
+- name: app7
+  location: Jerusalem
+  metric: 1 - up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheusad:9090/

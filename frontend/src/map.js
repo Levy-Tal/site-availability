@@ -114,21 +114,27 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             const appsInSite = apps.filter((app) => app.location === site.name);
             const allAppsUp = appsInSite.every((app) => app.status === "up");
             const anyAppDown = appsInSite.some((app) => app.status === "down");
+            const anyAppUnavailable = appsInSite.some((app) => app.status === "unavailable");
 
-            const color = allAppsUp ? "#4CAF50" : anyAppDown ? "#F44336" : "#FF9800";
+            const color = allAppsUp
+              ? "#4CAF50" // Green
+              : anyAppDown
+              ? "#F44336" // Red
+              : anyAppUnavailable
+              ? "#FF9800" // Orange
+              : "#D6D6DA"; // Default
 
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
                 <text
                   x={0}
-                  y={-(2+baseSize)}
+                  y={-(2 + baseSize)}
                   fill={color}
-                  fontSize={3+baseSize}
+                  fontSize={3 + baseSize}
                   textAnchor="middle"
                   fontWeight="bold"
                   style={{
-                    textShadow: "0px 0px 2px rgba(0, 0, 0, 0.5)",
-                    fontFamily: "'Roboto', sans-serif",
+                    cursor: "pointer",
                   }}
                 >
                   {site.name}

@@ -57,21 +57,30 @@ export const AppStatusPanel = ({ site, apps }) => {
                 fontFamily: "'Roboto', sans-serif",
                 fontWeight: "bold",
                 color: "#333",
-                fontSize: "14px",
               }}
             >
               {app.name}
             </div>
             <div
-              className={`status-indicator ${app.status === "up" ? "status-up" : "status-down"}`}
+              className={`status-indicator ${
+                app.status === "up"
+                  ? "status-up"
+                  : app.status === "down"
+                  ? "status-down"
+                  : "status-unavailable"
+              }`}
               style={{
                 fontFamily: "'Roboto', sans-serif",
                 fontWeight: "bold",
                 fontSize: "12px",
-                color: "#fff"
+                color: "#fff", // Ensure text color is white
               }}
             >
-              {app.status === "up" ? "Up" : "Down"}
+              {app.status === "up"
+                ? "Up"
+                : app.status === "down"
+                ? "Down"
+                : "Unavailable"}
             </div>
           </li>
         ))}

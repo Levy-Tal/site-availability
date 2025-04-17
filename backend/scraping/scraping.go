@@ -152,7 +152,7 @@ func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatu
 
 	statusCode, err := checker.Check(app.Prometheus, app.Metric)
 
-	status := "down"
+	status := "unavailable" // Default to "unavailable" if there's an error
 	if err != nil {
 		logging.Logger.WithFields(map[string]interface{}{
 			"app":   app.Name,
@@ -162,6 +162,7 @@ func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatu
 		status = "up"
 		logging.Logger.WithField("app", app.Name).Debug("Application is UP")
 	} else {
+		status = "down"
 		logging.Logger.WithField("app", app.Name).Debug("Application is DOWN")
 	}
 

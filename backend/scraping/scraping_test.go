@@ -1,6 +1,7 @@
 package scraping
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"site-availability/config"
@@ -81,6 +82,23 @@ func TestCheckAppStatus_Error(t *testing.T) {
 
 	if status.Status != "down" {
 		t.Errorf("Expected status 'down' on error, but got %s", status.Status)
+	}
+}
+
+func TestCheckAppStatus_Unavailable(t *testing.T) {
+	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: fmt.Errorf("mock error")}
+
+	app := config.App{
+		Name:       "app5",
+		Location:   "site5",
+		Metric:     "up{instance=\"app5\"}",
+		Prometheus: "http://prometheus5.app.url",
+	}
+
+	status := CheckAppStatus(app, mockChecker)
+
+	if status.Status != "unavailable" {
+		t.Errorf("Expected status 'unavailable' on error, but got %s", status.Status)
 	}
 }
 
