@@ -127,12 +127,12 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             const anyAppUnavailable = appsInSite.some((app) => app.status === "unavailable");
 
             const color = allAppsUp
-              ? "#4CAF50"
+              ? "#10B981" // Modern green for "up"
               : anyAppDown
-              ? "#F44336"
+              ? "#EF4444" // Soft red for "down"
               : anyAppUnavailable
-              ? "#FF9800"
-              : "#D6D6DA";
+              ? "#F59E0B" // Warm amber for "unavailable"
+              : "#D6D6DA"; // Default muted gray
 
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
@@ -147,7 +147,12 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                 >
                   {site.name}
                 </text>
-                <circle r={1 + baseSize} fill={color} opacity={0.8} style={{ transition: "all 0.3s ease" }} />
+                <circle
+                  r={1 + baseSize}
+                  fill={color}
+                  opacity={0.8}
+                  style={{ cursor: "pointer", transition: "all 0.3s ease" }} 
+                />
               </Marker>
             );
           })}

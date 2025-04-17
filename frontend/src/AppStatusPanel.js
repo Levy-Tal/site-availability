@@ -49,7 +49,7 @@ export const AppStatusPanel = ({ site, apps }) => {
       <ul>
         {filteredApps.map((app) => (
           <li key={app.name}>
-            <div className="app-name">{app.name}</div>
+            <div className="app-name" style={{ color: "#333333" }}>{app.name}</div>
             <div
               className={`status-indicator ${
                 app.status === "up"
