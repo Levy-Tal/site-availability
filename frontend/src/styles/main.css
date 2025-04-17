@@ -41,21 +41,21 @@ body {
   height: 100%;
   padding: 20px;
   border-radius: 8px 0 0 8px;
-  background-color: #F5F5F5; /* Light gray background for the panel */
-  color: #333333; /* Dark gray for text */
+  background-color: #F5F5F5;
+  color: #333333;
   overflow-y: auto;
   z-index: 1000;
   font-family: sans-serif;
   font-size: 14px;
-  line-height: 1.5; /* Ensure proper line spacing */
-  letter-spacing: 0.02em; /* Improve readability */
+  line-height: 1.5;
+  letter-spacing: 0.02em;
 }
 
 .status-panel h2 {
   margin-bottom: 20px;
-  font-size: 20px; /* Heading size */
-  font-weight: 600; /* Bold for headings */
-  color: #333333; /* Dark gray for headings */
+  font-size: 20px;
+  font-weight: 600;
+  color: #333333;
 }
 
 .status-panel ul {
@@ -72,18 +72,18 @@ body {
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 12px;
-  background-color: #E0E0E0; /* Muted gray for list items */
+  background-color: #E0E0E0;
   transition: background-color 0.2s ease;
 }
 
 .status-panel li:hover {
-  background-color: #D5D5D5; /* Slightly darker gray on hover */
+  background-color: #D5D5D5;
 }
 
 .status-panel .app-name {
-  font-weight: 400; /* Regular weight for labels */
-  font-size: 16px; /* Label size */
-  color: #333333; /* Dark gray for app names */
+  font-weight: 400;
+  font-size: 16px;
+  color: #333333;
   font-family: sans-serif;
   margin-right: 10px;
   flex-shrink: 1;
@@ -93,8 +93,8 @@ body {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 4px;
-  font-weight: 500; /* Medium weight for status text */
-  font-size: 14px; /* Status text size */
+  font-weight: 500;
+  font-size: 14px;
   color: #fff;
   font-family: sans-serif;
   white-space: nowrap;
@@ -102,15 +102,15 @@ body {
 }
 
 .status-up {
-  background-color: #10B981; /* Modern green for "up" */
+  background-color: #10B981;
 }
 
 .status-down {
-  background-color: #EF4444; /* Soft red for "down" */
+  background-color: #EF4444;
 }
 
 .status-unavailable {
-  background-color: #F59E0B; /* Warm amber for "unavailable" */
+  background-color: #F59E0B;
 }
 
 .status-panel .resize-handle {
@@ -137,7 +137,14 @@ body {
 }
 
 .close-button:hover {
-  color: #EF4444; /* Soft red on hover */
+  color: #EF4444;
+}
+
+#map-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
 }
 
 #map-container > * {
@@ -148,4 +155,22 @@ body {
 .react-simple-maps {
   width: 100%;
   height: 100%;
+}
+
+.map-loading {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+}
+
+.marker-text {
+  cursor: pointer;
+}
+
+.marker-circle {
+  cursor: pointer;
+  transition: all 0.3s ease;
 }

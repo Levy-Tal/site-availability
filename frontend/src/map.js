@@ -59,11 +59,6 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
       baseSize = 0;
     }
 
-    console.log("width:", width);
-    console.log("lonRange:", lonRange);
-    console.log("scaleFactor:", scaleFactor);
-    console.log("zoomFactor:", zoomFactor);
-
     return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor, baseSize };
   };
 
@@ -85,24 +80,11 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
   }, [locations]);
 
   if (loading) {
-    return (
-      <div
-        style={{
-          width: "100vw",
-          height: "100vh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          fontSize: "20px",
-        }}
-      >
-        Loading map...
-      </div>
-    );
+    return <div className="map-loading">Loading map...</div>;
   }
 
   return (
-    <div id="map-container" style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}>
+    <div id="map-container">
       <ComposableMap projectionConfig={{ scale }}>
         <ZoomableGroup center={center} zoom={zoom}>
           <Geographies geography={geoUrl}>
@@ -127,12 +109,12 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             const anyAppUnavailable = appsInSite.some((app) => app.status === "unavailable");
 
             const color = allAppsUp
-              ? "#10B981" // Modern green for "up"
+              ? "#10B981"
               : anyAppDown
-              ? "#EF4444" // Soft red for "down"
+              ? "#EF4444"
               : anyAppUnavailable
-              ? "#F59E0B" // Warm amber for "unavailable"
-              : "#D6D6DA"; // Default muted gray
+              ? "#F59E0B"
+              : "#D6D6DA";
 
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
@@ -143,7 +125,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                   fontSize={3 + baseSize}
                   textAnchor="middle"
                   fontWeight="bold"
-                  style={{ cursor: "pointer" }}
+                  className="marker-text"
                 >
                   {site.name}
                 </text>
@@ -151,7 +133,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                   r={1 + baseSize}
                   fill={color}
                   opacity={0.8}
-                  style={{ cursor: "pointer", transition: "all 0.3s ease" }} 
+                  className="marker-circle"
                 />
               </Marker>
             );
