@@ -1,0 +1,35 @@
+#name: Release Workflow
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#    tags:
+#      - "release/*"
+#
+#jobs:
+#  release:
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#
+#      - name: Extract tag from branch name
+#        run: echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+#
+#      - name: Generate release notes
+#        id: notes
+#        run: |
+#          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+#          git log $PREV_TAG..HEAD --oneline > release_notes.txt
+#
+#      - name: Create GitHub release
+#        uses: actions/create-release@v1
+#        with:
+#          tag_name: ${{ env.TAG }}
+#          release_name: ${{ env.TAG }}
+#          body_path: release_notes.txt
+#          draft: false
+#          prerelease: false
+#
