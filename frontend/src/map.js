@@ -11,7 +11,6 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const [baseSize, setBaseSize] = useState(0);
   const [initialZoom, setInitialZoom] = useState(INITIAL_ZOOM);
   const [mapReady, setMapReady] = useState(false);
-  const [initialCenter, setInitialCenter] = useState([0, 0]);
   const [currentCenter, setCurrentCenter] = useState(null);
   const hasInitialized = useRef(false);
 
@@ -35,30 +34,34 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
     let scaleFactor, zoomFactor, baseSize;
 
-    if (lonRange > 200) {
+    if (lonRange > 100) {
       scaleFactor = 300;
       zoomFactor = 1;
-      baseSize = 1;
-    } else if (lonRange > 50) {
+      baseSize = 0.7;
+    } else if (lonRange > 70) {
+      scaleFactor = 350;
+      zoomFactor = 2;
+      baseSize = 0.5;
+    } else if (lonRange > 40) {
       scaleFactor = 400;
-      zoomFactor = 3;
-      baseSize = 1;
+      zoomFactor = 2;
+      baseSize = 0.3;
     } else if (lonRange > 1) {
       scaleFactor = 500;
       zoomFactor = 3;
-      baseSize = 1;
+      baseSize = 0.2;
     } else if (lonRange > 0.5) {
       scaleFactor = 1500;
       zoomFactor = 5;
-      baseSize = 0;
+      baseSize = 0.2;
     } else if (lonRange > 0.1) {
       scaleFactor = 3000;
       zoomFactor = 5;
-      baseSize = 0;
+      baseSize = 0.15;
     } else {
       scaleFactor = 20000;
       zoomFactor = 5;
-      baseSize = 0;
+      baseSize = 0.15;
     }
 
     return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor, baseSize };
@@ -71,7 +74,6 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
       const bounds = calculateBounds(locations);
       if (bounds) {
         const { center, zoom, scale, baseSize } = calculateMapSettings(bounds, width, height);
-        setInitialCenter(center);
         setCurrentCenter(center);
         setZoom(zoom);
         setInitialZoom(zoom);
@@ -84,6 +86,10 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
   }, [locations]);
 
   const markerScaleFactor = initialZoom > 0 ? initialZoom / zoom : 1;
+
+  // Log values on each render
+  useEffect(() => {
+  }, [zoom, baseSize, markerScaleFactor]);
 
   if (!mapReady || !currentCenter) {
     return <div className="map-loading">Loading map...</div>;
@@ -133,28 +139,36 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
                 <g
-                  fill={color}
-                  stroke={color}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  transform={`scale(${((2 + baseSize) / 10) * markerScaleFactor}) translate(-12, -15)`}
-                  className="marker-icon"
+                  transform={`scale(${baseSize * markerScaleFactor})`}
+                  className="marker-wrapper"
                 >
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+                  {/* Icon group - centered at (0,0) */}
+                  <g
+                    fill={color}
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    transform="translate(-12, -15)"
+                    className="marker-icon"
+                  >
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+                  </g>
+
+                  {/* Text below marker */}
+                  <text
+                    className="marker-text"
+                    textAnchor="middle"
+                    x={0}
+                    y={20}  // Push text below icon
+                    fill={color}
+                    fontWeight="bold"
+                  >
+                    {site.name}
+                  </text>
                 </g>
-                <text
-                  textAnchor="middle"
-                  x={0}
-                  y={4 + baseSize}
-                  fontSize={(3 + baseSize) * markerScaleFactor}
-                  fill={color}
-                  fontWeight="bold"
-                  className="marker-text"
-                >
-                  {site.name}
-                </text>
               </Marker>
+
             );
           })}
         </ZoomableGroup>
