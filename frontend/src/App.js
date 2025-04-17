@@ -31,7 +31,7 @@ function App() {
   return (
     <div className="app-container">
       <MapComponent locations={locations} onSiteClick={handleSiteClick} apps={apps} />
-      {isPanelOpen && selectedSite && <AppStatusPanel site={selectedSite} apps={apps} />}
+      {isPanelOpen && selectedSite && <AppStatusPanel site={selectedSite} apps={apps} onClose={() => setIsPanelOpen(false)} />}
     </div>
   );
 }

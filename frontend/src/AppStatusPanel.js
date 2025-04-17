@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 
-export const AppStatusPanel = ({ site, apps }) => {
+export const AppStatusPanel = ({ site, apps, onClose }) => {
   const panelRef = useRef(null);
   const [filteredApps, setFilteredApps] = useState([]);
 
@@ -45,6 +45,15 @@ export const AppStatusPanel = ({ site, apps }) => {
   return (
     <div className="status-panel" ref={panelRef}>
       <div className="resize-handle"></div>
+      {/* Add close button */}
+      <button
+        className="close-button"
+        onClick={() => {
+          if (typeof onClose === "function") onClose();
+        }}
+      >
+        &times;
+      </button>
       <h2>{site.name}</h2>
       <ul>
         {filteredApps.map((app) => (
