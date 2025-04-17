@@ -17,7 +17,7 @@
 
 ## 📁 Project Structure
 
-```
+```text
 .github/       - GitHub Actions workflows for CI/CD  
 backend/       - Go-based backend server  
 config/        - Configuration management  
@@ -82,7 +82,7 @@ helm upgrade site-availability chart/ -f chart/values.yaml
 
 ## ⚙️ Configuration
 
-### Backend
+### Backend Configuration
 
 The backend reads configuration from `config.yaml`.  
 Example:
@@ -186,4 +186,4 @@ Contributions are welcome! Please open an issue or submit a pull request.
 ## 📬 Contact
 
 For questions or support, please contact:  
-**your-email@example.com**
+[**your-email@example.com**](mailto:your-email@example.com)

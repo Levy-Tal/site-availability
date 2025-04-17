@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 
 const INITIAL_ZOOM = 1;
-const MAX_ZOOM = 8;
 const MIN_SCALE = 250;
-const MAX_SCALE = 3000;
+
 
 export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const geoUrl = "/data/countries-50m.json";
