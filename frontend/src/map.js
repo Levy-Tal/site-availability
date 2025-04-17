@@ -7,10 +7,12 @@ const MIN_SCALE = 250;
 export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const geoUrl = "/data/countries-50m.json";
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
-  const [center, setCenter] = useState([0, 0]);
   const [scale, setScale] = useState(MIN_SCALE);
-  const [loading, setLoading] = useState(true);
   const [baseSize, setBaseSize] = useState(0);
+  const [initialZoom, setInitialZoom] = useState(INITIAL_ZOOM);
+  const [mapReady, setMapReady] = useState(false);
+  const [initialCenter, setInitialCenter] = useState([0, 0]);
+  const [currentCenter, setCurrentCenter] = useState(null);
   const hasInitialized = useRef(false);
 
   const calculateBounds = (locations) => {
@@ -69,24 +71,36 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
       const bounds = calculateBounds(locations);
       if (bounds) {
         const { center, zoom, scale, baseSize } = calculateMapSettings(bounds, width, height);
-        setCenter(center);
+        setInitialCenter(center);
+        setCurrentCenter(center);
         setZoom(zoom);
+        setInitialZoom(zoom);
         setScale(scale);
         setBaseSize(baseSize);
         hasInitialized.current = true;
-        setLoading(false);
+        setMapReady(true);
       }
     }
   }, [locations]);
 
-  if (loading) {
+  const markerScaleFactor = initialZoom > 0 ? initialZoom / zoom : 1;
+
+  if (!mapReady || !currentCenter) {
     return <div className="map-loading">Loading map...</div>;
   }
 
   return (
     <div id="map-container">
       <ComposableMap projectionConfig={{ scale }}>
-        <ZoomableGroup center={center} zoom={zoom}>
+        <ZoomableGroup
+          zoom={zoom}
+          center={currentCenter}
+          maxZoom={8}
+          onMoveEnd={({ coordinates, zoom: currentZoom }) => {
+            setCurrentCenter(coordinates);
+            setZoom(currentZoom);
+          }}
+        >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
               geographies.map((geo) => (
@@ -118,23 +132,28 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
-                <text
-                  x={0}
-                  y={-(2 + baseSize)}
+                <g
                   fill={color}
-                  fontSize={3 + baseSize}
+                  stroke={color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  transform={`scale(${((2 + baseSize) / 10) * markerScaleFactor}) translate(-12, -15)`}
+                  className="marker-icon"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+                </g>
+                <text
                   textAnchor="middle"
+                  x={0}
+                  y={4 + baseSize}
+                  fontSize={(3 + baseSize) * markerScaleFactor}
+                  fill={color}
                   fontWeight="bold"
                   className="marker-text"
                 >
                   {site.name}
                 </text>
-                <circle
-                  r={1 + baseSize}
-                  fill={color}
-                  opacity={0.8}
-                  className="marker-circle"
-                />
               </Marker>
             );
           })}
