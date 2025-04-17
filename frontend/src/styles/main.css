@@ -6,20 +6,19 @@
 }
 
 body {
-  font-family: 'Roboto', sans-serif; /* Updated to modern font */
-  background-color: #2d2d2d;
+  font-family: 'Roboto', sans-serif;
+  background-color: #1e1e1e;
   color: #fff;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  position: relative;
   overflow: hidden;
 }
 
 #root {
-  width: 100%;  /* Take up full width of the viewport */
-  height: 100%; /* Take up full height of the viewport */
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -42,71 +41,76 @@ body {
   height: 100%;
   padding: 20px;
   border-radius: 8px 0 0 8px;
-  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
-  background-color: #D6D6DA; /* Retained original color */
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.3);
+  background-color: #f5f5f5;
   color: #333;
   overflow-y: auto;
+  z-index: 1000;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
 }
 
 .status-panel h2 {
   margin-bottom: 20px;
-  font-size: 18px; /* Modernized text size */
+  font-size: 18px;
   font-weight: bold;
-  color: #FF9800; /* Amber color */
+  color: #000;
   font-family: 'Roboto', sans-serif;
 }
 
 .status-panel ul {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .status-panel li {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #D6D6DA;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background-color: #e0e0e0;
+  transition: background-color 0.2s ease;
 }
 
-.status-panel li:last-child {
-  border-bottom: none;
+.status-panel li:hover {
+  background-color: #d5d5d5;
 }
 
 .status-panel .app-name {
   font-weight: bold;
-  font-size: 14px;
-  color: #333; /* Dark gray color */
+  font-size: 15px;
+  color: #333;
   font-family: 'Roboto', sans-serif;
+  margin-right: 10px;
+  flex-shrink: 1;
 }
 
 .status-panel .status-indicator {
   display: inline-block;
-  padding: 5px 10px;
-  border-radius: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
   font-weight: bold;
   font-size: 12px;
   color: #fff;
   font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.status-panel .status-up {
-  background-color: #4CAF50; /* Green for up */
+.status-up {
+  background-color: #4caf50;
 }
 
-.status-panel .status-down {
-  background-color: #F44336; /* Red for down */
+.status-down {
+  background-color: #f44336;
 }
 
-.status-panel .status-unavailable {
-  background-color: #FF9800; /* Orange for unavailable */
-  color: #fff; /* Ensure text color is white */
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-weight: bold;
-  font-size: 12px;
-  display: inline-block; /* Ensure it behaves like a button */
-  text-align: center;
+.status-unavailable {
+  background-color: #ff9800;
 }
 
 .status-panel .resize-handle {
@@ -119,32 +123,11 @@ body {
   z-index: 1;
 }
 
-.status {
-  display: flex;
-  align-items: center;
-}
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-
-.green-dot {
-  background-color: #4CAF50; /* Green for up status */
-}
-
-.red-dot {
-  background-color: #F44336; /* Red for down status */
-}
-
 #map-container > * {
   width: 100%;
   height: 100%;
 }
 
-/* Ensuring the React Simple Maps takes up the full space */
 .react-simple-maps {
   width: 100%;
   height: 100%;

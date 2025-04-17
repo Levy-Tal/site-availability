@@ -5,7 +5,7 @@ export const AppStatusPanel = ({ site, apps }) => {
   const [filteredApps, setFilteredApps] = useState([]);
 
   useEffect(() => {
-    setFilteredApps([]); // Clear apps before setting new ones
+    setFilteredApps([]);
     setTimeout(() => {
       setFilteredApps(apps.filter((app) => app.location === site.name));
     }, 0);
@@ -43,24 +43,13 @@ export const AppStatusPanel = ({ site, apps }) => {
   }, []);
 
   return (
-    <div className="status-panel" ref={panelRef} style={{ fontFamily: "'Roboto', sans-serif", fontSize: "14px", color: "#333" }}>
+    <div className="status-panel" ref={panelRef}>
       <div className="resize-handle"></div>
-      <h2 style={{ fontFamily: "'Roboto', sans-serif", fontWeight: "bold", color: "#000", fontSize: "18px" }}>
-        {site.name}
-      </h2>
+      <h2>{site.name}</h2>
       <ul>
         {filteredApps.map((app) => (
-          <li key={app.name} style={{ marginBottom: "10px" }}>
-            <div
-              className="app-name"
-              style={{
-                fontFamily: "'Roboto', sans-serif",
-                fontWeight: "bold",
-                color: "#333",
-              }}
-            >
-              {app.name}
-            </div>
+          <li key={app.name}>
+            <div className="app-name">{app.name}</div>
             <div
               className={`status-indicator ${
                 app.status === "up"
@@ -69,12 +58,6 @@ export const AppStatusPanel = ({ site, apps }) => {
                   ? "status-down"
                   : "status-unavailable"
               }`}
-              style={{
-                fontFamily: "'Roboto', sans-serif",
-                fontWeight: "bold",
-                fontSize: "12px",
-                color: "#fff", // Ensure text color is white
-              }}
             >
               {app.status === "up"
                 ? "Up"

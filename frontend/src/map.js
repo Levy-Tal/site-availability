@@ -4,7 +4,6 @@ import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "re
 const INITIAL_ZOOM = 1;
 const MIN_SCALE = 250;
 
-
 export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const geoUrl = "/data/countries-50m.json";
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
@@ -31,64 +30,75 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
     const centerLon = (bounds.minLon + bounds.maxLon) / 2;
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
     const lonRange = bounds.maxLon - bounds.minLon;
-  
+
     let scaleFactor, zoomFactor, baseSize;
-  
-    if (lonRange > 200) { //size of the world
+
+    if (lonRange > 200) {
       scaleFactor = 300;
       zoomFactor = 1;
       baseSize = 1;
-    } else if (lonRange > 50) { // size of continent 
+    } else if (lonRange > 50) {
       scaleFactor = 400;
       zoomFactor = 3;
       baseSize = 1;
-    } else if (lonRange > 1) { //size of big countries
+    } else if (lonRange > 1) {
       scaleFactor = 500;
       zoomFactor = 3;
       baseSize = 1;
-    } else if (lonRange > 0.5) { //size of small countries
+    } else if (lonRange > 0.5) {
       scaleFactor = 1500;
       zoomFactor = 5;
       baseSize = 0;
-    } else if (lonRange > 0.1) { //size of small countries
+    } else if (lonRange > 0.1) {
       scaleFactor = 3000;
       zoomFactor = 5;
       baseSize = 0;
-    } else { //size of small countries
+    } else {
       scaleFactor = 20000;
       zoomFactor = 5;
       baseSize = 0;
     }
-  
+
     console.log("width:", width);
     console.log("lonRange:", lonRange);
     console.log("scaleFactor:", scaleFactor);
     console.log("zoomFactor:", zoomFactor);
-  
-    return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor ,baseSize: baseSize};
+
+    return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor, baseSize };
   };
-  
 
   useEffect(() => {
     if (locations.length > 0 && !hasInitialized.current) {
       const width = window.innerWidth;
       const height = window.innerHeight;
       const bounds = calculateBounds(locations);
-      const base = 0;
       if (bounds) {
-        const { center, zoom, scale ,baseSize} = calculateMapSettings(bounds, width, height , base);
+        const { center, zoom, scale, baseSize } = calculateMapSettings(bounds, width, height);
         setCenter(center);
         setZoom(zoom);
         setScale(scale);
         setBaseSize(baseSize);
         hasInitialized.current = true;
-        setLoading(false); // Show the map only after initialization
+        setLoading(false);
       }
     }
   }, [locations]);
 
   if (loading) {
-    return <div style={{ width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>Loading map...</div>;
+    return (
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: "20px",
+        }}
+      >
+        Loading map...
+      </div>
+    );
   }
 
   return (
@@ -117,12 +127,12 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             const anyAppUnavailable = appsInSite.some((app) => app.status === "unavailable");
 
             const color = allAppsUp
-              ? "#4CAF50" // Green
+              ? "#4CAF50"
               : anyAppDown
-              ? "#F44336" // Red
+              ? "#F44336"
               : anyAppUnavailable
-              ? "#FF9800" // Orange
-              : "#D6D6DA"; // Default
+              ? "#FF9800"
+              : "#D6D6DA";
 
             return (
               <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
@@ -133,13 +143,11 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                   fontSize={3 + baseSize}
                   textAnchor="middle"
                   fontWeight="bold"
-                  style={{
-                    cursor: "pointer",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   {site.name}
                 </text>
-                <circle r={1+baseSize} fill={color} opacity={0.8} style={{ transition: "all 0.3s ease" }} />
+                <circle r={1 + baseSize} fill={color} opacity={0.8} style={{ transition: "all 0.3s ease" }} />
               </Marker>
             );
           })}
