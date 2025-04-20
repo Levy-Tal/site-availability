@@ -1,14 +1,14 @@
 scrape_interval: 10s
 locations:
-#- name: Hadera
-#  latitude: 32.446235
-#  longitude: 34.903852
-#- name: Jerusalem
-#  latitude: 31.782904
-#  longitude: 35.214774
-#- name: Beer Sheva
-#  latitude: 31.245381
-#  longitude: 34.788745
+- name: Hadera
+  latitude: 32.446235
+  longitude: 34.903852
+- name: Jerusalem
+  latitude: 31.782904
+  longitude: 35.214774
+- name: Beer Sheva
+  latitude: 31.245381
+  longitude: 34.788745
 - name: Yona
   latitude: 32.31443
   longitude: 34.92621
@@ -49,26 +49,26 @@ apps:
   location: Hadera
   metric: up{instance="app:8080", job="app"}
   prometheus: http://prometheus:9090/
-#- name: app3
-#  location: Jerusalem
-#  metric: up{instance="localhost:9090", job="prometheus"}
-#  prometheus: http://prometheus:9090/
-#- name: app4
-#  location: Beer Sheva
-#  metric: up{instance="app:8080", job="app"}
-#  prometheus: http://prometheus:9090/
-#- name: app2
-#  location: Hadera
-#  metric: up{instance="app:8080", job="app"}
-#  prometheus: http://prometheusss:9090/
-#- name: app5
-#  location: Natanya
-#  metric: 1 - up{instance="localhost:9090", job="prometheus"}
-#  prometheus: http://prometheus:9090/
-#- name: app6
-#  location: Beer Sheva
-#  metric: up{instance="app:8080", job="app"}
-#  prometheus: http://prometheus:9090/
+- name: app3
+  location: Jerusalem
+  metric: up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheus:9090/
+- name: app4
+  location: Beer Sheva
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheus:9090/
+- name: app2
+  location: Hadera
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheusss:9090/
+- name: app5
+  location: Natanya
+  metric: 1 - up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheus:9090/
+- name: app6
+  location: Beer Sheva
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheus:9090/
 - name: app7
   location: Yona
   metric: 1 - up{instance="localhost:9090", job="prometheus"}

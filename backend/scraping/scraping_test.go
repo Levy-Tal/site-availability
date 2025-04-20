@@ -80,8 +80,8 @@ func TestCheckAppStatus_Error(t *testing.T) {
 
 	status := CheckAppStatus(app, mockChecker)
 
-	if status.Status != "down" {
-		t.Errorf("Expected status 'down' on error, but got %s", status.Status)
+	if status.Status != "unavailable" {
+		t.Errorf("Expected status 'unavailable' on error, but got %s", status.Status)
 	}
 }
 
