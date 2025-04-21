@@ -72,7 +72,7 @@ function App() {
           onClick={() => window.open(docsInfo.docs_url, "_blank")}
           title={docsInfo.docs_title}
         >
-          <span className="docs-tooltip">{docsInfo.docs_title}</span>
+          
           <FaBook size={24} />
         </div>
       )}
