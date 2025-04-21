@@ -3,6 +3,8 @@ import { MapComponent } from "./map";
 import { AppStatusPanel } from "./AppStatusPanel";
 import { fetchAppStatuses } from "./api/appStatusAPI";
 import { fetchScrapeInterval } from "./api/scrapeIntervalAPI";
+import { fetchDocs } from "./api/docsAPI";
+import { FaBook } from "react-icons/fa"; // Import the docs icon
 import "./styles/main.css";
 
 function App() {
@@ -11,6 +13,7 @@ function App() {
   const [selectedSite, setSelectedSite] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [scrapeInterval, setScrapeInterval] = useState(null);
+  const [docsInfo, setDocsInfo] = useState({ docs_title: "", docs_url: "" });
 
   // Fetch app statuses from the server
   const refreshAppStatuses = async () => {
@@ -24,12 +27,15 @@ function App() {
   };
 
   useEffect(() => {
-    // Fetch scrape interval and app statuses on initial load
+    // Fetch scrape interval, app statuses, and docs info on initial load
     const initialize = async () => {
       try {
         const intervalData = await fetchScrapeInterval();
         setScrapeInterval(intervalData.scrape_interval_ms); // Set scrape interval in ms
         await refreshAppStatuses(); // Fetch initial app statuses
+
+        const docsData = await fetchDocs();
+        setDocsInfo(docsData); // Set docs info
       } catch (error) {
         console.error("Error initializing app:", error);
       }
@@ -60,6 +66,16 @@ function App() {
 
   return (
     <div className="app-container">
+      {docsInfo.docs_url && (
+        <div
+          className="docs-button"
+          onClick={() => window.open(docsInfo.docs_url, "_blank")}
+          title={docsInfo.docs_title}
+        >
+          <span className="docs-tooltip">{docsInfo.docs_title}</span>
+          <FaBook size={24} />
+        </div>
+      )}
       <MapComponent locations={locations} onSiteClick={handleSiteClick} apps={apps} />
       {isPanelOpen && selectedSite && (
         <AppStatusPanel

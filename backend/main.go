@@ -91,6 +91,10 @@ func setupRoutes() {
 		logging.Logger.Debug("Handling /api/scrape-interval request")
 		handlers.GetScrapeInterval(w, r, cfg)
 	})
+	http.HandleFunc("/api/docs", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /api/docs request")
+		handlers.GetDocs(w, r, cfg)
+	})
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		logging.Logger.Debug("Handling /healthz probe")
 		livenessProbe(w, r)

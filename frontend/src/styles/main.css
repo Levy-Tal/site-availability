@@ -7,7 +7,7 @@
 
 body {
   font-family: sans-serif;
-  background-color: #333333;
+  background-color: #2d2d2d;
   color: #F5F5F5;
   display: flex;
   justify-content: center;
@@ -107,7 +107,7 @@ circle {
 .status-panel h2 {
   font-size: 24px; /* Larger for emphasis */
   font-weight: 700; /* Bolder for hierarchy */
-  color: #1a202c; /* Darker for better contrast */
+  color: #2d2d2d; /* Darker for better contrast */
   margin: 0; /* Remove bottom margin */
   position: absolute;
   top: 24px;
@@ -129,7 +129,7 @@ circle {
   border-radius: 6px;
   margin-bottom: 12px; 
   background-color: #f1f5f9;
-  border: 2px solid #000000;
+  border: 2px solid #2d2d2d;
   transition: background-color 0.2s ease;
 }
 
@@ -155,7 +155,7 @@ circle {
   font-weight: 500;
   font-size: 14px;
   color: #fff;
-  border: 2px solid #000000;
+  border: 2px solid #2d2d2d;
   font-family: sans-serif;
   white-space: nowrap;
   flex-shrink: 0;
@@ -256,7 +256,7 @@ circle {
   padding: 10px; /* Match the padding of the sort button */
   background-color: #f1f5f9; /* Same background as the sort button */
   border-radius: 8px; /* Same border radius as the sort button */
-  border: 2px solid #000000; /* Explicitly set black border */
+  border: 2px solid #2d2d2d; /* Explicitly set black border */
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
   margin-right: 16px; /* Add spacing between the search bar and sort button */
 }
@@ -296,7 +296,7 @@ circle {
   background-color: #f1f5f9;
   border-radius: 8px;
   padding: 12px;
-  border: 2px solid #000000; /* Match the search bar border */
+  border: 2px solid #2d2d2d; /* Match the search bar border */
   transition: background-color 0.2s ease, transform 0.2s ease;
   flex-shrink: 0; /* Prevent the sort button from shrinking */
 }
@@ -353,4 +353,50 @@ circle {
 .close-button:focus {
   outline: none;
  /* box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); /* Accessible focus ring */
+}
+
+.docs-button {
+  position: fixed; /* Change from absolute to fixed */
+  top: 24px;
+  left: 24px;
+  color:#2d2d2d; /* Icon color */
+  background-color: #f1f5f9; /* Light background */
+  border-radius: 50%; /* Circular */
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000; /* Ensure it appears above other elements */
+}
+
+.docs-button:hover {
+  transform: scale(1.3); /* Slight zoom on hover */
+  background-color: #e2e8f0; /* Slightly darker background */
+}
+
+.docs-tooltip {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #2d2d2d;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 1001; /* Ensure tooltip appears above other elements */
+}
+
+.docs-button:hover .docs-tooltip {
+  opacity: 1;
+  visibility: visible;
 }

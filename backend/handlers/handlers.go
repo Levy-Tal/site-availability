@@ -140,3 +140,23 @@ func GetScrapeInterval(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 
 	logging.Logger.WithField("scrape_interval_ms", intervalInMs).Debug("Scrape interval response sent")
 }
+
+func GetDocs(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /api/docs request")
+
+	// Create the response
+	response := map[string]string{
+		"docs_title": cfg.DocsTitle,
+		"docs_url":   cfg.DocsURL,
+	}
+
+	// Encode the response as JSON
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode docs response")
+		http.Error(w, "Failed to encode docs", http.StatusInternalServerError)
+		return
+	}
+
+	logging.Logger.WithField("docs response:", response).Debug("Docs response sent")
+}
