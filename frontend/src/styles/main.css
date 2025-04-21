@@ -1,3 +1,4 @@
+/* Global Styles */
 * {
   margin: 0;
   padding: 0;
@@ -5,14 +6,14 @@
 }
 
 body {
-  font-family: sans-serif; 
-  background-color: #333333; 
-  color: #F5F5F5; 
+  font-family: sans-serif;
+  background-color: #333333;
+  color: #F5F5F5;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  overflow: hidden;
+ /* overflow: hidden; */
 }
 
 #root {
@@ -21,123 +22,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.app-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Status Panel */
-.status-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 25%;
-  height: 100%;
-  padding: 20px;
-  border-radius: 8px 0 0 8px;
-  background-color: #F5F5F5;
-  color: #333333;
-  overflow-y: auto;
-  z-index: 1000;
-  font-family: sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  letter-spacing: 0.02em;
-}
-
-.status-panel h2 {
-  margin-bottom: 20px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #333333;
-}
-
-.status-panel ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.status-panel li {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  background-color: #E0E0E0;
-  transition: background-color 0.2s ease;
-}
-
-.status-panel li:hover {
-  background-color: #D5D5D5;
-}
-
-.status-panel .app-name {
-  font-weight: 400;
-  font-size: 16px;
-  color: #333333;
-  font-family: sans-serif;
-  margin-right: 10px;
-  flex-shrink: 1;
-}
-
-.status-panel .status-indicator {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-weight: 500;
-  font-size: 14px;
-  color: #fff;
-  font-family: sans-serif;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.status-up {
-  background-color: #10B981;
-}
-
-.status-down {
-  background-color: #EF4444;
-}
-
-.status-unavailable {
-  background-color: #F59E0B;
-}
-
-.status-panel .resize-handle {
-  position: absolute;
-  top: 0;
-  left: -5px;
-  width: 10px;
-  height: 100%;
-  cursor: ew-resize;
-  z-index: 1;
-}
-
-.close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 30px;
-  font-weight: bold;
-  color: #333333;
-  cursor: pointer;
-  z-index: 1001;
-}
-
-.close-button:hover {
-  color: #EF4444;
 }
 
 #map-container {
@@ -170,7 +54,298 @@ body {
   cursor: pointer;
 }
 
+.marker-wrapper {
+  transition: transform 0.2s ease, z-index 0.2s ease;
+}
+
+circle {
+  transition: filter 0.2s ease;
+}
+
 .marker-icon {
   cursor: pointer;
   transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.app-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Status Panel */
+.status-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 25%;
+  height: 100%;
+  padding: 24px; /* Increased padding for a more spacious feel */
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px 0 0 12px;
+  overflow-y: auto;
+  z-index: 1000;
+  font-family: sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: #333;
+  animation: slideIn 0.3s ease-out;
+}
+
+.status-panel h2 {
+  font-size: 24px; /* Larger for emphasis */
+  font-weight: 700; /* Bolder for hierarchy */
+  color: #1a202c; /* Darker for better contrast */
+  margin: 0; /* Remove bottom margin */
+  position: absolute;
+  top: 24px;
+  left: 24px;
+}
+
+.status-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.status-panel li {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+ /* margin-bottom: 12px; */
+  background-color: #f1f5f9;
+  border: 2px solid #000000;
+  transition: background-color 0.2s ease;
+}
+
+.status-panel li:hover {
+  background-color: #f8fafc; /* Subtle hover state */
+  transform: translateY(-2px); /* Lift effect */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Enhanced shadow on hover */
+}
+
+.status-panel .app-name {
+  font-weight: 400;
+  font-size: 16px;
+  color: #333333;
+  font-family: sans-serif;
+  margin-right: 10px;
+  flex-shrink: 1;
+}
+
+.status-panel .status-indicator {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #fff;
+  border: 2px solid #000000;
+  font-family: sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.status-up {
+  background-color: #34d399; /* Softer green */
+  color: #ffffff;
+}
+
+.status-down {
+  background-color: #f87171; /* Softer red */
+  color: #ffffff;
+}
+
+.status-unavailable {
+  background-color: #fbbf24; /* Softer amber */
+  color: #ffffff;
+}
+
+.status-panel .resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  background-color: #e2e8f0; /* Visible handle */
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+  cursor: col-resize;
+}
+
+.status-panel .resize-handle:hover {
+  background-color: #cbd5e0; /* Darker on hover */
+}
+
+.close-button {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background-color: #f1f5f9; /* Light background */
+  border-radius: 50%; /* Circular */
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.close-button:hover {
+  /* background-color: #f87171; /* Red background on hover */
+  /* color: #ffffff; /* White icon */
+  transform: scale(1.05); /* Subtle zoom on hover */
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sort-options {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search Bar */
+.search-sort-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 72px; /* Add proper spacing below the header */
+  margin-bottom: 24px; /* Add spacing below the search bar and sort button */
+  padding: 0; /* Remove padding to align with the apps list */
+}
+
+.search-bar {
+  flex-grow: 1; /* Allow the search bar to grow and shrink dynamically */
+  max-width: calc(100% - 60px); /* Prevent the search bar from overlapping the sort button */
+  display: flex;
+  align-items: center;
+  padding: 10px; /* Match the padding of the sort button */
+  background-color: #f1f5f9; /* Same background as the sort button */
+  border-radius: 8px; /* Same border radius as the sort button */
+  border: 2px solid #000000; /* Explicitly set black border */
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  margin-right: 16px; /* Add spacing between the search bar and sort button */
+}
+
+.search-bar:hover {
+  background-color: #e2e8f0;
+  transform: scale(1.01); /* Subtle zoom on hover */
+}
+
+.search-bar:focus-within {
+  background-color: #ffffff; /* Brighten on focus */
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2); /* Focus ring */
+}
+
+.search-icon {
+  color: #718096;
+  margin-right: 8px; /* Add spacing between the icon and input */
+}
+
+.search-input {
+  flex: 1; /* Allow the input to take up available space */
+  border: none; /* Remove default border */
+  background: none; /* Remove background */
+  font-weight: 400;
+  padding: 2px;
+  color: #2d3748;
+  font-size: 14px;
+  outline: none; /* Remove focus outline */
+}
+
+.search-input::placeholder {
+  color: #a0aec0; /* Lighter placeholder */
+}
+
+/* Sort Button */
+.sort-icon-button {
+  background-color: #f1f5f9;
+  border-radius: 8px;
+  padding: 12px;
+  border: 2px solid #000000; /* Match the search bar border */
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0; /* Prevent the sort button from shrinking */
+}
+.sort-icon-button:hover {
+  
+  transform: scale(1.05); /* Subtle zoom on hover */
+}
+/* Sort Options */
+.sort-options {
+  position: absolute;
+  top: calc(100% + 8px);  /*Increase spacing below the sort button */
+  right: 0;
+  background-color: transparent;
+ /* border: 2px solid #000000;  Match the black border style */
+  border-radius: 10px; /* Softer corners */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow for depth */
+  list-style: none;
+  padding: 8px 0; /* Consistent padding */
+  margin: 0;
+  z-index: 2000; /* Ensure it appears above other elements */
+  min-width: 220px; /* Ensure enough width for longer text */
+}
+
+.sort-options li {
+  padding: 12px 20px; /* More padding for a spacious feel */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; /* Modern font */
+  font-size: 14px; /* Readable size */
+  font-weight: 500; /* Medium weight for clarity */
+  color: #1f2937; /* Darker text for contrast */
+  cursor: pointer; /* Indicate interactivity */
+  transition: background-color 0.2s ease, transform 0.2s ease; /* Smooth transitions */
+}
+
+.sort-options li:hover {
+   /* Light gray on hover */
+  transform: translateX(4px); /* Subtle shift to the right for a playful effect */
+}
+
+.sort-options li.selected {
+  /* Highlight selected option */
+  font-weight: 700; /* Make selected option bold */
+}
+
+.sort-options li .checkmark {
+  margin-left: 8px; /* Add spacing between text and checkmark */
+  color: #34d399; /* Green checkmark for selected option */
+}
+
+.sort-dropdown {
+  position: relative;
+}
+/* Focus States */
+.search-input:focus,
+.sort-icon-button:focus,
+.close-button:focus {
+  outline: none;
+ /* box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); /* Accessible focus ring */
 }

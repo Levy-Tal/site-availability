@@ -12,6 +12,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
   const [initialZoom, setInitialZoom] = useState(INITIAL_ZOOM);
   const [mapReady, setMapReady] = useState(false);
   const [currentCenter, setCurrentCenter] = useState(null);
+  const [hoveredMarker, setHoveredMarker] = useState(null);
   const hasInitialized = useRef(false);
 
   const calculateBounds = (locations) => {
@@ -87,10 +88,6 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
   const markerScaleFactor = initialZoom > 0 ? initialZoom / zoom : 1;
 
-  // Log values on each render
-  useEffect(() => {
-  }, [zoom, baseSize, markerScaleFactor]);
-
   if (!mapReady || !currentCenter) {
     return <div className="map-loading">Loading map...</div>;
   }
@@ -122,6 +119,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
               ))
             }
           </Geographies>
+
           {locations.map((site) => {
             const appsInSite = apps.filter((app) => app.location === site.name);
             const allAppsUp = appsInSite.every((app) => app.status === "up");
@@ -136,17 +134,22 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
               ? "#F59E0B"
               : "#D6D6DA";
 
+            const isHovered = hoveredMarker === site.name;
+            const markerScale = baseSize * markerScaleFactor * (isHovered ? 1.5 : 1);
+
             return (
-              <Marker key={site.name} coordinates={[site.longitude, site.latitude]} onClick={() => onSiteClick(site)}>
-                <g
-                  transform={`scale(${baseSize * markerScaleFactor})`}
-                  className="marker-wrapper"
-                >
-                  {/* Icon group - centered at (0,0) */}
+              <Marker
+                key={site.name}
+                coordinates={[site.longitude, site.latitude]}
+                onClick={() => onSiteClick(site)}
+                onMouseEnter={() => setHoveredMarker(site.name)}
+                onMouseLeave={() => setHoveredMarker(null)}
+              >
+                <g transform={`scale(${markerScale})`} className="marker-wrapper">
                   <g
                     fill={color}
-                    stroke={color}
-                    strokeWidth="2"
+                    stroke="#000000"
+                    strokeWidth="0.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     transform="translate(-12, -15)"
@@ -154,21 +157,22 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                   >
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
                   </g>
-
-                  {/* Text below marker */}
                   <text
                     className="marker-text"
                     textAnchor="middle"
                     x={0}
-                    y={20}  // Push text below icon
+                    y={24}
                     fill={color}
-                    fontWeight="bold"
+                    stroke="#000000"
+                    strokeWidth="0.5"  
+                    fontWeight="900"  
+                    fontSize="22px"
+
                   >
                     {site.name}
                   </text>
                 </g>
               </Marker>
-
             );
           })}
         </ZoomableGroup>
