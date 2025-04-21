@@ -55,7 +55,13 @@ body {
 }
 
 .marker-wrapper {
-  transition: transform 0.2s ease, z-index 0.2s ease;
+  position: relative;
+  z-index: 1; /* Base z-index for all markers */
+  transition: z-index 0ms; /* Remove transition for z-index */
+}
+
+.marker-wrapper:hover {
+  z-index: 1000; /* Higher z-index when hovered */
 }
 
 circle {
@@ -121,7 +127,7 @@ circle {
   align-items: center;
   padding: 12px;
   border-radius: 6px;
- /* margin-bottom: 12px; */
+  margin-bottom: 12px; 
   background-color: #f1f5f9;
   border: 2px solid #000000;
   transition: background-color 0.2s ease;
@@ -306,7 +312,6 @@ circle {
   background-color: transparent;
  /* border: 2px solid #000000;  Match the black border style */
   border-radius: 10px; /* Softer corners */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow for depth */
   list-style: none;
   padding: 8px 0; /* Consistent padding */
   margin: 0;

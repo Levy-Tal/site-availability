@@ -49,27 +49,27 @@ apps:
   location: Hadera
   metric: up{instance="app:8080", job="app"}
   prometheus: http://prometheus:9090/
-#- name: app3
-#  location: Hadera
-#  metric: up{instance="localhost:9090", job="prometheus"}
-#  prometheus: http://prometheus:9090/
-#- name: app4
-#  location: Hadera
-#  metric: up{instance="app:8080", job="app"}
-#  prometheus: http://prometheus:9090/
-#- name: app2
-#  location: Hadera
-#  metric: up{instance="app:8080", job="app"}
-#  prometheus: http://prometheusss:9090/
-#- name: app5
-#  location: Hadera
-#  metric: 1 - up{instance="localhost:9090", job="prometheus"}
-#  prometheus: http://prometheus:9090/
-#- name: app6
-#  location: Beer Sheva
-#  metric: up{instance="app:8080", job="app"}
-#  prometheus: http://prometheus:9090/
-#- name: app7
-#  location: Yona
-#  metric: 1 - up{instance="localhost:9090", job="prometheus"}
-#  prometheus: http://prometheusad:9090/
+- name: app3
+  location: Jerusalem
+  metric: up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheus:9090/
+- name: app4
+  location: Beer Sheva
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheus:9090/
+- name: app2
+  location: Hadera
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheusss:9090/
+- name: app5
+  location: Natanya
+  metric: 1 - up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheus:9090/
+- name: app6
+  location: Beer Sheva
+  metric: up{instance="app:8080", job="app"}
+  prometheus: http://prometheus:9090/
+- name: app7
+  location: Yona
+  metric: 1 - up{instance="localhost:9090", job="prometheus"}
+  prometheus: http://prometheusad:9090/

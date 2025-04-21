@@ -88,6 +88,15 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
   const markerScaleFactor = initialZoom > 0 ? initialZoom / zoom : 1;
 
+  const markerRefs = useRef([]);
+
+  const bringToFront = (index) => {
+    const markerGroup = markerRefs.current[index];
+    if (markerGroup && markerGroup.parentNode) {
+      markerGroup.parentNode.appendChild(markerGroup);
+    }
+  };
+
   if (!mapReady || !currentCenter) {
     return <div className="map-loading">Loading map...</div>;
   }
@@ -120,7 +129,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
             }
           </Geographies>
 
-          {locations.map((site) => {
+          {locations.map((site, index) => {
             const appsInSite = apps.filter((app) => app.location === site.name);
             const allAppsUp = appsInSite.every((app) => app.status === "up");
             const anyAppDown = appsInSite.some((app) => app.status === "down");
@@ -142,10 +151,13 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                 key={site.name}
                 coordinates={[site.longitude, site.latitude]}
                 onClick={() => onSiteClick(site)}
-                onMouseEnter={() => setHoveredMarker(site.name)}
+                onMouseEnter={() => {
+                  setHoveredMarker(site.name);
+                  bringToFront(index);
+                }}
                 onMouseLeave={() => setHoveredMarker(null)}
               >
-                <g transform={`scale(${markerScale})`} className="marker-wrapper">
+                <g ref={(el) => (markerRefs.current[index] = el)} transform={`scale(${markerScale})`} className="marker-wrapper">
                   <g
                     fill={color}
                     stroke="#000000"
@@ -167,7 +179,6 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                     strokeWidth="0.5"  
                     fontWeight="900"  
                     fontSize="22px"
-
                   >
                     {site.name}
                   </text>

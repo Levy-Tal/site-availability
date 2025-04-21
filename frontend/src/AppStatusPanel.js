@@ -3,92 +3,94 @@ import { FaSortAmountDownAlt, FaSearch } from "react-icons/fa";
 
 export const AppStatusPanel = ({ site, apps, onClose }) => {
   const panelRef = useRef(null);
+
   const [filteredApps, setFilteredApps] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("name-asc");
   const [showSortOptions, setShowSortOptions] = useState(false);
 
-  const handleSortChange = (order) => {
-    setSortOrder(order);
-    setShowSortOptions(false);
-  };
-
-  const handleOutsideClick = (e) => {
-    if (
-      panelRef.current &&
-      !panelRef.current.contains(e.target) &&
-      !e.target.closest(".sort-dropdown")
-    ) {
-      setShowSortOptions(false);
-    }
-  };
-
+  // Close sort dropdown on outside click
   useEffect(() => {
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
+    const handleOutsideClick = (e) => {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target) &&
+        !e.target.closest(".sort-dropdown")
+      ) {
+        setShowSortOptions(false);
+      }
     };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  // Filter and sort apps
   useEffect(() => {
     let filtered = apps.filter((app) => app.location === site.name);
 
     if (searchTerm) {
-      filtered = filtered.filter((app) =>
-        app.name.toLowerCase().startsWith(searchTerm.toLowerCase())
-      );
+      const lower = searchTerm.toLowerCase();
+      filtered = filtered.filter((app) => app.name.toLowerCase().startsWith(lower));
     }
 
-    filtered.sort((a, b) => {
-      if (sortOrder === "name-asc") {
-        return a.name.localeCompare(b.name);
-      } else if (sortOrder === "name-desc") {
-        return b.name.localeCompare(a.name);
-      } else if (sortOrder === "status-up") {
-        return a.status.localeCompare(b.status);
-      } else if (sortOrder === "status-down") {
-        return b.status.localeCompare(a.status);
-      }
-      return 0;
-    });
-
-    setFilteredApps(filtered);
-  }, [site, apps, searchTerm, sortOrder]);
-
-  useEffect(() => {
-    const panel = panelRef.current;
-    let isResizing = false;
-
-    const handleMouseDown = (e) => {
-      isResizing = true;
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+    const sortMethods = {
+      "name-asc": (a, b) => a.name.localeCompare(b.name),
+      "name-desc": (a, b) => b.name.localeCompare(a.name),
+      "status-up": (a, b) => a.status.localeCompare(b.status),
+      "status-down": (a, b) => b.status.localeCompare(a.status),
     };
 
-    const handleMouseMove = (e) => {
+    filtered.sort(sortMethods[sortOrder] || (() => 0));
+    setFilteredApps(filtered);
+  }, [apps, site, searchTerm, sortOrder]);
+
+  // Resizable panel
+  useEffect(() => {
+    const panel = panelRef.current;
+    const handle = panel?.querySelector(".resize-handle");
+
+    if (!handle) return;
+
+    let isResizing = false;
+
+    const onMouseMove = (e) => {
       if (isResizing) {
         const newWidth = window.innerWidth - e.clientX;
         panel.style.width = `${newWidth}px`;
       }
     };
 
-    const handleMouseUp = () => {
+    const onMouseUp = () => {
       isResizing = false;
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
     };
 
-    const resizeHandle = panel.querySelector(".resize-handle");
-    resizeHandle.addEventListener("mousedown", handleMouseDown);
-
-    return () => {
-      resizeHandle.removeEventListener("mousedown", handleMouseDown);
+    const onMouseDown = () => {
+      isResizing = true;
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
     };
+
+    handle.addEventListener("mousedown", onMouseDown);
+    return () => handle.removeEventListener("mousedown", onMouseDown);
   }, []);
+
+  const renderSortOption = (label, value) => (
+    <li
+      className={sortOrder === value ? "selected" : ""}
+      onClick={() => {
+        setSortOrder(value);
+        setShowSortOptions(false);
+      }}
+    >
+      {label} {sortOrder === value && <span className="checkmark">✔</span>}
+    </li>
+  );
 
   return (
     <div className="status-panel" ref={panelRef}>
-      <div className="resize-handle"></div>
+      <div className="resize-handle" />
       <button
         className="close-button"
         onClick={() => typeof onClose === "function" && onClose()}
@@ -96,7 +98,9 @@ export const AppStatusPanel = ({ site, apps, onClose }) => {
       >
         ×
       </button>
+
       <h2>{site.name}</h2>
+
       <div className="search-sort-container">
         <div className="search-bar">
           <FaSearch className="search-icon" aria-hidden="true" />
@@ -109,6 +113,7 @@ export const AppStatusPanel = ({ site, apps, onClose }) => {
             aria-label="Search applications"
           />
         </div>
+
         <div className="sort-dropdown">
           <button
             className="sort-icon-button"
@@ -119,57 +124,38 @@ export const AppStatusPanel = ({ site, apps, onClose }) => {
           </button>
           {showSortOptions && (
             <ul className="sort-options">
-              <li
-                className={sortOrder === "name-asc" ? "selected" : ""}
-                onClick={() => handleSortChange("name-asc")}
-              >
-                Name A-Z {sortOrder === "name-asc" && <span className="checkmark">✔</span>}
-              </li>
-              <li
-                className={sortOrder === "name-desc" ? "selected" : ""}
-                onClick={() => handleSortChange("name-desc")}
-              >
-                Name Z-A {sortOrder === "name-desc" && <span className="checkmark">✔</span>}
-              </li>
-              <li
-                className={sortOrder === "status-up" ? "selected" : ""}
-                onClick={() => handleSortChange("status-up")}
-              >
-                Status (Up-Unavailable-Down){" "}
-                {sortOrder === "status-up" && <span className="checkmark">✔</span>}
-              </li>
-              <li
-                className={sortOrder === "status-down" ? "selected" : ""}
-                onClick={() => handleSortChange("status-down")}
-              >
-                Status (Down-Unavailable-Up){" "}
-                {sortOrder === "status-down" && <span className="checkmark">✔</span>}
-              </li>
+              {renderSortOption("Name A-Z", "name-asc")}
+              {renderSortOption("Name Z-A", "name-desc")}
+              {renderSortOption("Status (Up-Unavailable-Down)", "status-up")}
+              {renderSortOption("Status (Down-Unavailable-Up)", "status-down")}
             </ul>
           )}
         </div>
       </div>
+
       <ul>
-        {filteredApps.map((app) => (
-          <li key={app.name}>
-            <div className="app-name">{app.name}</div>
-            <div
-              className={`status-indicator ${
-                app.status === "up"
-                  ? "status-up"
-                  : app.status === "down"
-                  ? "status-down"
-                  : "status-unavailable"
-              }`}
-            >
-              {app.status === "up"
-                ? "Up"
-                : app.status === "down"
-                ? "Down"
-                : "Unavailable"}
-            </div>
-          </li>
-        ))}
+        {filteredApps.map((app) => {
+          const statusClass =
+            app.status === "up"
+              ? "status-up"
+              : app.status === "down"
+              ? "status-down"
+              : "status-unavailable";
+
+          const label =
+            app.status === "up"
+              ? "Up"
+              : app.status === "down"
+              ? "Down"
+              : "Unavailable";
+
+          return (
+            <li key={app.name}>
+              <div className="app-name">{app.name}</div>
+              <div className={`status-indicator ${statusClass}`}>{label}</div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
