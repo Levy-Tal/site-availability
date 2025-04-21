@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MapComponent } from "./map";
 import { AppStatusPanel } from "./AppStatusPanel";
 import { fetchAppStatuses } from "./api/appStatusAPI";
+import { fetchScrapeInterval } from "./api/scrapeIntervalAPI";
 import "./styles/main.css";
 
 function App() {
@@ -9,15 +10,44 @@ function App() {
   const [apps, setApps] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [scrapeInterval, setScrapeInterval] = useState(null);
 
-  useEffect(() => {
-    const getData = async () => {
+  // Fetch app statuses from the server
+  const refreshAppStatuses = async () => {
+    try {
       const data = await fetchAppStatuses();
       setLocations(data.locations || []); // Fallback to an empty array if locations are null
       setApps(data.apps || []); // Fallback to an empty array if apps are null
+    } catch (error) {
+      console.error("Error refreshing app statuses:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch scrape interval and app statuses on initial load
+    const initialize = async () => {
+      try {
+        const intervalData = await fetchScrapeInterval();
+        setScrapeInterval(intervalData.scrape_interval_ms); // Set scrape interval in ms
+        await refreshAppStatuses(); // Fetch initial app statuses
+      } catch (error) {
+        console.error("Error initializing app:", error);
+      }
     };
-    getData();
+    initialize();
   }, []);
+
+  useEffect(() => {
+    if (scrapeInterval) {
+      // Set up periodic refresh of app statuses
+      const intervalId = setInterval(() => {
+        refreshAppStatuses();
+      }, scrapeInterval);
+
+      // Clean up interval on component unmount or when scrapeInterval changes
+      return () => clearInterval(intervalId);
+    }
+  }, [scrapeInterval]);
 
   const handleSiteClick = (site) => {
     if (selectedSite === site) {
