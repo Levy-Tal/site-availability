@@ -6,6 +6,7 @@ import (
 	"site-availability/config"
 	"site-availability/logging"
 	"sync"
+	"time"
 )
 
 type AppStatus struct {
@@ -108,4 +109,34 @@ func IsAppStatusCacheEmpty() bool {
 
 	logging.Logger.WithField("empty", empty).Debug("Checking if app status cache is empty")
 	return empty
+}
+
+func GetScrapeInterval(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /api/scrape-interval request")
+
+	// Parse the scrape_interval string into a time.Duration
+	duration, err := time.ParseDuration(cfg.ScrapeInterval)
+	if err != nil {
+		logging.Logger.WithError(err).Error("Invalid scrape_interval format")
+		http.Error(w, "Invalid scrape_interval format", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert the duration to milliseconds
+	intervalInMs := duration.Milliseconds()
+
+	// Create the response
+	response := map[string]int64{
+		"scrape_interval_ms": intervalInMs,
+	}
+
+	// Encode the response as JSON
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode scrape interval response")
+		http.Error(w, "Failed to encode scrape interval", http.StatusInternalServerError)
+		return
+	}
+
+	logging.Logger.WithField("scrape_interval_ms", intervalInMs).Debug("Scrape interval response sent")
 }
