@@ -107,6 +107,16 @@ func startBackgroundStatusFetcher() {
 	if err != nil {
 		logging.Logger.Fatalf("Failed to parse ScrapeInterval: %v", err)
 	}
+
+	scrapeTimeout, err := time.ParseDuration(cfg.ScrapeTimeout)
+	if err != nil {
+		logging.Logger.Warnf("Invalid ScrapeTimeout, using default 10s: %v", err)
+		scrapeTimeout = 10 * time.Second
+	}
+
+	// Pass scrapeTimeout to the scraping package
+	scraping.SetScrapeTimeout(scrapeTimeout)
+
 	logging.Logger.Infof("Starting background status fetcher with interval: %s", scrapeInterval)
 
 	go func() {

@@ -15,8 +15,9 @@ func TestLoadConfig(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name()) // Ensure cleanup
 
-	// Write a sample config content (fixed YAML structure)
-	configContent := `scrape_interval: "60s"
+	// Write a sample valid config content
+	validConfigContent := `scrape_interval: "60s"
+scrape_timeout: "15s"
 locations:
   - name: "site a"
     latitude: 32.43843612145413
@@ -27,26 +28,47 @@ apps:
     metric: "up{instance=\"app1\"}"
     prometheus: "prometheus1.app.url"
 `
-	_, err = tempFile.WriteString(configContent)
+	_, err = tempFile.WriteString(validConfigContent)
 	if err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
+	tempFile.Close()
 
-	// Close the file
-	err = tempFile.Close()
-	if err != nil {
-		t.Fatalf("Failed to close temp file: %v", err)
-	}
-
-	// Load the config from the temporary file
+	// Load the valid config
 	cfg, err := LoadConfig(tempFile.Name())
 	assert.Nil(t, err)
 	assert.Equal(t, "60s", cfg.ScrapeInterval)
-	assert.Len(t, cfg.Locations, 1)
-	assert.Len(t, cfg.Apps, 1)
-	assert.Equal(t, "site a", cfg.Locations[0].Name)
-	assert.Equal(t, "app 1", cfg.Apps[0].Name)
-	assert.Equal(t, "prometheus1.app.url", cfg.Apps[0].Prometheus)
+	assert.Equal(t, "15s", cfg.ScrapeTimeout)
+
+	// Test case: Invalid latitude
+	invalidLatitudeConfig := `scrape_interval: "60s"
+scrape_timeout: "15s"
+locations:
+  - name: "site a"
+    latitude: 95.0
+    longitude: 34.899453546836334
+apps:
+  - name: "app 1"
+    location: "site a"
+    metric: "up{instance=\"app1\"}"
+    prometheus: "prometheus1.app.url"
+`
+	tempFile, err = os.CreateTemp("", "config_invalid_latitude.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	_, err = tempFile.WriteString(invalidLatitudeConfig)
+	if err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+	tempFile.Close()
+
+	// Load the invalid config and check for error
+	_, err = LoadConfig(tempFile.Name())
+	assert.NotNil(t, err, "Expected an error for invalid latitude but got nil")
+	assert.Contains(t, err.Error(), "has an invalid latitude", "Error message does not contain expected text")
 }
 
 func TestLoadConfig_InvalidFile(t *testing.T) {

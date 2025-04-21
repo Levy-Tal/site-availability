@@ -18,13 +18,24 @@ import (
 
 var customHTTPClient *http.Client
 
+var scrapeTimeout = 10 * time.Second // Default timeout
+
+func SetScrapeTimeout(timeout time.Duration) {
+	scrapeTimeout = timeout
+	if customHTTPClient != nil {
+		customHTTPClient.Timeout = scrapeTimeout
+	} else {
+		customHTTPClient = &http.Client{Timeout: scrapeTimeout}
+	}
+}
+
 // initCertificate loads CA certificates from the file paths listed in the given environment variable name.
 // The environment variable value may contain multiple file paths separated by ":".
 func InitCertificate(envVarName string) {
 	caPath := os.Getenv(envVarName)
 	if caPath == "" {
 		logging.Logger.WithField("env", envVarName).Info("Env var not set. Using default HTTP client.")
-		customHTTPClient = &http.Client{Timeout: 10 * time.Second}
+		customHTTPClient = &http.Client{Timeout: scrapeTimeout} // Use scrapeTimeout here
 		return
 	}
 
@@ -44,7 +55,8 @@ func InitCertificate(envVarName string) {
 		}
 
 		if ok := caCertPool.AppendCertsFromPEM(certData); !ok {
-			logging.Logger.WithField("path", path).Error("Failed to append CA certificate to pool")
+			logging.Logger.WithField("path", path).Error("Failed to append CA certificate")
+			continue
 		}
 	}
 
@@ -54,7 +66,7 @@ func InitCertificate(envVarName string) {
 	}
 
 	customHTTPClient = &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: scrapeTimeout, // Use scrapeTimeout here
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
@@ -96,10 +108,8 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 
 	client := customHTTPClient
 	if client == nil {
-		// fallback if initCertificate was never called
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = &http.Client{Timeout: scrapeTimeout} // Use scrapeTimeout here
 	}
-
 	resp, err := client.Get(fullURL)
 	if err != nil {
 		logging.Logger.WithError(err).WithField("url", fullURL).Error("Failed to query Prometheus")
