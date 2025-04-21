@@ -11,8 +11,10 @@ import (
 // Config structure defines the config.yaml structure
 type Config struct {
 	ScrapeInterval     string     `yaml:"scrape_interval"`
-	ScrapeTimeout      string     `yaml:"scrape_timeout"`       // New field
-	MaxParallelScrapes int        `yaml:"max_parallel_scrapes"` // New field
+	ScrapeTimeout      string     `yaml:"scrape_timeout"`
+	MaxParallelScrapes int        `yaml:"max_parallel_scrapes"`
+	DocsTitle          string     `yaml:"docs_title"`
+	DocsURL            string     `yaml:"docs_url"`
 	Locations          []Location `yaml:"locations"`
 	Apps               []App      `yaml:"apps"`
 }
@@ -39,61 +41,30 @@ func LoadConfig(filePath string) (*Config, error) {
 	// Open the configuration file
 	file, err := os.Open(filePath)
 	if err != nil {
-		logging.Logger.WithError(err).Error("Failed to open configuration file")
-		return nil, err
+		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
 	defer file.Close()
 
-	// Decode the YAML file into the Config struct
+	// Decode the YAML file
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(config); err != nil {
-		logging.Logger.WithError(err).Error("Failed to parse configuration YAML")
-		return nil, err
+		return nil, fmt.Errorf("failed to decode config file: %w", err)
 	}
 
-	// Validate the configuration
-	if err := validateConfig(config); err != nil {
-		return nil, err
+	// Validate that at least one location is provided
+	if len(config.Locations) == 0 {
+		return nil, fmt.Errorf("config validation error: at least one location is required")
+	}
+
+	// Validate latitude and longitude for each location
+	for _, location := range config.Locations {
+		if location.Latitude < -90 || location.Latitude > 90 {
+			return nil, fmt.Errorf("location %q has an invalid latitude: %f", location.Name, location.Latitude)
+		}
+		if location.Longitude < -180 || location.Longitude > 180 {
+			return nil, fmt.Errorf("location %q has an invalid longitude: %f", location.Name, location.Longitude)
+		}
 	}
 
 	return config, nil
-}
-
-// validateConfig checks for missing or invalid fields in the configuration
-func validateConfig(config *Config) error {
-	// Create a map of valid location names for quick lookup
-	validLocations := make(map[string]Location)
-	for _, location := range config.Locations {
-		// Validate latitude and longitude
-		if location.Latitude < -90 || location.Latitude > 90 {
-			return fmt.Errorf("location '%s' has an invalid latitude: %f (must be between -90 and 90)", location.Name, location.Latitude)
-		}
-		if location.Longitude < -180 || location.Longitude > 180 {
-			return fmt.Errorf("location '%s' has an invalid longitude: %f (must be between -180 and 180)", location.Name, location.Longitude)
-		}
-		validLocations[location.Name] = location
-	}
-
-	// Validate each app
-	for _, app := range config.Apps {
-		if app.Name == "" {
-			return fmt.Errorf("app is missing a name: %+v", app)
-		}
-		if app.Metric == "" {
-			return fmt.Errorf("app '%s' is missing a metric", app.Name)
-		}
-		if app.Prometheus == "" {
-			return fmt.Errorf("app '%s' is missing a Prometheus URL", app.Name)
-		}
-		location, exists := validLocations[app.Location]
-		if !exists {
-			return fmt.Errorf("app '%s' has an unknown location '%s'", app.Name, app.Location)
-		}
-		// Validate the app's location coordinates (redundant but ensures correctness)
-		if location.Latitude < -90 || location.Latitude > 90 || location.Longitude < -180 || location.Longitude > 180 {
-			return fmt.Errorf("app '%s' references a location '%s' with invalid coordinates (latitude: %f, longitude: %f)", app.Name, app.Location, location.Latitude, location.Longitude)
-		}
-	}
-
-	return nil
 }

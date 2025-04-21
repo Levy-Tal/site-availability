@@ -117,35 +117,31 @@ func startBackgroundStatusFetcher() {
 	// Pass scrapeTimeout to the scraping package
 	scraping.SetScrapeTimeout(scrapeTimeout)
 
-	logging.Logger.Infof("Starting background status fetcher with interval: %s", scrapeInterval)
+	maxParallelScrapes := cfg.MaxParallelScrapes
+	if maxParallelScrapes <= 0 {
+		logging.Logger.Warnf("Invalid MaxParallelScrapes value, using default 5")
+		maxParallelScrapes = 5
+	}
+
+	logging.Logger.Infof("Starting background status fetcher with interval: %s and max parallel scrapes: %d", scrapeInterval, maxParallelScrapes)
 
 	go func() {
 		ticker := time.NewTicker(scrapeInterval)
 		defer ticker.Stop()
 
 		checker := &scraping.DefaultPrometheusChecker{}
-		statusFetcher(checker)
-
 		for range ticker.C {
-			statusFetcher(checker)
+			statusFetcher(checker, maxParallelScrapes)
 		}
 	}()
 }
 
-// Fetch the application statuses
-func statusFetcher(checker *scraping.DefaultPrometheusChecker) {
+// Fetch the application statuses with a worker pool
+func statusFetcher(checker *scraping.DefaultPrometheusChecker, maxParallelScrapes int) {
 	logging.Logger.Info("Running status fetcher...")
-	var newStatuses []handlers.AppStatus
 
-	for _, app := range cfg.Apps {
-		logging.Logger.Debugf("Checking app status: name=%s, url=%s", app.Name, app.Prometheus)
-
-		appStatus := scraping.CheckAppStatus(app, checker)
-
-		logging.Logger.Debugf("App status fetched: name=%s, status=%s", appStatus.Name, appStatus.Status)
-
-		newStatuses = append(newStatuses, appStatus)
-	}
+	apps := cfg.Apps
+	newStatuses := scraping.ParallelScrapeAppStatuses(apps, checker, maxParallelScrapes)
 
 	handlers.UpdateAppStatus(newStatuses)
 	logging.Logger.Info("App statuses updated.")

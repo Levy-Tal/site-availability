@@ -131,7 +131,7 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
           {locations.map((site, index) => {
             const appsInSite = apps.filter((app) => app.location === site.name);
-            const allAppsUp = appsInSite.every((app) => app.status === "up");
+            const allAppsUp = appsInSite.length > 0 && appsInSite.every((app) => app.status === "up");
             const anyAppDown = appsInSite.some((app) => app.status === "down");
             const anyAppUnavailable = appsInSite.some((app) => app.status === "unavailable");
 

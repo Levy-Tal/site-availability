@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"site-availability/handlers"
 	"site-availability/logging"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -48,7 +48,7 @@ func InitCertificate(envVarName string) {
 			continue
 		}
 
-		certData, err := ioutil.ReadFile(path)
+		certData, err := os.ReadFile(path)
 		if err != nil {
 			logging.Logger.WithError(err).WithField("path", path).Error("Failed to read CA certificate")
 			continue
@@ -181,4 +181,29 @@ func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatu
 		Location: app.Location,
 		Status:   status,
 	}
+}
+
+func ParallelScrapeAppStatuses(apps []config.App, checker *DefaultPrometheusChecker, maxParallelScrapes int) []handlers.AppStatus {
+	results := make([]handlers.AppStatus, len(apps))
+	sem := make(chan struct{}, maxParallelScrapes)
+	var wg sync.WaitGroup
+
+	for i, app := range apps {
+		sem <- struct{}{} // Acquire slot
+		wg.Add(1)         // One more goroutine to wait for
+
+		go func(i int, app config.App) {
+			defer func() {
+				<-sem     // Release slot
+				wg.Done() // Mark as done
+			}()
+
+			logging.Logger.Debugf("Checking app status: name=%s, url=%s", app.Name, app.Prometheus)
+			results[i] = CheckAppStatus(app, checker)
+			logging.Logger.Debugf("App status fetched: name=%s, status=%s", results[i].Name, results[i].Status)
+		}(i, app)
+	}
+
+	wg.Wait() // Wait for all goroutines to finish
+	return results
 }
