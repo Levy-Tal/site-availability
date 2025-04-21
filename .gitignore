@@ -33,6 +33,6 @@ frontend/.env
 ### Other ##
 /.env
 
-backend/static/**
-fromtend/build
+backend/static
+frontend/build
 release

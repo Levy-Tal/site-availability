@@ -10,6 +10,10 @@ help:  ## Show available commands
 test:  ## Run tests
 	@cd backend && go test ./...
 
+install:  ## Install dependencies
+	@npm install --prefix frontend
+	@cd backend && go mod tidy
+
 build:  ## Build the frontend and backend
 	@npm run build --prefix frontend
 	@rm -rf backend/static
