@@ -9,24 +9,13 @@ import (
 	"site-availability/config"
 	"site-availability/handlers"
 	"site-availability/logging"
+	"site-availability/metrics"
 	"site-availability/scraping"
 	"syscall"
 	"time"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var (
-	serverUptime = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "server_uptime_seconds",
-			Help: "Total uptime of the server in seconds",
-		},
-	)
-
-	cfg *config.Config // Global configuration variable
-)
+var cfg *config.Config // Global configuration variable
 
 func main() {
 	// Attempt to initialize the logger, and fall back to Go's log package if it fails
@@ -47,7 +36,7 @@ func main() {
 		logging.Logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	initPrometheusMetrics()
+	metrics.Init()
 	startBackgroundStatusFetcher()
 	setupRoutes()
 	startServer()
@@ -67,18 +56,6 @@ func loadConfig() (*config.Config, error) {
 	}
 	logging.Logger.Debugf("Configuration loaded: %+v", cfg)
 	return cfg, nil
-}
-
-// Initialize Prometheus metrics
-func initPrometheusMetrics() {
-	prometheus.MustRegister(serverUptime)
-	logging.Logger.Info("Prometheus metrics registered")
-
-	go func() {
-		for range time.Tick(time.Second) {
-			serverUptime.Inc()
-		}
-	}()
 }
 
 // Setup HTTP routes and handlers
@@ -103,7 +80,9 @@ func setupRoutes() {
 		logging.Logger.Debug("Handling /readyz probe")
 		readinessProbe(w, r)
 	})
-	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		metrics.SetupMetricsHandler().ServeHTTP(w, r)
+	})
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	logging.Logger.Info("HTTP routes configured")
@@ -122,7 +101,6 @@ func startBackgroundStatusFetcher() {
 		scrapeTimeout = 10 * time.Second
 	}
 
-	// Pass scrapeTimeout to the scraping package
 	scraping.SetScrapeTimeout(scrapeTimeout)
 
 	maxParallelScrapes := cfg.MaxParallelScrapes

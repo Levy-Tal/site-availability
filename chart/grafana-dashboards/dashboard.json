@@ -1,0 +1,165 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "App Availability Percentage",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "site_availability_total_apps_up / site_availability_total_apps * 100",
+          "format": "time_series",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 6,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 95 },
+              { "color": "green", "value": 99.9 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto"
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 5 }
+    },
+    {
+      "title": "Apps Status per Location",
+      "type": "table",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "site_availability_status",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "gridPos": { "x": 8, "y": 0, "w": 16, "h": 8 }
+    },
+    {
+      "title": "Goroutines",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "go_goroutines",
+          "format": "time_series",
+          "instant": true
+        }
+      ],
+      "gridPos": { "x": 0, "y": 5, "w": 4, "h": 4 }
+    },
+    {
+      "title": "Memory: Allocated Bytes",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "go_memstats_alloc_bytes",
+          "format": "time_series"
+        }
+      ],
+      "gridPos": { "x": 4, "y": 5, "w": 12, "h": 5 }
+    },
+    {
+      "title": "GC Pause Duration (quantile)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "go_gc_duration_seconds",
+          "format": "time_series"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 5 }
+    },
+    {
+      "title": "Process CPU Time",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "process_cpu_seconds_total",
+          "format": "time_series"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 5 }
+    },
+    {
+      "title": "Memory: Resident Set Size",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes",
+          "format": "time_series"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 5 }
+    },
+    {
+      "title": "Network I/O",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "process_network_receive_bytes_total", "legendFormat": "Receive" },
+        { "expr": "process_network_transmit_bytes_total", "legendFormat": "Transmit" }
+      ],
+      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 5 }
+    }
+  ],
+  "schemaVersion": 40,
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Go Runtime & Site Availability",
+  "uid": "site-availability-dashboard",
+  "version": 1,
+  "weekStart": ""
+}

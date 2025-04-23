@@ -1,65 +1,34 @@
-{{- if .Values.prometheusRules.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ include "site-availability.fullname" . }}-rules
-  labels:
-    release: "prometheus"
 spec:
   groups:
-    - name: go-runtime-alerts
-      rules:
-        - alert: HighGoroutines
-          expr: go_goroutines > 1000
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "High number of goroutines"
-            description: "The number of goroutines ({{ "{{" }} $value {{ "}}" }}) has exceeded 1000 for over 5 minutes."
+  - name: site-availability
+    rules:
+    - alert: AppDown
+      expr: site_availability_status == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "App down"
+        description: "The app {{ "{{" }} $labels.app }} is down in location {{ "{{" }} $labels.location }}."
 
-        - alert: HighGCDuration
-          expr: go_gc_duration_seconds{quantile="0.99"} > 0.1
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "High GC duration"
-            description: "Go GC duration (99th percentile) is greater than 100ms for over 5 minutes."
+    - alert: AppUnavailable
+      expr: site_availability_apps_unavailable > 0
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "App unavailable"
+        description: "The app(s) in location {{ "{{" }} $labels.location }} are unavailable."
 
-        - alert: HighMemoryAllocation
-          expr: go_memstats_alloc_bytes > 500000000
-          for: 10m
-          labels:
-            severity: warning
-          annotations:
-            summary: "High memory allocation"
-            description: "Memory allocated by Go runtime is greater than 500MB for over 10 minutes."
-
-        - alert: ApproachingMaxFileDescriptors
-          expr: process_open_fds / process_max_fds > 0.8
-          for: 5m
-          labels:
-            severity: critical
-          annotations:
-            summary: "High file descriptor usage"
-            description: "Process is using more than 80% of its file descriptors."
-
-        - alert: ShortUptime
-          expr: server_uptime_seconds < 300
-          for: 1m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Server recently restarted"
-            description: "The server uptime is less than 5 minutes."
-
-        - alert: HighThreadCount
-          expr: go_threads > 100
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "High thread count"
-            description: "Go runtime is using more than 100 threads for over 5 minutes."
-{{- end }}
+    - alert: NoMetricsReceived
+      expr: absent(site_availability_total_apps) == 1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Site availability - No metrics received "
+        description: "No site availability metrics received from the exporter in the last 5 minutes."

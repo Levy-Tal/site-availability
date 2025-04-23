@@ -118,14 +118,14 @@ extraVolumeMounts: []
 #  subPath: ca.crt
 
 serviceMonitor:
-  enabled: false
+  enabled: true
   scrapeInterval: 10s
 
 prometheusRules:
-  enabled: false
+  enabled: true
 
 grafanaDashboards:
-  enabled: false
+  enabled: true
 
 externalSecrets: []
 #  - name: my-secret-1
