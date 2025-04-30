@@ -2,12 +2,15 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ include "site-availability.fullname" . }}-rules
+  labels:
+    release: "kube-prometheus-stack"
+    {{- include "site-availability.labels" . | nindent 4 }}
 spec:
   groups:
   - name: site-availability
     rules:
     - alert: AppDown
-      expr: site_availability_status == 0
+      expr: avg(site_availability_status) by (app, location) == 0
       for: 1m
       labels:
         severity: critical
@@ -16,13 +19,13 @@ spec:
         description: "The app {{ "{{" }} $labels.app }} is down in location {{ "{{" }} $labels.location }}."
 
     - alert: AppUnavailable
-      expr: site_availability_apps_unavailable > 0
+      expr: sum(site_availability_apps_unavailable) by (location) > 0
       for: 1m
       labels:
         severity: warning
       annotations:
         summary: "App unavailable"
-        description: "The app(s) in location {{ "{{" }} $labels.location }} are unavailable."
+        description: "One or more apps are unavailable in location {{ "{{" }} $labels.location }}."
 
     - alert: NoMetricsReceived
       expr: absent(site_availability_total_apps) == 1

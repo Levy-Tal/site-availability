@@ -42,3 +42,33 @@ release:    ## Create release. Example: make release TAG=1.0.0
 	@echo "Updating Helm chart version..."
 	helm package $(HELM_CHART_PATH) --version $(TAG) -d $(RELEASE_DIR)
 
+deploy-app: ## deploy the chart
+	@kubectl config use-context kind-site-availability
+	@helm upgrade --install site-availability $(HELM_CHART_PATH)
+	@echo "Starting port forwards..."
+	@kubectl port-forward -n default svc/site-availability 8080:8080 > /dev/null 2>&1 &
+	@echo "Services exposed:"
+	@echo "Site Availability: http://localhost:8080"
+
+deploy-kube-prometheus-stack: ## deploy the chart kube-prometheus-stack
+	@kubectl config use-context kind-site-availability
+	@helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+	@helm repo update
+	@helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack
+	@echo "Starting port forwards..."
+	@kubectl port-forward -n default svc/kube-prometheus-stack-prometheus 9090:9090 > /dev/null 2>&1 &
+	@kubectl port-forward -n default svc/kube-prometheus-stack-grafana 3000:3000 > /dev/null 2>&1 &
+	@echo "Services exposed:"
+	@echo "Prometheus: http://localhost:9090"
+	@echo "Grafana: http://localhost:3000"
+
+stop-port-forward: ## Stop all port-forwarding processes
+	@echo "Stopping port forwards..."
+	@pkill -f "kubectl port-forward"
+
+create-cluster: ## Create a kind cluster
+	@kind create cluster --name site-availability
+	@kubectl config use-context kind-site-availability
+
+destroy-cluster: ## Destroy the kind cluster
+	@kind delete cluster --name site-availability

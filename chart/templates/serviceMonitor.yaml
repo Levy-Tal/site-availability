@@ -4,7 +4,7 @@ kind: ServiceMonitor
 metadata:
   name: {{ include "site-availability.fullname" . }}-servicemonitor
   labels:
-    release: "prometheus"
+    release: "kube-prometheus-stack"
     {{- include "site-availability.labels" . | nindent 4 }}
 spec:
   selector:
@@ -14,7 +14,7 @@ spec:
     - port: http
       path: /metrics
       interval: {{ .Values.serviceMonitor.scrapeInterval | default "10s" }}
-      scrapeTimeout: 5s
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeOut | default "10s" }}
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}

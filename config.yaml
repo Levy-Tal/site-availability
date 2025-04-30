@@ -20,34 +20,6 @@ locations:
   latitude: 29.96649
   longitude: 34.89450
 
-#- name: Los Angeles
-#  latitude: 34.052235
-#  longitude: -118.243683
-#- name: Chicago
-#  latitude: 41.878113
-#  longitude: -87.629799
-#- name: Houston
-#  latitude: 29.760427
-#  longitude: -95.369804
-#- name: Phoenix
-#  latitude: 33.448376
-#  longitude: -112.074036
-#- name: Philadelphia
-#  latitude: 39.952583
-#  longitude: -75.165222
-#- name: San Antonio
-#  latitude: 29.424122
-#  longitude: -98.493629
-#- name: San Diego
-#  latitude: 32.715736
-#  longitude: -117.161087
-#- name: Dallas
-#  latitude: 32.776664
-#  longitude: -96.796988
-#- name: Miami
-#  latitude: 25.761680
-#  longitude: -80.191790
-
 
 apps:
 - name: app1
