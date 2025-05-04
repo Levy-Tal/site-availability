@@ -71,7 +71,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_total_apps{pod=\"$pod\"}",
+          "expr": "avg (site_availability_total_apps{})",
           "instant": true,
           "refId": "A"
         }
@@ -89,9 +89,15 @@
           "color": {
             "mode": "thresholds"
           },
+          "custom": {
+            "neutral": 0
+          },
+          "decimals": 6,
           "displayName": "${__field.labels.app}",
           "fieldMinMax": false,
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -104,11 +110,10 @@
               },
               {
                 "color": "green",
-                "value": 98
+                "value": 99
               }
             ]
-          },
-          "unit": "percent"
+          }
         },
         "overrides": []
       },
@@ -139,7 +144,7 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum_over_time(site_availability_status{pod=\"$pod\"}[$__range:1m]) / count_over_time(site_availability_status{pod=\"$pod\"}[$__range:1m]) * 100)",
+          "expr": "(sum_over_time(avg (site_availability_status{}) by (app)[$__range:1m]) / count_over_time(avg (site_availability_status{}) by (app)[$__range:1m]) * 100)",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{app}}",
@@ -208,7 +213,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_total_apps_up{pod=\"$pod\"}",
+          "expr": "avg (site_availability_total_apps_up{})",
           "instant": true,
           "refId": "A"
         }
@@ -266,7 +271,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_total_apps_down{pod=\"$pod\"}",
+          "expr": "avg(site_availability_total_apps_down{})",
           "instant": true,
           "refId": "A"
         }
@@ -324,7 +329,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_total_apps_unavailable{pod=\"$pod\"}",
+          "expr": "avg(site_availability_total_apps_unavailable{})",
           "instant": true,
           "refId": "A"
         }
@@ -413,7 +418,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_apps{pod=\"$pod\"} - site_availability_apps_down{pod=\"$pod\"} - site_availability_apps_unavailable{pod=\"$pod\"}",
+          "expr": "avg(site_availability_apps{}) by (location) - avg(site_availability_apps_down{}) by (location)- avg(site_availability_apps_unavailable{}) by (location)",
           "legendFormat": "{{location}}",
           "range": true,
           "refId": "A"
@@ -505,7 +510,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_apps_down{pod=\"$pod\"}",
+          "expr": "avg(site_availability_apps_down{}) by (location)",
           "legendFormat": "{{location}}",
           "range": true,
           "refId": "A"
@@ -597,7 +602,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_availability_apps_unavailable{pod=\"$pod\"}",
+          "expr": "avg(site_availability_apps_unavailable{}) by (location)",
           "legendFormat": "{{location}}",
           "range": true,
           "refId": "A"
@@ -695,7 +700,7 @@
           "refId": "A"
         }
       ],
-      "title": "CPU Usage",
+      "title": "CPU Usage (by pod)",
       "type": "timeseries"
     },
     {
@@ -793,7 +798,7 @@
           "refId": "B"
         }
       ],
-      "title": "Memory Usage",
+      "title": "Memory Usage (by pod)",
       "type": "timeseries"
     },
     {
@@ -891,7 +896,7 @@
           "refId": "B"
         }
       ],
-      "title": "Network Traffic",
+      "title": "Network Traffic (by pod)",
       "type": "timeseries"
     },
     {
@@ -961,7 +966,7 @@
           "refId": "A"
         }
       ],
-      "title": "HTTP Request Success Rate",
+      "title": "HTTP Request Success Rate (by pod)",
       "type": "stat"
     },
     {
@@ -1027,7 +1032,7 @@
           "refId": "A"
         }
       ],
-      "title": "Goroutines Count",
+      "title": "Goroutines Count (by pod)",
       "type": "stat"
     },
     {
@@ -1093,7 +1098,7 @@
           "refId": "A"
         }
       ],
-      "title": "Open File Descriptors",
+      "title": "Open File Descriptors (by pod)",
       "type": "stat"
     },
     {
@@ -1197,7 +1202,7 @@
           "refId": "C"
         }
       ],
-      "title": "Heap Allocation",
+      "title": "Heap Allocation (by pod)",
       "type": "timeseries"
     },
     {
@@ -1301,7 +1306,7 @@
           "refId": "C"
         }
       ],
-      "title": "Garbage Collection Duration",
+      "title": "Garbage Collection Duration (by pod)",
       "type": "timeseries"
     }
   ],
@@ -1357,5 +1362,5 @@
   "timezone": "",
   "title": "Site Availability",
   "uid": "site-availability",
-  "version": 6
+  "version": 1
 }

@@ -76,7 +76,7 @@ configFile:
 #      location: טל לוי
 #      metric: 1-up{container="alertmanager"}
 #      prometheus: http://prometheus-operated:9090/
-# if you want to use configMap for the config file
+
 
 # Pod annotations for extra metadata
 podAnnotations: {}
