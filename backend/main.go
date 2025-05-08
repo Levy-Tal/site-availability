@@ -39,7 +39,7 @@ func main() {
 	metrics.Init()
 	startBackgroundStatusFetcher()
 	setupRoutes()
-	startServer()
+	startServer(config.GetEnv("PORT", "8080"))
 }
 
 // Load configuration file
@@ -90,12 +90,12 @@ func setupRoutes() {
 
 // Start the background status fetcher
 func startBackgroundStatusFetcher() {
-	scrapeInterval, err := time.ParseDuration(cfg.ScrapeInterval)
+	scrapeInterval, err := time.ParseDuration(cfg.Scraping.Interval)
 	if err != nil {
 		logging.Logger.Fatalf("Failed to parse ScrapeInterval: %v", err)
 	}
 
-	scrapeTimeout, err := time.ParseDuration(cfg.ScrapeTimeout)
+	scrapeTimeout, err := time.ParseDuration(cfg.Scraping.Timeout)
 	if err != nil {
 		logging.Logger.Warnf("Invalid ScrapeTimeout, using default 10s: %v", err)
 		scrapeTimeout = 10 * time.Second
@@ -103,7 +103,7 @@ func startBackgroundStatusFetcher() {
 
 	scraping.SetScrapeTimeout(scrapeTimeout)
 
-	maxParallelScrapes := cfg.MaxParallelScrapes
+	maxParallelScrapes := cfg.Scraping.MaxParallel
 	if maxParallelScrapes <= 0 {
 		logging.Logger.Warnf("Invalid MaxParallelScrapes value, using default 5")
 		maxParallelScrapes = 5
@@ -126,18 +126,17 @@ func startBackgroundStatusFetcher() {
 func statusFetcher(checker *scraping.DefaultPrometheusChecker, maxParallelScrapes int) {
 	logging.Logger.Info("Running status fetcher...")
 
-	apps := cfg.Apps
-	newStatuses := scraping.ParallelScrapeAppStatuses(apps, checker, maxParallelScrapes)
+	apps := cfg.Applications
+	newStatuses := scraping.ParallelScrapeAppStatuses(apps, cfg.PrometheusServers, checker, maxParallelScrapes)
 
 	handlers.UpdateAppStatus(newStatuses)
 	logging.Logger.Info("App statuses updated.")
 }
 
 // Start the HTTP server and handle graceful shutdown
-func startServer() {
-	port := getServerPort()
+func startServer(port string) {
 
-	srv := &http.Server{Addr: port}
+	srv := &http.Server{Addr: ":" + port}
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
@@ -150,16 +149,6 @@ func startServer() {
 
 	<-sigChan
 	gracefulShutdown(srv)
-}
-
-// Get server port from environment variable or default to ":8080"
-func getServerPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = ":8080"
-	}
-	logging.Logger.Infof("Server will listen on %s", port)
-	return port
 }
 
 // Gracefully shut down the server
@@ -193,4 +182,12 @@ func readinessProbe(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("READY"))
+}
+
+// getEnv gets an environment variable value and returns a default value if empty
+func getEnv(name, defaultValue string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return defaultValue
 }

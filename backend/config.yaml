@@ -1,0 +1,42 @@
+server_settings:
+  port: 8080
+  custom_ca_path: /app/ca.crt
+
+scraping:
+  interval: 10s
+  timeout: 1s
+  max_parallel: 10
+
+documentation:
+  title: "DR documentation"
+  url: "https://google.com"
+
+prometheus_servers:
+  - name: prom1
+    url: http://prometheus1-operated:9090/
+  - name: prom2
+    url: http://prometheus2-operated:9090/
+  - name: prom3
+    url: http://prometheus3-operated:9090/
+
+locations:
+  - name: Hadera
+    latitude: 32.446235
+    longitude: 34.903852
+  - name: Jerusalem
+    latitude: 31.782904
+    longitude: 35.214774
+  - name: Tel Aviv
+    latitude: 31.245381
+    longitude: 34.788745
+
+applications:
+  - name: app1
+    location: Hadera
+    metric: up{job="site-availability"}
+    prometheus: prom1
+
+  - name: app2
+    location: Hadera
+    metric: up{job="site-availability"}
+    prometheus: prom1

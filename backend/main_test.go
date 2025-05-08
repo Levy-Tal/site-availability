@@ -5,7 +5,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
+	"site-availability/config"
 	"site-availability/handlers"
 	"site-availability/logging"
 )
@@ -56,21 +58,51 @@ func TestReadinessProbe_WithData(t *testing.T) {
 	}
 }
 
-func TestGetServerPort(t *testing.T) {
-	os.Setenv("PORT", ":9090")
-	defer os.Unsetenv("PORT")
+func TestGetEnv(t *testing.T) {
+	// Test with environment variable set
+	os.Setenv("TEST_ENV_VAR", "test_value")
+	defer os.Unsetenv("TEST_ENV_VAR")
 
-	port := getServerPort()
-	if port != ":9090" {
-		t.Errorf("Expected port :9090, got %s", port)
+	if value := getEnv("TEST_ENV_VAR", "default"); value != "test_value" {
+		t.Errorf("Expected 'test_value', got %s", value)
+	}
+
+	// Test with environment variable not set
+	if value := getEnv("NONEXISTENT_VAR", "default"); value != "default" {
+		t.Errorf("Expected 'default', got %s", value)
+	}
+
+	// Test with empty environment variable
+	os.Setenv("EMPTY_VAR", "")
+	defer os.Unsetenv("EMPTY_VAR")
+
+	if value := getEnv("EMPTY_VAR", "default"); value != "default" {
+		t.Errorf("Expected 'default', got %s", value)
 	}
 }
 
-func TestGetServerPort_Default(t *testing.T) {
-	os.Unsetenv("PORT")
+func TestStartServer(t *testing.T) {
+	// Create a test configuration
+	testCfg := &config.Config{
+		ServerSettings: config.ServerSettings{
+			Port: "8080",
+		},
+	}
 
-	port := getServerPort()
-	if port != ":8080" {
-		t.Errorf("Expected default port :8080, got %s", port)
+	// Start server in a goroutine
+	go startServer(testCfg.ServerSettings.Port)
+
+	// Give the server a moment to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Test the server is running by making a request to the liveness probe
+	resp, err := http.Get("http://localhost:8080/healthz")
+	if err != nil {
+		t.Errorf("Failed to connect to server: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 }

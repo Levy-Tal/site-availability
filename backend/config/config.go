@@ -10,13 +10,33 @@ import (
 
 // Config structure defines the config.yaml structure
 type Config struct {
-	ScrapeInterval     string     `yaml:"scrape_interval"`
-	ScrapeTimeout      string     `yaml:"scrape_timeout"`
-	MaxParallelScrapes int        `yaml:"max_parallel_scrapes"`
-	DocsTitle          string     `yaml:"docs_title"`
-	DocsURL            string     `yaml:"docs_url"`
-	Locations          []Location `yaml:"locations"`
-	Apps               []App      `yaml:"apps"`
+	ServerSettings    ServerSettings     `yaml:"server_settings"`
+	Scraping          ScrapingSettings   `yaml:"scraping"`
+	Documentation     Documentation      `yaml:"documentation"`
+	PrometheusServers []PrometheusServer `yaml:"prometheus_servers"`
+	Locations         []Location         `yaml:"locations"`
+	Applications      []Application      `yaml:"applications"`
+}
+
+type ServerSettings struct {
+	Port         string `yaml:"port"`
+	CustomCAPath string `yaml:"custom_ca_path"`
+}
+
+type ScrapingSettings struct {
+	Interval    string `yaml:"interval"`
+	Timeout     string `yaml:"timeout"`
+	MaxParallel int    `yaml:"max_parallel"`
+}
+
+type Documentation struct {
+	Title string `yaml:"title"`
+	URL   string `yaml:"url"`
+}
+
+type PrometheusServer struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
 }
 
 type Location struct {
@@ -25,7 +45,7 @@ type Location struct {
 	Longitude float64 `yaml:"longitude" json:"longitude"`
 }
 
-type App struct {
+type Application struct {
 	Name       string `yaml:"name"`
 	Location   string `yaml:"location"`
 	Metric     string `yaml:"metric"`
@@ -66,5 +86,17 @@ func LoadConfig(filePath string) (*Config, error) {
 		}
 	}
 
+	// Validate that at least one Prometheus server is provided
+	if len(config.PrometheusServers) == 0 {
+		return nil, fmt.Errorf("config validation error: at least one Prometheus server is required")
+	}
+
 	return config, nil
+}
+
+func GetEnv(name, defaultValue string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return defaultValue
 }

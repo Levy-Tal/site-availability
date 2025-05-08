@@ -128,11 +128,11 @@ func IsAppStatusCacheEmpty() bool {
 func GetScrapeInterval(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/scrape-interval request")
 
-	// Parse the scrape_interval string into a time.Duration
-	duration, err := time.ParseDuration(cfg.ScrapeInterval)
+	// Parse the scrape interval string into a time.Duration
+	duration, err := time.ParseDuration(cfg.Scraping.Interval)
 	if err != nil {
-		logging.Logger.WithError(err).Error("Invalid scrape_interval format")
-		http.Error(w, "Invalid scrape_interval format", http.StatusInternalServerError)
+		logging.Logger.WithError(err).Error("Invalid scrape interval format")
+		http.Error(w, "Invalid scrape interval format", http.StatusInternalServerError)
 		return
 	}
 
@@ -160,8 +160,8 @@ func GetDocs(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 
 	// Create the response
 	response := map[string]string{
-		"docs_title": cfg.DocsTitle,
-		"docs_url":   cfg.DocsURL,
+		"docs_title": cfg.Documentation.Title,
+		"docs_url":   cfg.Documentation.URL,
 	}
 
 	// Encode the response as JSON

@@ -152,7 +152,7 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 }
 
 // CheckAppStatus now accepts a PrometheusChecker interface
-func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatus {
+func CheckAppStatus(app config.Application, prometheusServers []config.PrometheusServer, checker PrometheusChecker) handlers.AppStatus {
 	logging.Logger.WithFields(map[string]interface{}{
 		"app":        app.Name,
 		"location":   app.Location,
@@ -160,7 +160,25 @@ func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatu
 		"metric":     app.Metric,
 	}).Debug("Checking application status")
 
-	statusCode, err := checker.Check(app.Prometheus, app.Metric)
+	// Find the Prometheus server URL by name
+	var prometheusURL string
+	for _, server := range prometheusServers {
+		if server.Name == app.Prometheus {
+			prometheusURL = server.URL
+			break
+		}
+	}
+
+	if prometheusURL == "" {
+		logging.Logger.WithField("prometheus", app.Prometheus).Error("Prometheus server not found")
+		return handlers.AppStatus{
+			Name:     app.Name,
+			Location: app.Location,
+			Status:   "unavailable",
+		}
+	}
+
+	statusCode, err := checker.Check(prometheusURL, app.Metric)
 
 	status := "unavailable" // Default to "unavailable" if there's an error
 	if err != nil {
@@ -183,7 +201,7 @@ func CheckAppStatus(app config.App, checker PrometheusChecker) handlers.AppStatu
 	}
 }
 
-func ParallelScrapeAppStatuses(apps []config.App, checker *DefaultPrometheusChecker, maxParallelScrapes int) []handlers.AppStatus {
+func ParallelScrapeAppStatuses(apps []config.Application, prometheusServers []config.PrometheusServer, checker *DefaultPrometheusChecker, maxParallelScrapes int) []handlers.AppStatus {
 	results := make([]handlers.AppStatus, len(apps))
 	sem := make(chan struct{}, maxParallelScrapes)
 	var wg sync.WaitGroup
@@ -192,14 +210,14 @@ func ParallelScrapeAppStatuses(apps []config.App, checker *DefaultPrometheusChec
 		sem <- struct{}{} // Acquire slot
 		wg.Add(1)         // One more goroutine to wait for
 
-		go func(i int, app config.App) {
+		go func(i int, app config.Application) {
 			defer func() {
 				<-sem     // Release slot
 				wg.Done() // Mark as done
 			}()
 
 			logging.Logger.Debugf("Checking app status: name=%s, url=%s", app.Name, app.Prometheus)
-			results[i] = CheckAppStatus(app, checker)
+			results[i] = CheckAppStatus(app, prometheusServers, checker)
 			logging.Logger.Debugf("App status fetched: name=%s, status=%s", results[i].Name, results[i].Status)
 		}(i, app)
 	}

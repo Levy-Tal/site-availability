@@ -31,14 +31,21 @@ func (m *MockPrometheusChecker) Check(prometheusURL string, promQLQuery string) 
 func TestCheckAppStatus_Up(t *testing.T) {
 	mockChecker := &MockPrometheusChecker{mockResponse: 1, mockError: nil}
 
-	app := config.App{
+	app := config.Application{
 		Name:       "app1",
 		Location:   "site1",
 		Metric:     "up{instance=\"app1\"}",
-		Prometheus: "http://prometheus1.app.url",
+		Prometheus: "prom1",
 	}
 
-	status := CheckAppStatus(app, mockChecker)
+	prometheusServers := []config.PrometheusServer{
+		{
+			Name: "prom1",
+			URL:  "http://prometheus1.app.url",
+		},
+	}
+
+	status := CheckAppStatus(app, prometheusServers, mockChecker)
 
 	if status.Status != "up" {
 		t.Errorf("Expected status 'up', but got %s", status.Status)
@@ -54,14 +61,21 @@ func TestCheckAppStatus_Up(t *testing.T) {
 func TestCheckAppStatus_Down(t *testing.T) {
 	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: nil}
 
-	app := config.App{
+	app := config.Application{
 		Name:       "app2",
 		Location:   "site2",
 		Metric:     "up{instance=\"app2\"}",
-		Prometheus: "http://prometheus2.app.url",
+		Prometheus: "prom1",
 	}
 
-	status := CheckAppStatus(app, mockChecker)
+	prometheusServers := []config.PrometheusServer{
+		{
+			Name: "prom1",
+			URL:  "http://prometheus1.app.url",
+		},
+	}
+
+	status := CheckAppStatus(app, prometheusServers, mockChecker)
 
 	if status.Status != "down" {
 		t.Errorf("Expected status 'down', but got %s", status.Status)
@@ -71,14 +85,21 @@ func TestCheckAppStatus_Down(t *testing.T) {
 func TestCheckAppStatus_Error(t *testing.T) {
 	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: ErrMockFailure}
 
-	app := config.App{
+	app := config.Application{
 		Name:       "app3",
 		Location:   "site3",
 		Metric:     "up{instance=\"app3\"}",
-		Prometheus: "http://prometheus3.app.url",
+		Prometheus: "prom1",
 	}
 
-	status := CheckAppStatus(app, mockChecker)
+	prometheusServers := []config.PrometheusServer{
+		{
+			Name: "prom1",
+			URL:  "http://prometheus1.app.url",
+		},
+	}
+
+	status := CheckAppStatus(app, prometheusServers, mockChecker)
 
 	if status.Status != "unavailable" {
 		t.Errorf("Expected status 'unavailable' on error, but got %s", status.Status)
@@ -88,17 +109,48 @@ func TestCheckAppStatus_Error(t *testing.T) {
 func TestCheckAppStatus_Unavailable(t *testing.T) {
 	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: fmt.Errorf("mock error")}
 
-	app := config.App{
+	app := config.Application{
 		Name:       "app5",
 		Location:   "site5",
 		Metric:     "up{instance=\"app5\"}",
-		Prometheus: "http://prometheus5.app.url",
+		Prometheus: "prom1",
 	}
 
-	status := CheckAppStatus(app, mockChecker)
+	prometheusServers := []config.PrometheusServer{
+		{
+			Name: "prom1",
+			URL:  "http://prometheus1.app.url",
+		},
+	}
+
+	status := CheckAppStatus(app, prometheusServers, mockChecker)
 
 	if status.Status != "unavailable" {
 		t.Errorf("Expected status 'unavailable' on error, but got %s", status.Status)
+	}
+}
+
+func TestCheckAppStatus_PrometheusNotFound(t *testing.T) {
+	mockChecker := &MockPrometheusChecker{mockResponse: 1, mockError: nil}
+
+	app := config.Application{
+		Name:       "app6",
+		Location:   "site6",
+		Metric:     "up{instance=\"app6\"}",
+		Prometheus: "nonexistent",
+	}
+
+	prometheusServers := []config.PrometheusServer{
+		{
+			Name: "prom1",
+			URL:  "http://prometheus1.app.url",
+		},
+	}
+
+	status := CheckAppStatus(app, prometheusServers, mockChecker)
+
+	if status.Status != "unavailable" {
+		t.Errorf("Expected status 'unavailable' when Prometheus server not found, but got %s", status.Status)
 	}
 }
 
