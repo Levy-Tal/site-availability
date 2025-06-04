@@ -24,7 +24,7 @@ install-nvm:  ## Install nvm
 	@echo "nvm installed. Please run: source ~/.bashrc or restart your terminal"
 
 install-semantic-release:  ## Install semantic-release
-	@source ~/.bashrc && nvm install 20 && nvm use 20 && npm install -g semantic-release @semantic-release/changelog @semantic-release/exec
+	@source ~/.bashrc && nvm install 20 && nvm use 20 && npm install -g semantic-release @semantic-release/git @semantic-release/changelog @semantic-release/exec
 
 build:  ## Build the frontend and backend
 	@npm run build --prefix frontend

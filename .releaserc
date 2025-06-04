@@ -13,20 +13,36 @@
       }
     ],
     [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "VERSION",
+          "frontend/package.json",
+          "chart/Chart.yaml",
+          "backend/go.mod",
+          "CHANGELOG.md"
+        ],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
+        "tag": "v${nextRelease.version}",
+        "tagMessage": "Release ${nextRelease.version}"
+      }
+    ],
+    [
       "@semantic-release/github",
       {
         "assets": [
           {
             "path": "release/site-availability-*.tar",
-            "name": "site-availability-${nextRelease.version}.tar",
+            "name": "Image-site-availability-${nextRelease.version}.tar",
             "label": "Docker Image (${nextRelease.version})"
           },
           {
             "path": "release/site-availability-*.tgz",
-            "name": "site-availability-${nextRelease.version}.tgz",
+            "name": "Helm-site-availability-${nextRelease.version}.tgz",
             "label": "Helm Chart (${nextRelease.version})"
           }
-        ]
+        ],
+        "tagFormat": false
       }
     ]
   ]
