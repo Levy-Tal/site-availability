@@ -22,9 +22,7 @@
           "backend/go.mod",
           "CHANGELOG.md"
         ],
-        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
-        "tag": "v${nextRelease.version}",
-        "tagMessage": "Release ${nextRelease.version}"
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
     [
@@ -41,8 +39,7 @@
             "name": "Helm-site-availability-${nextRelease.version}.tgz",
             "label": "Helm Chart (${nextRelease.version})"
           }
-        ],
-        "tagFormat": false
+        ]
       }
     ]
   ]

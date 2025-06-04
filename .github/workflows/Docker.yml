@@ -1,17 +1,32 @@
-name: Docker Workflow
+name: Docker
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
 
 jobs:
   docker:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download release version artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-version
+
+      - name: Read version from VERSION file
+        id: read_version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -24,4 +39,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: levytal/site-availability:${{ github.ref_name }}
+          tags: levytal/site-availability:${{ steps.read_version.outputs.version }}
