@@ -1,3 +1,10 @@
+## [1.4.3](https://github.com/Levy-Tal/site-availability/compare/v1.4.2...v1.4.3) (2025-06-04)
+
+
+### Bug Fixes
+
+* **semantic-release:** file name in release ([0ceefb4](https://github.com/Levy-Tal/site-availability/commit/0ceefb49ce7c9c0ce80264f658c11a8699ca1861))
+
 ## [1.4.2](https://github.com/Levy-Tal/site-availability/compare/v1.4.1...v1.4.2) (2025-06-04)
 
 
