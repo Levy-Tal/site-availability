@@ -9,7 +9,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "echo ${nextRelease.version} > VERSION && npm version ${nextRelease.version} --prefix frontend --no-git-tag-version && sed -i 's/version: .*/version: ${nextRelease.version}/' chart/Chart.yaml && sed -i 's/appVersion: .*/appVersion: ${nextRelease.version}/' chart/Chart.yaml && sed -i 's/version = .*/version = \"${nextRelease.version}\"/' backend/go.mod && mkdir -p release && helm package chart --destination release && docker build -t site-availability:${nextRelease.version} -f Dockerfile . && docker save site-availability:${nextRelease.version} > release/site-availability-${nextRelease.version}.tar"
+        "prepareCmd": "echo ${nextRelease.version} > VERSION && npm version ${nextRelease.version} --prefix frontend --no-git-tag-version && sed -i 's/version: .*/version: ${nextRelease.version}/' chart/Chart.yaml && sed -i 's/appVersion: .*/appVersion: ${nextRelease.version}/' chart/Chart.yaml && sed -i 's/version = .*/version = \"${nextRelease.version}\"/' backend/go.mod && mkdir -p release && helm package chart --destination release && docker build -t site-availability:${nextRelease.version} -f Dockerfile . && docker save site-availability:${nextRelease.version} > release/site-availability-${nextRelease.version}.tar && chmod 777 release/*"
       }
     ],
     [

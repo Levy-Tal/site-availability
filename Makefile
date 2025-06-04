@@ -41,8 +41,9 @@ run:   ## Run the app using Docker Compose
 down:   ## Run the app using Docker Compose
 	@docker compose down
 
-semantic-release:  ## Run semantic release to determine next version
-	@source ~/.bashrc && nvm use 20 && GITHUB_TOKEN=$$GITHUB_TOKEN semantic-release --no-ci
+release:  ## Run semantic release to determine next version
+	@read -s -p "Enter GitHub token: " GITHUB_TOKEN && \
+	source ~/.bashrc && nvm use 20 && GITHUB_TOKEN=$$GITHUB_TOKEN semantic-release --no-ci
 
 deploy-app: ## deploy the chart
 	@kubectl config use-context kind-site-availability

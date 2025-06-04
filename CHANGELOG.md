@@ -1,3 +1,24 @@
+## [1.4.1](https://github.com/Levy-Tal/site-availability/compare/v1.4.0...v1.4.1) (2025-06-04)
+
+
+### Bug Fixes
+
+* **semantic-release:** add semantic release for github release ([9cad75b](https://github.com/Levy-Tal/site-availability/commit/9cad75bdf6177a5063fc5ce4df41e8f1ccddae3b))
+
+## [1.4.1](https://github.com/Levy-Tal/site-availability/compare/v1.4.0...v1.4.1) (2025-06-04)
+
+
+### Bug Fixes
+
+* **semantic-release:** add semantic release for github release ([9cad75b](https://github.com/Levy-Tal/site-availability/commit/9cad75bdf6177a5063fc5ce4df41e8f1ccddae3b))
+
+## [1.4.1](https://github.com/Levy-Tal/site-availability/compare/v1.4.0...v1.4.1) (2025-06-04)
+
+
+### Bug Fixes
+
+* **semantic-release:** add semantic release for github release ([9cad75b](https://github.com/Levy-Tal/site-availability/commit/9cad75bdf6177a5063fc5ce4df41e8f1ccddae3b))
+
 # [1.4.0](https://github.com/Levy-Tal/site-availability/compare/v1.3.0...v1.4.0) (2025-06-04)
 
 
