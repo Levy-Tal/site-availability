@@ -1,3 +1,10 @@
+## [1.4.6](https://github.com/Levy-Tal/site-availability/compare/v1.4.5...v1.4.6) (2025-06-04)
+
+
+### Bug Fixes
+
+* **semantic-release:** not pushing files to git ([eab713e](https://github.com/Levy-Tal/site-availability/commit/eab713e3b8c1c134b796adcec9ae6977d2b48a8f))
+
 ## [1.4.3](https://github.com/Levy-Tal/site-availability/compare/v1.4.2...v1.4.3) (2025-06-04)
 
 
