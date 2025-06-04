@@ -7,7 +7,7 @@ replicaCount: 3
 image:
   repository: levytal/site-availability
   pullPolicy: IfNotPresent
-  tag: ""  # Default tag, can be overridden
+  tag: "" # Default tag, can be overridden
 
 imagePullSecrets: []
 
@@ -23,60 +23,58 @@ env:
 # Secret references to be passed as environment variables
 extraSecretNameForEnvFrom: []
 
-
 # if you want to use the chart for config file
 configFile:
   enabled: true
-  content: 
-#    scrape_interval: 10s
-#    scrape_timeout: 1s
-#    max_parallel_scrapes: 10
-#    docs_title: "DR documentation"
-#    docs_url: "https://google.com"
-#    locations:
-#    - name: Hadera
-#      latitude: 32.446235
-#      longitude: 34.903852
-#    - name: עברית
-#      latitude: 31.782904
-#      longitude: 35.214774
-#    - name: טל לוי
-#      latitude: 31.245381
-#      longitude: 34.788745
-#    apps:
-#    - name: app1
-#      location: Hadera
-#      metric: up{job="site-availability"}
-#      prometheus: http://prometheus-operated:9090/
-#    - name: app3
-#      location: עברית
-#      metric: up{container="alertmanager"}
-#      prometheus: http://prometheus-operated:9090/
-#    - name: app4
-#      location: טל לוי
-#      metric: 1-up{container="alertmanager"}
-#      prometheus: http://promethaseus-operated:9090/
-#    - name: app2
-#      location: Hadera
-#      metric: up{job="site-availability"}
-#      prometheus: http://prometheus-operated:9090/
-#    - name: app5
-#      location: עברית
-#      metric: up{container="alertmanager"}
-#      prometheus: http://prometheus-operated:9090/
-#    - name: app6
-#      location: טל לוי
-#      metric: 1-up{container="alertmanager"}
-#      prometheus: http://prometsdfheus-operated:9090/
-#    - name: app8
-#      location: טל לוי
-#      metric: 1-up{container="alertmanager"}
-#      prometheus: http://prometheus-operated:9090/
-#    - name: app7
-#      location: טל לוי
-#      metric: 1-up{container="alertmanager"}
-#      prometheus: http://prometheus-operated:9090/
-
+  content:
+    scrape_interval: 10s
+    scrape_timeout: 1s
+    max_parallel_scrapes: 10
+    docs_title: "DR documentation"
+    docs_url: "https://google.com"
+    locations:
+      - name: Hadera
+        latitude: 32.446235
+        longitude: 34.903852
+      - name: עברית
+        latitude: 31.782904
+        longitude: 35.214774
+      - name: טל לוי
+        latitude: 31.245381
+        longitude: 34.788745
+    apps:
+      - name: app1
+        location: Hadera
+        metric: up{job="site-availability"}
+        prometheus: http://prometheus-operated:9090/
+      - name: app3
+        location: עברית
+        metric: up{container="alertmanager"}
+        prometheus: http://prometheus-operated:9090/
+      - name: app4
+        location: טל לוי
+        metric: 1-up{container="alertmanager"}
+        prometheus: http://promethaseus-operated:9090/
+      - name: app2
+        location: Hadera
+        metric: up{job="site-availability"}
+        prometheus: http://prometheus-operated:9090/
+      - name: app5
+        location: עברית
+        metric: up{container="alertmanager"}
+        prometheus: http://prometheus-operated:9090/
+      - name: app6
+        location: טל לוי
+        metric: 1-up{container="alertmanager"}
+        prometheus: http://prometsdfheus-operated:9090/
+      - name: app8
+        location: טל לוי
+        metric: 1-up{container="alertmanager"}
+        prometheus: http://prometheus-operated:9090/
+      - name: app7
+        location: טל לוי
+        metric: 1-up{container="alertmanager"}
+        prometheus: http://prometheus-operated:9090/
 
 # Pod annotations for extra metadata
 podAnnotations: {}

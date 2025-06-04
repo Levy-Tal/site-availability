@@ -36,3 +36,6 @@ frontend/.env
 backend/static
 frontend/build
 release
+node_modules
+
+.semrel/plugins/

@@ -1,7 +1,8 @@
 RELEASE_DIR=release
 HELM_CHART_PATH=chart
+SEMREL_PLUGINS=semrel-plugins.tgz
 
-.PHONY: help build docker run release
+.PHONY: help build docker run release semantic-release install-plugins
 
 help:  ## Show available commands
 	@echo "Available commands:"
@@ -13,6 +14,9 @@ test:  ## Run tests
 install:  ## Install dependencies
 	@npm install --prefix frontend
 	@cd backend && go mod tidy
+	@mkdir -p ~/bin
+	@curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ~/bin/semantic-release && chmod +x ~/bin/semantic-release
+
 
 build:  ## Build the frontend and backend
 	@npm run build --prefix frontend
@@ -29,18 +33,19 @@ run:   ## Run the app using Docker Compose
 down:   ## Run the app using Docker Compose
 	@docker compose down
 
-release:    ## Create release. Example: make release TAG=1.0.0
+semantic-release:  ## Run semantic release to determine next version
+	@GITHUB_REPOSITORY=Levy-Tal/site-availability GITHUB_REF=refs/heads/main semantic-release --dry --no-ci --provider github --ci-condition github
+
+release: semantic-release  ## Create release using semantic versioning
 	@mkdir -p $(RELEASE_DIR)
 	@rm -rf $(RELEASE_DIR)/*
-	@echo "Building Docker image with tag: $(TAG)"
-	docker build -t levytal/site-availability:$(TAG) .
-	@echo "Saving Docker image to tar..."
-	docker save levytal/site-availability:$(TAG) -o $(RELEASE_DIR)/site-availability-$(TAG).tar
-	@echo "Updating Helm Chart.yaml version..."
-	sed -i 's/^version:.*/version: $(TAG)/' $(HELM_CHART_PATH)/Chart.yaml
-	sed -i 's/^appVersion:.*/appVersion: "$(TAG)"/' $(HELM_CHART_PATH)/Chart.yaml
-	@echo "Updating Helm chart version..."
-	helm package $(HELM_CHART_PATH) --version $(TAG) -d $(RELEASE_DIR)
+	@VERSION=$$(cat VERSION); \
+	echo "Building Docker image with tag: $$VERSION"; \
+	docker build -t levytal/site-availability:$$VERSION .; \
+	echo "Saving Docker image to tar..."; \
+	docker save levytal/site-availability:$$VERSION -o $(RELEASE_DIR)/site-availability-$$VERSION.tar; \
+	echo "Packaging Helm chart..."; \
+	helm package $(HELM_CHART_PATH) --version $$VERSION -d $(RELEASE_DIR)
 
 deploy-app: ## deploy the chart
 	@kubectl config use-context kind-site-availability

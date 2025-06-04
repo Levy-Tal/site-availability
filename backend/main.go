@@ -23,23 +23,23 @@ func main() {
 		log.Fatalf("Logger initialization failed: %v", err)
 	}
 
-	// Load custom CA certificates only if the env variable is set and not empty
-	if caPath := os.Getenv("CUSTOM_CA_PATH"); caPath != "" {
-		scraping.InitCertificate("CUSTOM_CA_PATH")
-	} else {
-		logging.Logger.Info("CUSTOM_CA_PATH is not set or empty, skipping custom CA loading")
-	}
-
 	var err error
 	cfg, err = loadConfig()
 	if err != nil {
 		logging.Logger.Fatalf("Failed to load configuration: %v", err)
 	}
-
+	loadCustomCA()
 	metrics.Init()
 	startBackgroundStatusFetcher()
 	setupRoutes()
-	startServer(config.GetEnv("PORT", "8080"))
+	startServer(cfg.ServerSettings.Port)
+}
+
+func loadCustomCA() {
+	caPath := cfg.ServerSettings.CustomCAPath
+	if caPath != "" {
+		scraping.InitCertificate(caPath)
+	}
 }
 
 // Load configuration file
