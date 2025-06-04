@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/Levy-Tal/site-availability/compare/v1.4.1...v1.4.2) (2025-06-04)
+
+
+### Bug Fixes
+
+* **semantic-release:** file permissions ([0336baf](https://github.com/Levy-Tal/site-availability/commit/0336bafe747ee36359dca5d95c4ffd955d4c88bd))
+
 ## [1.4.1](https://github.com/Levy-Tal/site-availability/compare/v1.4.0...v1.4.1) (2025-06-04)
 
 
