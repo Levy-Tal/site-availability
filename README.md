@@ -2,6 +2,17 @@
 
 **Site Availability Monitoring** is an open-source application designed to monitor the availability of applications and services across multiple locations. It provides a visual representation of application statuses on a world map and integrates with Prometheus for metrics collection.
 
+## Features
+
+- Real-time site status monitoring
+- Interactive world map visualization
+- Historical data tracking
+- Alert notifications
+
+## Development
+
+This project uses semantic versioning for releases. All commits should follow the conventional commit format.
+
 ---
 
 ## 🚀 Features
