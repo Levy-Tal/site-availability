@@ -1,0 +1,31 @@
+{
+  "branches": [
+    "main"
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "echo ${nextRelease.version} > VERSION && npm version ${nextRelease.version} --prefix frontend --no-git-tag-version && sed -i 's/version: .*/version: ${nextRelease.version}/' chart/Chart.yaml && sed -i 's/appVersion: .*/appVersion: ${nextRelease.version}/' chart/Chart.yaml && sed -i 's/version = .*/version = \"${nextRelease.version}\"/' backend/go.mod && mkdir -p release && helm package chart --destination release && docker build -t site-availability:${nextRelease.version} -f Dockerfile . && docker save site-availability:${nextRelease.version} > release/site-availability-${nextRelease.version}.tar"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "release/site-availability-${nextRelease.version}.tar",
+            "label": "Docker Image"
+          },
+          {
+            "path": "release/site-availability-${nextRelease.version}.tgz",
+            "label": "Helm Chart"
+          }
+        ]
+      }
+    ]
+  ]
+}
