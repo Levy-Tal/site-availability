@@ -8,6 +8,7 @@
 - Interactive world map visualization
 - Historical data tracking
 - Alert notifications
+- New feature: Automated status reports generation
 
 ## Development
 
