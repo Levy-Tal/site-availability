@@ -1,3 +1,10 @@
+## [1.4.10](https://github.com/Levy-Tal/site-availability/compare/v1.4.9...v1.4.10) (2025-06-05)
+
+
+### Bug Fixes
+
+* **release:** typo ([5e7e24a](https://github.com/Levy-Tal/site-availability/commit/5e7e24ab9a942b1a8a24dfd37ec92d67d158e771))
+
 ## [1.4.9](https://github.com/Levy-Tal/site-availability/compare/v1.4.8...v1.4.9) (2025-06-05)
 
 

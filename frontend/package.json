@@ -1,6 +1,6 @@
 {
     "name": "frontend",
-    "version": "1.4.9",
+    "version": "1.4.10",
     "description": "React app for monitoring app status on world map",
     "main": "src/index.js",
     "dependencies": {
