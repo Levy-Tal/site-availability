@@ -1,3 +1,10 @@
+## [1.4.7](https://github.com/Levy-Tal/site-availability/compare/v1.4.6...v1.4.7) (2025-06-04)
+
+
+### Bug Fixes
+
+* **docker:** workflow ([252c316](https://github.com/Levy-Tal/site-availability/commit/252c316f1045cb16633f714720a8a15b68d290d8))
+
 ## [1.4.6](https://github.com/Levy-Tal/site-availability/compare/v1.4.5...v1.4.6) (2025-06-04)
 
 
