@@ -1,3 +1,12 @@
+## [1.4.8](https://github.com/Levy-Tal/site-availability/compare/v1.4.7...v1.4.8) (2025-06-05)
+
+
+### Bug Fixes
+
+* **release:** typo ([1f43b42](https://github.com/Levy-Tal/site-availability/commit/1f43b42197079def51932b280c9a83c537cd4779))
+* **release:** typo ([54cc3ff](https://github.com/Levy-Tal/site-availability/commit/54cc3ff87bbf18c7479edd41b920dd7c449e0cec))
+* **release:** workflow ([5486082](https://github.com/Levy-Tal/site-availability/commit/5486082b0720320629983bee4593319f1e2a9af4))
+
 ## [1.4.7](https://github.com/Levy-Tal/site-availability/compare/v1.4.6...v1.4.7) (2025-06-04)
 
 
