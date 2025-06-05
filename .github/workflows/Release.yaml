@@ -54,7 +54,7 @@ jobs:
   DockerHub:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: release
+    needs: GitHub
 
     steps:
       - name: Checkout code
