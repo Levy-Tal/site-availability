@@ -71,4 +71,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: levytal/site-availability:${{ needs.GitHub.outputs.version }}
+          tags: levytal/site-availability:v${{ needs.GitHub.outputs.version }}
