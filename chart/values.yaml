@@ -6,7 +6,7 @@ replicaCount: 3
 
 image:
   repository: levytal/site-availability
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: "" # Default tag, can be overridden
 
 imagePullSecrets: []
@@ -91,6 +91,7 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 10001
   runAsGroup: 10001
+  allowPrivilegeEscalation: false
 
 # Service settings
 service:
@@ -114,6 +115,7 @@ resources:
   limits:
     memory: 128Mi
     ephemeral-storage: 50Mi
+    cpu: 200m
   requests:
     cpu: 50m
     memory: 128Mi
