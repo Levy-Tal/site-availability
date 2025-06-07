@@ -1,5 +1,7 @@
 # Site Availability Monitoring
 
+[![codecov](https://codecov.io/gh/Levy-Tal/site-availability/graph/badge.svg?token=K3PLCUDMX9)](https://codecov.io/gh/Levy-Tal/site-availability)
+
 **Site Availability Monitoring** is an open-source application designed to monitor the availability of applications and services across multiple locations. It provides a visual representation of application statuses on a world map and integrates with Prometheus for metrics collection.
 
 ## Features

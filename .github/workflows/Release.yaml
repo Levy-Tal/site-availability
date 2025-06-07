@@ -9,6 +9,8 @@ jobs:
   Test:
     name: Run tests
     uses: ./.github/workflows/Test.yaml
+    with:
+      working-directory: "./backend"
 
   GitHub:
     name: Create GitHub Release
