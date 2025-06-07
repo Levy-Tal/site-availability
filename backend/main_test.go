@@ -89,16 +89,20 @@ func TestStartServer(t *testing.T) {
 		},
 	}
 
+	// Set up routes before starting the server
+	setupRoutes()
+
 	// Start server in a goroutine
 	go startServer(testCfg.ServerSettings.Port)
 
-	// Give the server a moment to start
-	time.Sleep(100 * time.Millisecond)
+	// Give the server more time to start
+	time.Sleep(500 * time.Millisecond)
 
 	// Test the server is running by making a request to the liveness probe
 	resp, err := http.Get("http://localhost:8080/healthz")
 	if err != nil {
 		t.Errorf("Failed to connect to server: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 

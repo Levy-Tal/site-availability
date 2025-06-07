@@ -56,7 +56,7 @@ applications:
 	assert.Equal(t, "60s", cfg.Scraping.Interval)
 	assert.Equal(t, "15s", cfg.Scraping.Timeout)
 	assert.Equal(t, 10, cfg.Scraping.MaxParallel)
-	assert.Equal(t, 8080, cfg.ServerSettings.Port)
+	assert.Equal(t, "8080", cfg.ServerSettings.Port)
 	assert.Equal(t, "/app/ca.crt", cfg.ServerSettings.CustomCAPath)
 	assert.Equal(t, "DR documentation", cfg.Documentation.Title)
 	assert.Equal(t, "https://google.com", cfg.Documentation.URL)
