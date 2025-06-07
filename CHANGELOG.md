@@ -1,3 +1,10 @@
+## [1.4.11](https://github.com/Levy-Tal/site-availability/compare/v1.4.10...v1.4.11) (2025-06-07)
+
+
+### Bug Fixes
+
+* **helm:** security ([d6bce5f](https://github.com/Levy-Tal/site-availability/commit/d6bce5f1b6951a6ab42e0a6d1a50efd3a6e73b3f))
+
 ## [1.4.10](https://github.com/Levy-Tal/site-availability/compare/v1.4.9...v1.4.10) (2025-06-05)
 
 
