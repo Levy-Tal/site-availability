@@ -6,8 +6,13 @@ on:
       - main
 
 jobs:
+  Test:
+    name: Run tests
+    uses: ./.github/workflows/Test.yaml
+
   GitHub:
     name: Create GitHub Release
+    needs: Test
     runs-on: ubuntu-latest
     permissions:
       contents: write
