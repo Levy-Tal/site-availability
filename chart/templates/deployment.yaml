@@ -11,12 +11,12 @@ spec:
       {{- include "site-availability.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      labels:
+        {{- include "site-availability.selectorLabels" . | nindent 8 }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      labels:
-        {{- include "site-availability.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

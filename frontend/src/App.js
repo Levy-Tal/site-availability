@@ -72,11 +72,14 @@ function App() {
           onClick={() => window.open(docsInfo.docs_url, "_blank")}
           title={docsInfo.docs_title}
         >
-          
           <FaBook size={24} />
         </div>
       )}
-      <MapComponent locations={locations} onSiteClick={handleSiteClick} apps={apps} />
+      <MapComponent
+        locations={locations}
+        onSiteClick={handleSiteClick}
+        apps={apps}
+      />
       {isPanelOpen && selectedSite && (
         <AppStatusPanel
           site={selectedSite}

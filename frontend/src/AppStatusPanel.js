@@ -30,7 +30,9 @@ export const AppStatusPanel = ({ site, apps, onClose }) => {
 
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
-      filtered = filtered.filter((app) => app.name.toLowerCase().startsWith(lower));
+      filtered = filtered.filter((app) =>
+        app.name.toLowerCase().startsWith(lower),
+      );
     }
 
     const sortMethods = {
@@ -139,15 +141,15 @@ export const AppStatusPanel = ({ site, apps, onClose }) => {
             app.status === "up"
               ? "status-up"
               : app.status === "down"
-              ? "status-down"
-              : "status-unavailable";
+                ? "status-down"
+                : "status-unavailable";
 
           const label =
             app.status === "up"
               ? "Up"
               : app.status === "down"
-              ? "Down"
-              : "Unavailable";
+                ? "Down"
+                : "Unavailable";
 
           return (
             <li key={app.name}>

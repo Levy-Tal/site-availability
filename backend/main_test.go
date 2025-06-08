@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,7 +15,9 @@ import (
 
 func TestMain(m *testing.M) {
 	// Initialize global logger before tests run
-	logging.Init()
+	if err := logging.Init(); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
 	code := m.Run()
 	os.Exit(code)
 }

@@ -1,4 +1,5 @@
 {{- if .Values.grafanaDashboards.enabled }}
+---
 {{- $root := . }}
 {{- $dashboards := .Files.Glob "grafana-dashboards/*.json" }}
 {{- range $path, $content := $dashboards }}

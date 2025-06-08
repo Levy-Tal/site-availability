@@ -1,11 +1,14 @@
 RELEASE_DIR=release
 HELM_CHART_PATH=chart
 
-.PHONY: help build docker run release semantic-release install-plugins
+.PHONY: help build docker run release semantic-release install-plugins pre-commit
 
 help:  ## Show available commands
 	@echo "Available commands:"
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+pre-commit:  ## Run pre-commit hooks on all files
+	@pre-commit run --all-files
 
 test:  ## Run tests
 	@cd backend && go test ./...

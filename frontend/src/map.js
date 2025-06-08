@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
+import {
+  ComposableMap,
+  Geographies,
+  Geography,
+  Marker,
+  ZoomableGroup,
+} from "react-simple-maps";
 
 const INITIAL_ZOOM = 1;
 const MIN_SCALE = 250;
@@ -24,7 +30,12 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
         maxLon: Math.max(acc.maxLon, loc.longitude),
         maxLat: Math.max(acc.maxLat, loc.latitude),
       }),
-      { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity }
+      {
+        minLon: Infinity,
+        minLat: Infinity,
+        maxLon: -Infinity,
+        maxLat: -Infinity,
+      },
     );
   };
 
@@ -65,7 +76,12 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
       baseSize = 0.15;
     }
 
-    return { center: [centerLon, centerLat], zoom: zoomFactor, scale: scaleFactor, baseSize };
+    return {
+      center: [centerLon, centerLat],
+      zoom: zoomFactor,
+      scale: scaleFactor,
+      baseSize,
+    };
   };
 
   useEffect(() => {
@@ -74,7 +90,11 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
       const height = window.innerHeight;
       const bounds = calculateBounds(locations);
       if (bounds) {
-        const { center, zoom, scale, baseSize } = calculateMapSettings(bounds, width, height);
+        const { center, zoom, scale, baseSize } = calculateMapSettings(
+          bounds,
+          width,
+          height,
+        );
         setCurrentCenter(center);
         setZoom(zoom);
         setInitialZoom(zoom);
@@ -131,20 +151,25 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
 
           {locations.map((site, index) => {
             const appsInSite = apps.filter((app) => app.location === site.name);
-            const allAppsUp = appsInSite.length > 0 && appsInSite.every((app) => app.status === "up");
+            const allAppsUp =
+              appsInSite.length > 0 &&
+              appsInSite.every((app) => app.status === "up");
             const anyAppDown = appsInSite.some((app) => app.status === "down");
-            const anyAppUnavailable = appsInSite.some((app) => app.status === "unavailable");
+            const anyAppUnavailable = appsInSite.some(
+              (app) => app.status === "unavailable",
+            );
 
             const color = allAppsUp
               ? "#10B981"
               : anyAppDown
-              ? "#EF4444"
-              : anyAppUnavailable
-              ? "#F59E0B"
-              : "#D6D6DA";
+                ? "#EF4444"
+                : anyAppUnavailable
+                  ? "#F59E0B"
+                  : "#D6D6DA";
 
             const isHovered = hoveredMarker === site.name;
-            const markerScale = baseSize * markerScaleFactor * (isHovered ? 1.5 : 1);
+            const markerScale =
+              baseSize * markerScaleFactor * (isHovered ? 1.5 : 1);
 
             return (
               <Marker
@@ -157,7 +182,11 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                 }}
                 onMouseLeave={() => setHoveredMarker(null)}
               >
-                <g ref={(el) => (markerRefs.current[index] = el)} transform={`scale(${markerScale})`} className="marker-wrapper">
+                <g
+                  ref={(el) => (markerRefs.current[index] = el)}
+                  transform={`scale(${markerScale})`}
+                  className="marker-wrapper"
+                >
                   <g
                     fill={color}
                     stroke="#000000"
@@ -176,8 +205,8 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
                     y={24}
                     fill={color}
                     stroke="#000000"
-                    strokeWidth="0.5"  
-                    fontWeight="900"  
+                    strokeWidth="0.5"
+                    fontWeight="900"
                     fontSize="22px"
                   >
                     {site.name}

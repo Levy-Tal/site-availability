@@ -168,7 +168,9 @@ func gracefulShutdown(srv *http.Server) {
 // Liveness probe handler
 func livenessProbe(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	if _, err := w.Write([]byte("OK")); err != nil {
+		logging.Logger.Errorf("Failed to write liveness probe response: %v", err)
+	}
 }
 
 // Readiness probe handler
@@ -176,12 +178,16 @@ func readinessProbe(w http.ResponseWriter, r *http.Request) {
 	if handlers.IsAppStatusCacheEmpty() {
 		logging.Logger.Warn("Readiness probe failed: App status cache is empty")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("NOT READY"))
+		if _, err := w.Write([]byte("NOT READY")); err != nil {
+			logging.Logger.Errorf("Failed to write readiness probe response: %v", err)
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("READY"))
+	if _, err := w.Write([]byte("READY")); err != nil {
+		logging.Logger.Errorf("Failed to write readiness probe response: %v", err)
+	}
 }
 
 // getEnv gets an environment variable value and returns a default value if empty
