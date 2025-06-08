@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/Levy-Tal/site-availability/compare/v1.4.11...v1.5.0) (2025-06-08)
+
+
+### Features
+
+* **pre-commit:** add ([7eacda2](https://github.com/Levy-Tal/site-availability/commit/7eacda25f9d8e7812f0c1e8c1ee7b8d8bcd80f76))
+
 ## [1.4.11](https://github.com/Levy-Tal/site-availability/compare/v1.4.10...v1.4.11) (2025-06-07)
 
 ### Bug Fixes
