@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/Levy-Tal/site-availability/compare/v1.5.0...v1.6.0) (2025-06-08)
+
+
+### Features
+
+* **scrape:** add the option to scrape prometheus with authentication ([c67852a](https://github.com/Levy-Tal/site-availability/commit/c67852a8e35acfa49a0598aac485b8716c162a12))
+
 # [1.5.0](https://github.com/Levy-Tal/site-availability/compare/v1.4.11...v1.5.0) (2025-06-08)
 
 
