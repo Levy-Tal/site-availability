@@ -29,9 +29,9 @@ locations:
 
 prometheus_servers:
   - name: prom1
-    url: http://prometheus:9090/
+    url: http://nginx:9090
   - name: prom2
-    url: http://prometheus2:9090/
+    url: http://nginx:9090
 
 applications:
   - name: app1
@@ -62,3 +62,9 @@ applications:
     location: Hadera
     metric: 1 - up{instance="localhost:9090", job="prometheus"}
     prometheus: prom2
+
+sites:
+  - name: "Test Site"
+    url: "http://example.com"
+    check_interval: "1m"
+    timeout: "5s"

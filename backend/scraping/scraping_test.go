@@ -15,9 +15,10 @@ import (
 type MockPrometheusChecker struct {
 	mockResponse int
 	mockError    error
+	Credentials  []config.PrometheusCredentials
 }
 
-func (m *MockPrometheusChecker) Check(prometheusURL string, promQLQuery string) (int, error) {
+func (m *MockPrometheusChecker) Check(prometheusURL string, promQLQuery string, prometheusServers []config.PrometheusServer) (int, error) {
 	if m.mockError != nil {
 		return 0, m.mockError
 	}
@@ -29,7 +30,11 @@ func (m *MockPrometheusChecker) Check(prometheusURL string, promQLQuery string) 
 // --------------------
 
 func TestCheckAppStatus_Up(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{mockResponse: 1, mockError: nil}
+	mockChecker := &MockPrometheusChecker{
+		mockResponse: 1,
+		mockError:    nil,
+		Credentials:  nil,
+	}
 
 	app := config.Application{
 		Name:       "app1",
@@ -58,8 +63,46 @@ func TestCheckAppStatus_Up(t *testing.T) {
 	}
 }
 
+func TestCheckAppStatus_WithCredentials(t *testing.T) {
+	mockChecker := &MockPrometheusChecker{
+		mockResponse: 1,
+		mockError:    nil,
+		Credentials: []config.PrometheusCredentials{
+			{
+				Name:  "prom1",
+				Auth:  "bearer",
+				Token: "test-token",
+			},
+		},
+	}
+
+	app := config.Application{
+		Name:       "app1",
+		Location:   "site1",
+		Metric:     "up{instance=\"app1\"}",
+		Prometheus: "prom1",
+	}
+
+	prometheusServers := []config.PrometheusServer{
+		{
+			Name: "prom1",
+			URL:  "http://prometheus1.app.url",
+		},
+	}
+
+	status := CheckAppStatus(app, prometheusServers, mockChecker)
+
+	if status.Status != "up" {
+		t.Errorf("Expected status 'up', but got %s", status.Status)
+	}
+}
+
 func TestCheckAppStatus_Down(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: nil}
+	mockChecker := &MockPrometheusChecker{
+		mockResponse: 0,
+		mockError:    nil,
+		Credentials:  nil,
+	}
 
 	app := config.Application{
 		Name:       "app2",
@@ -83,7 +126,11 @@ func TestCheckAppStatus_Down(t *testing.T) {
 }
 
 func TestCheckAppStatus_Error(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: ErrMockFailure}
+	mockChecker := &MockPrometheusChecker{
+		mockResponse: 0,
+		mockError:    ErrMockFailure,
+		Credentials:  nil,
+	}
 
 	app := config.Application{
 		Name:       "app3",
@@ -107,7 +154,11 @@ func TestCheckAppStatus_Error(t *testing.T) {
 }
 
 func TestCheckAppStatus_Unavailable(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{mockResponse: 0, mockError: fmt.Errorf("mock error")}
+	mockChecker := &MockPrometheusChecker{
+		mockResponse: 0,
+		mockError:    fmt.Errorf("mock error"),
+		Credentials:  nil,
+	}
 
 	app := config.Application{
 		Name:       "app5",
@@ -131,7 +182,11 @@ func TestCheckAppStatus_Unavailable(t *testing.T) {
 }
 
 func TestCheckAppStatus_PrometheusNotFound(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{mockResponse: 1, mockError: nil}
+	mockChecker := &MockPrometheusChecker{
+		mockResponse: 1,
+		mockError:    nil,
+		Credentials:  nil,
+	}
 
 	app := config.Application{
 		Name:       "app6",

@@ -163,3 +163,8 @@ externalSecrets: []
 #        remoteKey: production/db-password
 #      - secretKey: api-key
 #        remoteKey: production/api-key
+
+# Credentials configuration
+credentials:
+  # Name of the secret containing credentials
+  credentialsSecretName: ""

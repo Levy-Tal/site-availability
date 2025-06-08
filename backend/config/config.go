@@ -10,12 +10,13 @@ import (
 
 // Config structure defines the config.yaml structure
 type Config struct {
-	ServerSettings    ServerSettings     `yaml:"server_settings"`
-	Scraping          ScrapingSettings   `yaml:"scraping"`
-	Documentation     Documentation      `yaml:"documentation"`
-	PrometheusServers []PrometheusServer `yaml:"prometheus_servers"`
-	Locations         []Location         `yaml:"locations"`
-	Applications      []Application      `yaml:"applications"`
+	ServerSettings    ServerSettings          `yaml:"server_settings"`
+	Scraping          ScrapingSettings        `yaml:"scraping"`
+	Documentation     Documentation           `yaml:"documentation"`
+	PrometheusServers []PrometheusServer      `yaml:"prometheus_servers"`
+	Locations         []Location              `yaml:"locations"`
+	Applications      []Application           `yaml:"applications"`
+	Credentials       []PrometheusCredentials `yaml:"credentials"`
 }
 
 type ServerSettings struct {
@@ -37,6 +38,12 @@ type Documentation struct {
 type PrometheusServer struct {
 	Name string `yaml:"name"`
 	URL  string `yaml:"url"`
+}
+
+type PrometheusCredentials struct {
+	Name  string `yaml:"name"`
+	Auth  string `yaml:"auth"`
+	Token string `yaml:"token"`
 }
 
 type Location struct {
@@ -89,6 +96,30 @@ func LoadConfig(filePath string) (*Config, error) {
 	// Validate that at least one Prometheus server is provided
 	if len(config.PrometheusServers) == 0 {
 		return nil, fmt.Errorf("config validation error: at least one Prometheus server is required")
+	}
+
+	// Try to load credentials file
+	credentialsPath := os.Getenv("CREDENTIALS_FILE")
+	if credentialsPath == "" {
+		logging.Logger.Info("No credentials file specified, continuing without authentication")
+		return config, nil
+	}
+
+	// Try to open credentials file
+	credsFile, err := os.Open(credentialsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logging.Logger.WithField("file", credentialsPath).Info("Credentials file not found, continuing without authentication")
+			return config, nil
+		}
+		return nil, fmt.Errorf("failed to open credentials file: %w", err)
+	}
+	defer credsFile.Close()
+
+	// Decode the credentials YAML file
+	decoder = yaml.NewDecoder(credsFile)
+	if err := decoder.Decode(config); err != nil {
+		return nil, fmt.Errorf("failed to decode credentials file: %w", err)
 	}
 
 	return config, nil

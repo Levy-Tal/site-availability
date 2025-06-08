@@ -55,16 +55,23 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if .Values.credentials.credentialsSecretName }}
+            - name: CREDENTIALS_FILE
+              value: /app/credentials.yaml
+            {{- end }}
           envFrom:
             {{- range .Values.extraSecretNameForEnvFrom }}
             - secretRef:
                 name: {{ . }}
             {{- end }}
           volumeMounts:
-            {{- if .Values.configFile.enabled }}
             - name: config-volume
               mountPath: /app/config.yaml
               subPath: config.yaml
+            {{- if .Values.credentials.credentialsSecretName }}
+            - name: credentials-volume
+              mountPath: /app/credentials.yaml
+              subPath: credentials.yaml
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
@@ -82,10 +89,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        {{- if .Values.configFile.enabled }}
         - name: config-volume
           configMap:
-            name: {{ include "site-availability.fullname" . }}
+            name: {{ include "site-availability.fullname" . }}-config
+        {{- if .Values.credentials.credentialsSecretName }}
+        - name: credentials-volume
+          secret:
+            secretName: {{ .Values.credentials.credentialsSecretName }}
         {{- end }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}

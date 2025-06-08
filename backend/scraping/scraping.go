@@ -16,26 +16,26 @@ import (
 	"time"
 )
 
-var customHTTPClient *http.Client
+var httpClient *http.Client
 
-var scrapeTimeout = 10 * time.Second // Default timeout
+var defaultScrapeTimeout = 10 * time.Second
 
 func SetScrapeTimeout(timeout time.Duration) {
-	scrapeTimeout = timeout
-	if customHTTPClient != nil {
-		customHTTPClient.Timeout = scrapeTimeout
+	defaultScrapeTimeout = timeout
+	if httpClient != nil {
+		httpClient.Timeout = defaultScrapeTimeout
 	} else {
-		customHTTPClient = &http.Client{Timeout: scrapeTimeout}
+		httpClient = &http.Client{Timeout: defaultScrapeTimeout}
 	}
 }
 
-// initCertificate loads CA certificates from the file paths listed in the given environment variable name.
+// InitCertificate loads CA certificates from the file paths listed in the given environment variable name.
 // The environment variable value may contain multiple file paths separated by ":".
 func InitCertificate(envVarName string) {
 	caPath := os.Getenv(envVarName)
 	if caPath == "" {
 		logging.Logger.WithField("env", envVarName).Info("Env var not set. Using default HTTP client.")
-		customHTTPClient = &http.Client{Timeout: scrapeTimeout} // Use scrapeTimeout here
+		httpClient = &http.Client{Timeout: defaultScrapeTimeout}
 		return
 	}
 
@@ -65,8 +65,8 @@ func InitCertificate(envVarName string) {
 		InsecureSkipVerify: false, // Only set true if you know what you're doing
 	}
 
-	customHTTPClient = &http.Client{
-		Timeout: scrapeTimeout, // Use scrapeTimeout here
+	httpClient = &http.Client{
+		Timeout: defaultScrapeTimeout,
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
@@ -87,16 +87,18 @@ type PrometheusResponse struct {
 	} `json:"data"`
 }
 
-// PrometheusChecker defines an interface for checking Prometheus metrics.
-type PrometheusChecker interface {
-	Check(prometheusURL string, promQLQuery string) (int, error)
+// MetricChecker defines an interface for checking Prometheus metrics.
+type MetricChecker interface {
+	Check(prometheusURL string, promQLQuery string, prometheusServers []config.PrometheusServer) (int, error)
 }
 
-// DefaultPrometheusChecker checks Prometheus metrics.
-type DefaultPrometheusChecker struct{}
+// PrometheusMetricChecker implements the MetricChecker interface for Prometheus.
+type PrometheusMetricChecker struct {
+	Credentials []config.PrometheusCredentials
+}
 
 // Check queries Prometheus and extracts the metric value.
-func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery string) (int, error) {
+func (c *PrometheusMetricChecker) Check(prometheusURL string, promQLQuery string, prometheusServers []config.PrometheusServer) (int, error) {
 	encodedQuery := url.QueryEscape(promQLQuery)
 	fullURL := fmt.Sprintf("%s/api/v1/query?query=%s", prometheusURL, encodedQuery)
 
@@ -106,16 +108,78 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 		"source": "scraping.Check",
 	}).Debug("Querying Prometheus")
 
-	client := customHTTPClient
+	client := httpClient
 	if client == nil {
-		client = &http.Client{Timeout: scrapeTimeout} // Use scrapeTimeout here
+		client = &http.Client{Timeout: defaultScrapeTimeout}
 	}
-	resp, err := client.Get(fullURL)
+
+	// Create request
+	req, err := http.NewRequest("GET", fullURL, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add authentication if credentials are available
+	var authMethod string
+	if c.Credentials != nil {
+		logging.Logger.WithFields(map[string]interface{}{
+			"credentials_count": len(c.Credentials),
+			"prometheus_url":    prometheusURL,
+		}).Debug("Checking credentials for Prometheus server")
+
+		// Find the Prometheus server name from the URL
+		var prometheusName string
+		for _, server := range prometheusServers {
+			if server.URL == prometheusURL {
+				prometheusName = server.Name
+				break
+			}
+		}
+
+		if prometheusName != "" {
+			// Find matching credentials for this Prometheus server
+			for _, cred := range c.Credentials {
+				if cred.Name == prometheusName {
+					authMethod = cred.Auth
+					logging.Logger.WithFields(map[string]interface{}{
+						"prometheus": prometheusName,
+						"auth_type":  cred.Auth,
+					}).Debug("Found matching credentials for Prometheus server")
+
+					switch cred.Auth {
+					case "bearer":
+						req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cred.Token))
+					case "basic":
+						req.Header.Set("Authorization", fmt.Sprintf("Basic %s", cred.Token))
+					}
+					break
+				}
+			}
+		} else {
+			logging.Logger.WithField("url", prometheusURL).Warn("Could not find Prometheus server name for URL")
+		}
+	} else {
+		logging.Logger.Debug("No credentials available for authentication")
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		logging.Logger.WithError(err).WithField("url", fullURL).Error("Failed to query Prometheus")
 		return 0, fmt.Errorf("failed to query Prometheus: %v", err)
 	}
 	defer resp.Body.Close()
+
+	// Check for authentication errors
+	if resp.StatusCode == http.StatusUnauthorized {
+		logging.Logger.WithFields(map[string]interface{}{
+			"url":         fullURL,
+			"auth_method": authMethod,
+			"status_code": resp.StatusCode,
+		}).Error("Authentication failed for Prometheus server")
+
+		return 0, fmt.Errorf("authentication failed for Prometheus server %s using %s auth",
+			fullURL, authMethod)
+	}
 
 	var promResp PrometheusResponse
 	if err := json.NewDecoder(resp.Body).Decode(&promResp); err != nil {
@@ -151,8 +215,8 @@ func (d *DefaultPrometheusChecker) Check(prometheusURL string, promQLQuery strin
 	return 0, nil
 }
 
-// CheckAppStatus now accepts a PrometheusChecker interface
-func CheckAppStatus(app config.Application, prometheusServers []config.PrometheusServer, checker PrometheusChecker) handlers.AppStatus {
+// CheckAppStatus checks the status of an application using the provided metric checker.
+func CheckAppStatus(app config.Application, prometheusServers []config.PrometheusServer, checker MetricChecker) handlers.AppStatus {
 	logging.Logger.WithFields(map[string]interface{}{
 		"app":        app.Name,
 		"location":   app.Location,
@@ -178,7 +242,7 @@ func CheckAppStatus(app config.Application, prometheusServers []config.Prometheu
 		}
 	}
 
-	statusCode, err := checker.Check(prometheusURL, app.Metric)
+	statusCode, err := checker.Check(prometheusURL, app.Metric, prometheusServers)
 
 	status := "unavailable" // Default to "unavailable" if there's an error
 	if err != nil {
@@ -201,7 +265,7 @@ func CheckAppStatus(app config.Application, prometheusServers []config.Prometheu
 	}
 }
 
-func ParallelScrapeAppStatuses(apps []config.Application, prometheusServers []config.PrometheusServer, checker *DefaultPrometheusChecker, maxParallelScrapes int) []handlers.AppStatus {
+func ParallelScrapeAppStatuses(apps []config.Application, prometheusServers []config.PrometheusServer, checker *PrometheusMetricChecker, maxParallelScrapes int) []handlers.AppStatus {
 	results := make([]handlers.AppStatus, len(apps))
 	sem := make(chan struct{}, maxParallelScrapes)
 	var wg sync.WaitGroup

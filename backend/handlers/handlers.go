@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"site-availability/config"
 	"site-availability/logging"
@@ -41,7 +40,6 @@ func GetAppStatusCache() []AppStatus {
 	for _, status := range appStatusCache {
 		apps = append(apps, status)
 	}
-	fmt.Printf("apps: %v\n", apps)
 	return apps
 }
 

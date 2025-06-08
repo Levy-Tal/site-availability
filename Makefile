@@ -40,9 +40,10 @@ docker:   ## Build the Docker image
 	@docker build -t levytal/site-availability .
 
 run:   ## Run the app using Docker Compose
-	@docker compose up -d --build
-down:   ## Run the app using Docker Compose
-	@docker compose down
+	@cd helpers && docker compose up -d --build
+
+down:   ## Stop and remove Docker Compose containers
+	@cd helpers && docker compose down
 
 release:  ## Run semantic release to determine next version
 	@read -s -p "Enter GitHub token: " GITHUB_TOKEN && \

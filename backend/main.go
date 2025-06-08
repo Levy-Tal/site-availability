@@ -115,7 +115,9 @@ func startBackgroundStatusFetcher() {
 		ticker := time.NewTicker(scrapeInterval)
 		defer ticker.Stop()
 
-		checker := &scraping.DefaultPrometheusChecker{}
+		checker := &scraping.PrometheusMetricChecker{
+			Credentials: cfg.Credentials,
+		}
 		for range ticker.C {
 			statusFetcher(checker, maxParallelScrapes)
 		}
@@ -123,7 +125,7 @@ func startBackgroundStatusFetcher() {
 }
 
 // Fetch the application statuses with a worker pool
-func statusFetcher(checker *scraping.DefaultPrometheusChecker, maxParallelScrapes int) {
+func statusFetcher(checker *scraping.PrometheusMetricChecker, maxParallelScrapes int) {
 	logging.Logger.Info("Running status fetcher...")
 
 	apps := cfg.Applications

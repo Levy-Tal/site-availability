@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ applications:
 	}
 	tempFile.Close()
 
-	// Load the valid config
+	// Test loading config without credentials
 	cfg, err := LoadConfig(tempFile.Name())
 	assert.Nil(t, err)
 	assert.Equal(t, "60s", cfg.Scraping.Interval)
@@ -60,6 +61,40 @@ applications:
 	assert.Equal(t, "/app/ca.crt", cfg.ServerSettings.CustomCAPath)
 	assert.Equal(t, "DR documentation", cfg.Documentation.Title)
 	assert.Equal(t, "https://google.com", cfg.Documentation.URL)
+	assert.Nil(t, cfg.Credentials)
+
+	// Test loading config with credentials
+	// Create a temporary credentials file
+	credsFile, err := os.CreateTemp("", "credentials.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp credentials file: %v", err)
+	}
+	defer os.Remove(credsFile.Name())
+
+	// Write sample credentials
+	credsContent := `credentials:
+  - name: prom1
+    auth: bearer
+    token: "test-token"
+`
+	_, err = credsFile.WriteString(credsContent)
+	if err != nil {
+		t.Fatalf("Failed to write to temp credentials file: %v", err)
+	}
+	credsFile.Close()
+
+	// Set credentials file environment variable
+	os.Setenv("CREDENTIALS_FILE", credsFile.Name())
+	defer os.Unsetenv("CREDENTIALS_FILE")
+
+	// Load config with credentials
+	cfg, err = LoadConfig(tempFile.Name())
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg.Credentials)
+	assert.Len(t, cfg.Credentials, 1)
+	assert.Equal(t, "prom1", cfg.Credentials[0].Name)
+	assert.Equal(t, "bearer", cfg.Credentials[0].Auth)
+	assert.Equal(t, "test-token", cfg.Credentials[0].Token)
 }
 
 func TestLoadConfig_InvalidLatitude(t *testing.T) {
@@ -107,8 +142,15 @@ applications:
 
 	// Load the invalid config and check for error
 	_, err = LoadConfig(tempFile.Name())
-	assert.NotNil(t, err, "Expected an error for invalid latitude but got nil")
-	assert.Contains(t, err.Error(), "has an invalid latitude", "Error message does not contain expected text")
+	if err == nil {
+		t.Fatal("Expected an error for invalid latitude but got nil")
+	}
+	if err.Error() == "" {
+		t.Fatal("Expected error message but got empty string")
+	}
+	if !strings.Contains(err.Error(), "has an invalid latitude") {
+		t.Errorf("Error message does not contain expected text. Got: %s", err.Error())
+	}
 }
 
 func TestLoadConfig_InvalidFile(t *testing.T) {
@@ -159,6 +201,13 @@ applications:
 
 	// Load the config and check for error
 	_, err = LoadConfig(tempFile.Name())
-	assert.NotNil(t, err, "Expected an error for no locations but got nil")
-	assert.Contains(t, err.Error(), "at least one location is required", "Error message does not contain expected text")
+	if err == nil {
+		t.Fatal("Expected an error for no locations but got nil")
+	}
+	if err.Error() == "" {
+		t.Fatal("Expected error message but got empty string")
+	}
+	if !strings.Contains(err.Error(), "at least one location is required") {
+		t.Errorf("Error message does not contain expected text. Got: %s", err.Error())
+	}
 }
