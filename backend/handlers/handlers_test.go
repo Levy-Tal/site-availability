@@ -46,10 +46,24 @@ func TestUpdateAppStatus(t *testing.T) {
 
 	cache := GetAppStatusCache()
 	require.Len(t, cache, 2)
-	assert.Equal(t, "app1", cache[0].Name)
-	assert.Equal(t, "up", cache[0].Status)
-	assert.Equal(t, "app2", cache[1].Name)
-	assert.Equal(t, "down", cache[1].Status)
+
+	// Create a map for easier lookup
+	statusMap := make(map[string]AppStatus)
+	for _, status := range cache {
+		statusMap[status.Name] = status
+	}
+
+	// Verify app1
+	app1, exists := statusMap["app1"]
+	require.True(t, exists)
+	assert.Equal(t, "loc1", app1.Location)
+	assert.Equal(t, "up", app1.Status)
+
+	// Verify app2
+	app2, exists := statusMap["app2"]
+	require.True(t, exists)
+	assert.Equal(t, "loc2", app2.Location)
+	assert.Equal(t, "down", app2.Status)
 
 	// Test updating with empty statuses
 	UpdateAppStatus([]AppStatus{})
