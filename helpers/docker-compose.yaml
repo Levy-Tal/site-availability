@@ -1,34 +1,51 @@
+version: "3.8"
+
 services:
-  app:
+  site-availability-a:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: levytal/site-availability
-    environment:
-      - CONFIG_FILE=/app/config.yaml
-      - CREDENTIALS_FILE=/app/credentials.yaml
-    volumes:
-      - ./config.yaml:/app/config.yaml
-      - ./credentials.yaml:/app/credentials.yaml
     ports:
       - "8080:8080"
-    depends_on:
-      - nginx
-
-  nginx:
-    image: nginx:latest
+      - "3030:3030"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./.htpasswd:/etc/nginx/.htpasswd:ro
+      - ./config-a.yaml:/etc/site-availability/config.yaml
+      - ./credentials-a.yaml:/etc/site-availability/credentials.yaml
+      - ./certs/site-a-ca.crt:/etc/site-availability/certs/site-a-ca.crt
+      - ./certs/site-b-ca.crt:/etc/site-availability/certs/site-b-ca.crt
+    environment:
+      - CONFIG_FILE=/etc/site-availability/config.yaml
+      - CREDENTIALS_FILE=/etc/site-availability/credentials.yaml
+    networks:
+      - site-net
+
+  site-availability-b:
+    build:
+      context: ..
+      dockerfile: Dockerfile
     ports:
-      - "9090:9090"
-    depends_on:
-      - prometheus
+      - "8081:8080"
+      - "3031:3030"
+    volumes:
+      - ./config-b.yaml:/etc/site-availability/config.yaml
+      - ./credentials-b.yaml:/etc/site-availability/credentials.yaml
+      - ./certs/site-a-ca.crt:/etc/site-availability/certs/site-a-ca.crt
+      - ./certs/site-b-ca.crt:/etc/site-availability/certs/site-b-ca.crt
+    environment:
+      - CONFIG_FILE=/etc/site-availability/config.yaml
+      - CREDENTIALS_FILE=/etc/site-availability/credentials.yaml
+    networks:
+      - site-net
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    ports:
+      - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    expose:
-      - "9090"
+    networks:
+      - site-net
+
+networks:
+  site-net:
+    driver: bridge

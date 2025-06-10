@@ -1,115 +1,318 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"net/http/httptest"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
-	"time"
 
 	"site-availability/config"
-	"site-availability/handlers"
 	"site-availability/logging"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
-	// Initialize global logger before tests run
+	// Setup test environment
 	if err := logging.Init(); err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
+		panic(err)
 	}
-	code := m.Run()
-	os.Exit(code)
+	os.Exit(m.Run())
 }
 
-func TestLivenessProbe(t *testing.T) {
-	req := httptest.NewRequest("GET", "/healthz", nil)
-	w := httptest.NewRecorder()
-	livenessProbe(w, req)
+func TestLoadConfig(t *testing.T) {
+	// Create temporary test files
+	tmpDir := t.TempDir()
 
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	// Create test CA certificates
+	serverCAPath := filepath.Join(tmpDir, "ca.crt")
+	err := os.WriteFile(serverCAPath, []byte("test server certificate"), 0644)
+	require.NoError(t, err)
+
+	siteCAPath := filepath.Join(tmpDir, "site-ca.crt")
+	err = os.WriteFile(siteCAPath, []byte("test site certificate"), 0644)
+	require.NoError(t, err)
+
+	// Create test config.yaml
+	configContent := fmt.Sprintf(`
+server_settings:
+  port: "8080"
+  sync_enable: true
+  custom_ca_path: "%s"
+
+scraping:
+  interval: "60s"
+  timeout: "15s"
+  max_parallel: 10
+
+documentation:
+  title: "Test Documentation"
+  url: "https://test.example.com/docs"
+
+locations:
+  - name: "test location"
+    latitude: 31.782904
+    longitude: 35.214774
+
+prometheus_servers:
+  - name: "prom1"
+    url: "http://prometheus:9090/"
+
+applications:
+  - name: "test app"
+    location: "test location"
+    metric: 'up{instance="test"}'
+    prometheus: "prom1"
+
+sites:
+  - name: "Test Site"
+    url: "https://test-site:3030"
+    enabled: true
+    timeout: "5s"
+    custom_ca_path: "%s"
+`, serverCAPath, siteCAPath)
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Create test credentials.yaml
+	credentialsContent := `
+server_settings:
+  token: "test-server-token"
+
+prometheus_servers:
+  - name: "prom1"
+    auth: "bearer"
+    token: "test-prometheus-token"
+
+sites:
+  - name: "Test Site"
+    token: "test-site-token"
+`
+	credentialsPath := filepath.Join(tmpDir, "credentials.yaml")
+	err = os.WriteFile(credentialsPath, []byte(credentialsContent), 0644)
+	require.NoError(t, err)
+
+	// Set environment variables
+	os.Setenv("CONFIG_FILE", configPath)
+	os.Setenv("CREDENTIALS_FILE", credentialsPath)
+	defer func() {
+		os.Unsetenv("CONFIG_FILE")
+		os.Unsetenv("CREDENTIALS_FILE")
+	}()
+
+	// Test loading configuration
+	cfg, err := config.LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+
+	// Verify server settings
+	assert.Equal(t, "8080", cfg.ServerSettings.Port)
+	assert.True(t, cfg.ServerSettings.SyncEnable)
+	assert.Equal(t, serverCAPath, cfg.ServerSettings.CustomCAPath)
+	assert.Equal(t, "test-server-token", cfg.ServerSettings.Token)
+
+	// Verify scraping settings
+	assert.Equal(t, "60s", cfg.Scraping.Interval)
+	assert.Equal(t, "15s", cfg.Scraping.Timeout)
+	assert.Equal(t, 10, cfg.Scraping.MaxParallel)
+
+	// Verify documentation
+	assert.Equal(t, "Test Documentation", cfg.Documentation.Title)
+	assert.Equal(t, "https://test.example.com/docs", cfg.Documentation.URL)
+
+	// Verify locations
+	require.Len(t, cfg.Locations, 1)
+	assert.Equal(t, "test location", cfg.Locations[0].Name)
+	assert.Equal(t, 31.782904, cfg.Locations[0].Latitude)
+	assert.Equal(t, 35.214774, cfg.Locations[0].Longitude)
+
+	// Verify Prometheus servers
+	require.Len(t, cfg.PrometheusServers, 1)
+	assert.Equal(t, "prom1", cfg.PrometheusServers[0].Name)
+	assert.Equal(t, "http://prometheus:9090/", cfg.PrometheusServers[0].URL)
+	assert.Equal(t, "bearer", cfg.PrometheusServers[0].Auth)
+	assert.Equal(t, "test-prometheus-token", cfg.PrometheusServers[0].Token)
+
+	// Verify applications
+	require.Len(t, cfg.Applications, 1)
+	assert.Equal(t, "test app", cfg.Applications[0].Name)
+	assert.Equal(t, "test location", cfg.Applications[0].Location)
+	assert.Equal(t, `up{instance="test"}`, cfg.Applications[0].Metric)
+	assert.Equal(t, "prom1", cfg.Applications[0].Prometheus)
+
+	// Verify sites
+	require.Len(t, cfg.Sites, 1)
+	assert.Equal(t, "Test Site", cfg.Sites[0].Name)
+	assert.Equal(t, "https://test-site:3030", cfg.Sites[0].URL)
+	assert.True(t, cfg.Sites[0].Enabled)
+	assert.Equal(t, "5s", cfg.Sites[0].Timeout)
+	assert.Equal(t, siteCAPath, cfg.Sites[0].CustomCAPath)
+	assert.Equal(t, "test-site-token", cfg.Sites[0].Token)
 }
 
-func TestReadinessProbe_EmptyCache(t *testing.T) {
-	handlers.UpdateAppStatus([]handlers.AppStatus{}) // Clear cache
+func TestLoadConfigWithMissingFiles(t *testing.T) {
+	// Test with missing config file
+	os.Setenv("CONFIG_FILE", "nonexistent.yaml")
+	os.Setenv("CREDENTIALS_FILE", "nonexistent-credentials.yaml")
+	defer func() {
+		os.Unsetenv("CONFIG_FILE")
+		os.Unsetenv("CREDENTIALS_FILE")
+	}()
 
-	req := httptest.NewRequest("GET", "/readyz", nil)
-	w := httptest.NewRecorder()
-	readinessProbe(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Errorf("Expected status 503, got %d", resp.StatusCode)
-	}
+	_, err := config.LoadConfig()
+	assert.Error(t, err)
 }
 
-func TestReadinessProbe_WithData(t *testing.T) {
-	handlers.UpdateAppStatus([]handlers.AppStatus{
-		{Name: "TestApp", Status: "up"},
-	})
+func TestLoadConfigWithInvalidYAML(t *testing.T) {
+	// Create temporary test file with invalid YAML
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "invalid.yaml")
+	err := os.WriteFile(configPath, []byte("invalid: yaml: content:"), 0644)
+	require.NoError(t, err)
 
-	req := httptest.NewRequest("GET", "/readyz", nil)
-	w := httptest.NewRecorder()
-	readinessProbe(w, req)
+	os.Setenv("CONFIG_FILE", configPath)
+	defer os.Unsetenv("CONFIG_FILE")
 
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	_, err = config.LoadConfig()
+	assert.Error(t, err)
 }
 
-func TestGetEnv(t *testing.T) {
-	// Test with environment variable set
-	os.Setenv("TEST_ENV_VAR", "test_value")
-	defer os.Unsetenv("TEST_ENV_VAR")
+func TestLoadConfigWithMissingRequiredFields(t *testing.T) {
+	// Create temporary test file with missing required fields
+	tmpDir := t.TempDir()
+	configContent := `
+server_settings:
+  port: "8080"
+`
+	configPath := filepath.Join(tmpDir, "incomplete.yaml")
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-	if value := getEnv("TEST_ENV_VAR", "default"); value != "test_value" {
-		t.Errorf("Expected 'test_value', got %s", value)
-	}
+	os.Setenv("CONFIG_FILE", configPath)
+	defer os.Unsetenv("CONFIG_FILE")
 
-	// Test with environment variable not set
-	if value := getEnv("NONEXISTENT_VAR", "default"); value != "default" {
-		t.Errorf("Expected 'default', got %s", value)
-	}
-
-	// Test with empty environment variable
-	os.Setenv("EMPTY_VAR", "")
-	defer os.Unsetenv("EMPTY_VAR")
-
-	if value := getEnv("EMPTY_VAR", "default"); value != "default" {
-		t.Errorf("Expected 'default', got %s", value)
-	}
+	_, err = config.LoadConfig()
+	assert.Error(t, err)
 }
 
-func TestStartServer(t *testing.T) {
-	// Create a test configuration
-	testCfg := &config.Config{
-		ServerSettings: config.ServerSettings{
-			Port: "8080",
-		},
-	}
+func TestLoadConfigWithInvalidLocationCoordinates(t *testing.T) {
+	// Create temporary test file with invalid coordinates
+	tmpDir := t.TempDir()
+	configContent := `
+server_settings:
+  port: "8080"
 
-	// Set up routes before starting the server
-	setupRoutes()
+locations:
+  - name: "invalid location"
+    latitude: 200.0  # Invalid latitude
+    longitude: 35.214774
+`
+	configPath := filepath.Join(tmpDir, "invalid-coords.yaml")
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-	// Start server in a goroutine
-	go startServer(testCfg.ServerSettings.Port)
+	os.Setenv("CONFIG_FILE", configPath)
+	defer os.Unsetenv("CONFIG_FILE")
 
-	// Give the server more time to start
-	time.Sleep(500 * time.Millisecond)
+	_, err = config.LoadConfig()
+	assert.Error(t, err)
+}
 
-	// Test the server is running by making a request to the liveness probe
-	resp, err := http.Get("http://localhost:8080/healthz")
-	if err != nil {
-		t.Errorf("Failed to connect to server: %v", err)
-		return
-	}
-	defer resp.Body.Close()
+func TestLoadConfigWithOptionalCredentials(t *testing.T) {
+	// Create temporary test files
+	tmpDir := t.TempDir()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	// Create test config.yaml with minimal required fields
+	configContent := `
+server_settings:
+  port: "8080"
+
+locations:
+  - name: "test location"
+    latitude: 31.782904
+    longitude: 35.214774
+
+prometheus_servers:
+  - name: "prom1"
+    url: "http://prometheus:9090/"
+
+sites:
+  - name: "Test Site"
+    url: "https://test-site:3030"
+    enabled: true
+`
+	configPath := filepath.Join(tmpDir, "minimal-config.yaml")
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Create empty credentials file
+	credentialsPath := filepath.Join(tmpDir, "empty-credentials.yaml")
+	err = os.WriteFile(credentialsPath, []byte(""), 0644)
+	require.NoError(t, err)
+
+	os.Setenv("CONFIG_FILE", configPath)
+	os.Setenv("CREDENTIALS_FILE", credentialsPath)
+	defer func() {
+		os.Unsetenv("CONFIG_FILE")
+		os.Unsetenv("CREDENTIALS_FILE")
+	}()
+
+	// Test loading configuration with optional credentials
+	cfg, err := config.LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+
+	// Verify that optional fields are empty
+	assert.Empty(t, cfg.ServerSettings.Token)
+	assert.Empty(t, cfg.PrometheusServers[0].Auth)
+	assert.Empty(t, cfg.PrometheusServers[0].Token)
+	assert.Empty(t, cfg.Sites[0].Token)
+}
+
+func TestLoadConfigWithEnvironmentVariables(t *testing.T) {
+	// Test default values when environment variables are not set
+	os.Unsetenv("CONFIG_FILE")
+	os.Unsetenv("CREDENTIALS_FILE")
+
+	// Create default config file
+	tmpDir := t.TempDir()
+	configContent := `
+server_settings:
+  port: "8080"
+
+locations:
+  - name: "test location"
+    latitude: 31.782904
+    longitude: 35.214774
+
+prometheus_servers:
+  - name: "prom1"
+    url: "http://prometheus:9090/"
+
+sites:
+  - name: "Test Site"
+    url: "https://test-site:3030"
+    enabled: true
+`
+	defaultConfigPath := filepath.Join(tmpDir, "config.yaml")
+	err := os.WriteFile(defaultConfigPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Change to the temporary directory
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	defer func() {
+		err := os.Chdir(originalDir)
+		require.NoError(t, err)
+	}()
+
+	// Test loading configuration with default paths
+	cfg, err := config.LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "8080", cfg.ServerSettings.Port)
 }

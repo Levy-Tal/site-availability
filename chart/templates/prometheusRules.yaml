@@ -33,5 +33,32 @@ spec:
       labels:
         severity: critical
       annotations:
-        summary: "Site availability - No metrics received "
+        summary: "Site availability - No metrics received"
         description: "No site availability metrics received from the exporter in the last 5 minutes."
+
+    - alert: SiteSyncFailure
+      expr: site_sync_failures_total > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Site sync failure"
+        description: "Site sync has failed in the last 5 minutes."
+
+    - alert: SiteSyncHighLatency
+      expr: rate(site_sync_latency_seconds_sum[5m]) / rate(site_sync_latency_seconds_count[5m]) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High site sync latency"
+        description: "Site sync operations are taking longer than 1 second on average."
+
+    - alert: SiteSyncDown
+      expr: site_sync_status{status="down"} == 1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Site sync down"
+        description: "Site sync is down for site {{ $labels.site }}."

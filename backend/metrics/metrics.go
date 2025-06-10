@@ -73,6 +73,40 @@ var (
 			Help: "Total apps in unavailable status across all locations",
 		},
 	)
+
+	// Site sync metrics
+	siteSyncAttempts = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "site_sync_attempts_total",
+			Help: "Total number of sync attempts",
+		},
+	)
+	siteSyncFailures = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "site_sync_failures_total",
+			Help: "Total number of sync failures",
+		},
+	)
+	siteSyncLatency = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "site_sync_latency_seconds",
+			Help:    "Sync operation latency in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+	siteSyncLastSuccess = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "site_sync_last_success_timestamp",
+			Help: "Timestamp of last successful sync",
+		},
+	)
+	siteSyncStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "site_sync_status",
+			Help: "Status of each synced site",
+		},
+		[]string{"site", "status"},
+	)
 )
 
 // SetupMetricsHandler returns the handler for /metrics endpoint
@@ -160,4 +194,29 @@ func Init() {
 	prometheus.MustRegister(siteAvailabilityTotalAppsUp)
 	prometheus.MustRegister(siteAvailabilityTotalAppsDown)
 	prometheus.MustRegister(siteAvailabilityTotalAppsUnavailable)
+	prometheus.MustRegister(siteSyncAttempts)
+	prometheus.MustRegister(siteSyncFailures)
+	prometheus.MustRegister(siteSyncLatency)
+	prometheus.MustRegister(siteSyncLastSuccess)
+	prometheus.MustRegister(siteSyncStatus)
+}
+
+// SiteSyncMetrics provides access to site sync metrics
+type SiteSyncMetrics struct {
+	SyncAttempts prometheus.Counter
+	SyncFailures prometheus.Counter
+	SyncLatency  prometheus.Histogram
+	LastSyncTime prometheus.Gauge
+	SiteStatus   *prometheus.GaugeVec
+}
+
+// NewSiteSyncMetrics returns a new SiteSyncMetrics instance
+func NewSiteSyncMetrics() *SiteSyncMetrics {
+	return &SiteSyncMetrics{
+		SyncAttempts: siteSyncAttempts,
+		SyncFailures: siteSyncFailures,
+		SyncLatency:  siteSyncLatency,
+		LastSyncTime: siteSyncLastSuccess,
+		SiteStatus:   siteSyncStatus,
+	}
 }

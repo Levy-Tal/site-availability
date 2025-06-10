@@ -1,254 +1,376 @@
 package scraping
 
 import (
-	"fmt"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"site-availability/config"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// --------------------
-// Mock implementation
-// --------------------
+func TestSetScrapeTimeout(t *testing.T) {
+	// Test setting timeout
+	timeout := 5 * time.Second
+	SetScrapeTimeout(timeout)
+	assert.Equal(t, timeout, defaultScrapeTimeout)
+	assert.NotNil(t, httpClient)
+	assert.Equal(t, timeout, httpClient.Timeout)
 
-type MockPrometheusChecker struct {
-	mockResponse int
-	mockError    error
-	Credentials  []config.PrometheusCredentials
+	// Test updating timeout
+	newTimeout := 10 * time.Second
+	SetScrapeTimeout(newTimeout)
+	assert.Equal(t, newTimeout, defaultScrapeTimeout)
+	assert.Equal(t, newTimeout, httpClient.Timeout)
 }
 
-func (m *MockPrometheusChecker) Check(prometheusURL string, promQLQuery string, prometheusServers []config.PrometheusServer) (int, error) {
-	if m.mockError != nil {
-		return 0, m.mockError
-	}
-	return m.mockResponse, nil
+func TestInitCertificate(t *testing.T) {
+	// Create temporary CA certificate
+	tmpDir := t.TempDir()
+	certPath := filepath.Join(tmpDir, "ca.crt")
+	err := os.WriteFile(certPath, []byte("test certificate"), 0644)
+	require.NoError(t, err)
+
+	// Test with valid certificate
+	os.Setenv("TEST_CA_PATH", certPath)
+	defer os.Unsetenv("TEST_CA_PATH")
+
+	InitCertificate("TEST_CA_PATH")
+	assert.NotNil(t, httpClient)
+	assert.NotNil(t, httpClient.Transport)
+
+	// Test with empty environment variable
+	os.Unsetenv("TEST_CA_PATH")
+	InitCertificate("TEST_CA_PATH")
+	assert.NotNil(t, httpClient)
+
+	// Test with invalid certificate path
+	os.Setenv("TEST_CA_PATH", "nonexistent.crt")
+	InitCertificate("TEST_CA_PATH")
+	assert.NotNil(t, httpClient)
 }
 
-// --------------------
-// CheckAppStatus tests
-// --------------------
+func TestPrometheusMetricChecker_Check(t *testing.T) {
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check authentication
+		if auth := r.Header.Get("Authorization"); auth != "" {
+			if auth != "Bearer test-token" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
 
-func TestCheckAppStatus_Up(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{
-		mockResponse: 1,
-		mockError:    nil,
-		Credentials:  nil,
-	}
-
-	app := config.Application{
-		Name:       "app1",
-		Location:   "site1",
-		Metric:     "up{instance=\"app1\"}",
-		Prometheus: "prom1",
-	}
-
-	prometheusServers := []config.PrometheusServer{
-		{
-			Name: "prom1",
-			URL:  "http://prometheus1.app.url",
-		},
-	}
-
-	status := CheckAppStatus(app, prometheusServers, mockChecker)
-
-	if status.Status != "up" {
-		t.Errorf("Expected status 'up', but got %s", status.Status)
-	}
-	if status.Name != app.Name {
-		t.Errorf("Expected app name %s, but got %s", app.Name, status.Name)
-	}
-	if status.Location != app.Location {
-		t.Errorf("Expected app location %s, but got %s", app.Location, status.Location)
-	}
-}
-
-func TestCheckAppStatus_WithCredentials(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{
-		mockResponse: 1,
-		mockError:    nil,
-		Credentials: []config.PrometheusCredentials{
-			{
-				Name:  "prom1",
-				Auth:  "bearer",
-				Token: "test-token",
+		// Return test response
+		response := PrometheusResponse{
+			Status: "success",
+			Data: struct {
+				ResultType string `json:"resultType"`
+				Result     []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				} `json:"result"`
+			}{
+				ResultType: "vector",
+				Result: []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				}{
+					{
+						Metric: map[string]string{"instance": "test"},
+						Value:  []interface{}{float64(time.Now().Unix()), "1"},
+					},
+				},
 			},
-		},
-	}
+		}
 
-	app := config.Application{
-		Name:       "app1",
-		Location:   "site1",
-		Metric:     "up{instance=\"app1\"}",
-		Prometheus: "prom1",
-	}
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(response)
+		require.NoError(t, err)
+	}))
+	defer server.Close()
 
-	prometheusServers := []config.PrometheusServer{
+	// Test cases
+	tests := []struct {
+		name           string
+		prometheusURL  string
+		promQLQuery    string
+		servers        []config.PrometheusServer
+		expectedStatus int
+		expectError    bool
+	}{
 		{
-			Name: "prom1",
-			URL:  "http://prometheus1.app.url",
+			name:          "Successful query",
+			prometheusURL: server.URL,
+			promQLQuery:   "up{instance='test'}",
+			servers: []config.PrometheusServer{
+				{
+					Name:  "test",
+					URL:   server.URL,
+					Auth:  "bearer",
+					Token: "test-token",
+				},
+			},
+			expectedStatus: 1,
+			expectError:    false,
 		},
-	}
-
-	status := CheckAppStatus(app, prometheusServers, mockChecker)
-
-	if status.Status != "up" {
-		t.Errorf("Expected status 'up', but got %s", status.Status)
-	}
-}
-
-func TestCheckAppStatus_Down(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{
-		mockResponse: 0,
-		mockError:    nil,
-		Credentials:  nil,
-	}
-
-	app := config.Application{
-		Name:       "app2",
-		Location:   "site2",
-		Metric:     "up{instance=\"app2\"}",
-		Prometheus: "prom1",
-	}
-
-	prometheusServers := []config.PrometheusServer{
 		{
-			Name: "prom1",
-			URL:  "http://prometheus1.app.url",
+			name:          "Authentication failure",
+			prometheusURL: server.URL,
+			promQLQuery:   "up{instance='test'}",
+			servers: []config.PrometheusServer{
+				{
+					Name:  "test",
+					URL:   server.URL,
+					Auth:  "bearer",
+					Token: "wrong-token",
+				},
+			},
+			expectedStatus: 0,
+			expectError:    true,
 		},
-	}
-
-	status := CheckAppStatus(app, prometheusServers, mockChecker)
-
-	if status.Status != "down" {
-		t.Errorf("Expected status 'down', but got %s", status.Status)
-	}
-}
-
-func TestCheckAppStatus_Error(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{
-		mockResponse: 0,
-		mockError:    ErrMockFailure,
-		Credentials:  nil,
-	}
-
-	app := config.Application{
-		Name:       "app3",
-		Location:   "site3",
-		Metric:     "up{instance=\"app3\"}",
-		Prometheus: "prom1",
-	}
-
-	prometheusServers := []config.PrometheusServer{
 		{
-			Name: "prom1",
-			URL:  "http://prometheus1.app.url",
+			name:           "No authentication",
+			prometheusURL:  server.URL,
+			promQLQuery:    "up{instance='test'}",
+			servers:        []config.PrometheusServer{},
+			expectedStatus: 1,
+			expectError:    false,
 		},
 	}
 
-	status := CheckAppStatus(app, prometheusServers, mockChecker)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checker := &PrometheusMetricChecker{
+				PrometheusServers: tt.servers,
+			}
 
-	if status.Status != "unavailable" {
-		t.Errorf("Expected status 'unavailable' on error, but got %s", status.Status)
+			status, err := checker.Check(tt.prometheusURL, tt.promQLQuery, tt.servers)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedStatus, status)
+			}
+		})
 	}
 }
 
-func TestCheckAppStatus_Unavailable(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{
-		mockResponse: 0,
-		mockError:    fmt.Errorf("mock error"),
-		Credentials:  nil,
-	}
+func TestCheckAppStatus(t *testing.T) {
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := PrometheusResponse{
+			Status: "success",
+			Data: struct {
+				ResultType string `json:"resultType"`
+				Result     []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				} `json:"result"`
+			}{
+				ResultType: "vector",
+				Result: []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				}{
+					{
+						Metric: map[string]string{"instance": "test"},
+						Value:  []interface{}{float64(time.Now().Unix()), "1"},
+					},
+				},
+			},
+		}
 
-	app := config.Application{
-		Name:       "app5",
-		Location:   "site5",
-		Metric:     "up{instance=\"app5\"}",
-		Prometheus: "prom1",
-	}
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(response)
+		require.NoError(t, err)
+	}))
+	defer server.Close()
 
-	prometheusServers := []config.PrometheusServer{
+	// Test cases
+	tests := []struct {
+		name           string
+		app            config.Application
+		servers        []config.PrometheusServer
+		expectedStatus string
+	}{
 		{
-			Name: "prom1",
-			URL:  "http://prometheus1.app.url",
+			name: "Valid app with matching server",
+			app: config.Application{
+				Name:       "test-app",
+				Location:   "test-location",
+				Metric:     "up{instance='test'}",
+				Prometheus: "test-server",
+			},
+			servers: []config.PrometheusServer{
+				{
+					Name: "test-server",
+					URL:  server.URL,
+				},
+			},
+			expectedStatus: "up",
 		},
-	}
-
-	status := CheckAppStatus(app, prometheusServers, mockChecker)
-
-	if status.Status != "unavailable" {
-		t.Errorf("Expected status 'unavailable' on error, but got %s", status.Status)
-	}
-}
-
-func TestCheckAppStatus_PrometheusNotFound(t *testing.T) {
-	mockChecker := &MockPrometheusChecker{
-		mockResponse: 1,
-		mockError:    nil,
-		Credentials:  nil,
-	}
-
-	app := config.Application{
-		Name:       "app6",
-		Location:   "site6",
-		Metric:     "up{instance=\"app6\"}",
-		Prometheus: "nonexistent",
-	}
-
-	prometheusServers := []config.PrometheusServer{
 		{
-			Name: "prom1",
-			URL:  "http://prometheus1.app.url",
+			name: "App with non-existent server",
+			app: config.Application{
+				Name:       "test-app",
+				Location:   "test-location",
+				Metric:     "up{instance='test'}",
+				Prometheus: "nonexistent",
+			},
+			servers: []config.PrometheusServer{
+				{
+					Name: "test-server",
+					URL:  server.URL,
+				},
+			},
+			expectedStatus: "unavailable",
 		},
 	}
 
-	status := CheckAppStatus(app, prometheusServers, mockChecker)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checker := &PrometheusMetricChecker{
+				PrometheusServers: tt.servers,
+			}
 
-	if status.Status != "unavailable" {
-		t.Errorf("Expected status 'unavailable' when Prometheus server not found, but got %s", status.Status)
+			status := CheckAppStatus(tt.app, tt.servers, checker)
+			assert.Equal(t, tt.app.Name, status.Name)
+			assert.Equal(t, tt.app.Location, status.Location)
+			assert.Equal(t, tt.expectedStatus, status.Status)
+		})
 	}
 }
 
-var ErrMockFailure = &MockError{}
+func TestParallelScrapeAppStatuses(t *testing.T) {
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := PrometheusResponse{
+			Status: "success",
+			Data: struct {
+				ResultType string `json:"resultType"`
+				Result     []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				} `json:"result"`
+			}{
+				ResultType: "vector",
+				Result: []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				}{
+					{
+						Metric: map[string]string{"instance": "test"},
+						Value:  []interface{}{float64(time.Now().Unix()), "1"},
+					},
+				},
+			},
+		}
 
-type MockError struct{}
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(response)
+		require.NoError(t, err)
+	}))
+	defer server.Close()
 
-func (e *MockError) Error() string {
-	return "mock error"
-}
-
-// --------------------
-// InitCertificate tests
-// --------------------
-
-func TestInitCertificate_Success(t *testing.T) {
-	// Create a temporary valid CA cert file
-	tmpFile := filepath.Join(t.TempDir(), "test-ca.pem")
-	certContent := `-----BEGIN CERTIFICATE-----
-MIID...FAKE...CERTIFICATE...CONTENT...==
------END CERTIFICATE-----`
-	if err := os.WriteFile(tmpFile, []byte(certContent), 0644); err != nil {
-		t.Fatalf("Failed to write temp cert: %v", err)
+	// Test data
+	apps := []config.Application{
+		{
+			Name:       "app1",
+			Location:   "loc1",
+			Metric:     "up{instance='test'}",
+			Prometheus: "test-server",
+		},
+		{
+			Name:       "app2",
+			Location:   "loc2",
+			Metric:     "up{instance='test'}",
+			Prometheus: "test-server",
+		},
 	}
 
-	// Set the env var to point to our temp cert
-	os.Setenv("TEST_CA_CERT_PATH", tmpFile)
-	defer os.Unsetenv("TEST_CA_CERT_PATH")
+	servers := []config.PrometheusServer{
+		{
+			Name: "test-server",
+			URL:  server.URL,
+		},
+	}
 
-	// Should not panic or error (we can't easily assert the internal pool)
-	InitCertificate("TEST_CA_CERT_PATH")
+	checker := &PrometheusMetricChecker{
+		PrometheusServers: servers,
+	}
+
+	// Test with different maxParallelScrapes values
+	maxParallelScrapes := 2
+	results := ParallelScrapeAppStatuses(apps, servers, checker, maxParallelScrapes)
+
+	// Verify results
+	require.Len(t, results, 2)
+	assert.Equal(t, "app1", results[0].Name)
+	assert.Equal(t, "loc1", results[0].Location)
+	assert.Equal(t, "up", results[0].Status)
+	assert.Equal(t, "app2", results[1].Name)
+	assert.Equal(t, "loc2", results[1].Location)
+	assert.Equal(t, "up", results[1].Status)
 }
 
-func TestInitCertificate_EmptyEnv(t *testing.T) {
-	os.Unsetenv("EMPTY_CA_ENV")
-	InitCertificate("EMPTY_CA_ENV") // Should silently skip
-}
+func TestPrometheusMetricChecker_Check_ErrorCases(t *testing.T) {
+	// Create test server that returns error responses
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return error response
+		response := PrometheusResponse{
+			Status: "error",
+			Data: struct {
+				ResultType string `json:"resultType"`
+				Result     []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				} `json:"result"`
+			}{},
+		}
 
-func TestInitCertificate_FileNotExist(t *testing.T) {
-	// Set a non-existent path
-	os.Setenv("INVALID_CA_PATH", "/non/existent/path.pem")
-	defer os.Unsetenv("INVALID_CA_PATH")
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(response)
+		require.NoError(t, err)
+	}))
+	defer server.Close()
 
-	// Should log error but not crash
-	InitCertificate("INVALID_CA_PATH")
+	checker := &PrometheusMetricChecker{}
+
+	// Test error cases
+	_, err := checker.Check(server.URL, "invalid query", nil)
+	assert.Error(t, err)
+
+	// Test with empty result
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := PrometheusResponse{
+			Status: "success",
+			Data: struct {
+				ResultType string `json:"resultType"`
+				Result     []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				} `json:"result"`
+			}{
+				ResultType: "vector",
+				Result: []struct {
+					Metric map[string]string `json:"metric"`
+					Value  []interface{}     `json:"value"`
+				}{},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(response)
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	_, err = checker.Check(server.URL, "empty result query", nil)
+	assert.Error(t, err)
 }

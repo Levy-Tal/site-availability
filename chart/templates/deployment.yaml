@@ -34,6 +34,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{- if .Values.siteSync.enabled }}
+            - name: sync
+              containerPort: {{ .Values.siteSync.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -59,6 +64,10 @@ spec:
             - name: CREDENTIALS_FILE
               value: /app/credentials.yaml
             {{- end }}
+            {{- if .Values.siteSync.enabled }}
+            - name: SITE_CREDENTIALS_FILE
+              value: /app/site-credentials.yaml
+            {{- end }}
           envFrom:
             {{- range .Values.extraSecretNameForEnvFrom }}
             - secretRef:
@@ -72,6 +81,11 @@ spec:
             - name: credentials-volume
               mountPath: /app/credentials.yaml
               subPath: credentials.yaml
+            {{- end }}
+            {{- if .Values.siteSync.enabled }}
+            - name: site-credentials-volume
+              mountPath: /app/site-credentials.yaml
+              subPath: site-credentials.yaml
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
@@ -96,6 +110,11 @@ spec:
         - name: credentials-volume
           secret:
             secretName: {{ .Values.credentials.credentialsSecretName }}
+        {{- end }}
+        {{- if .Values.siteSync.enabled }}
+        - name: site-credentials-volume
+          secret:
+            secretName: {{ .Values.siteSync.serverToken.secretName }}
         {{- end }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}

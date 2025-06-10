@@ -94,7 +94,7 @@ type MetricChecker interface {
 
 // PrometheusMetricChecker implements the MetricChecker interface for Prometheus.
 type PrometheusMetricChecker struct {
-	Credentials []config.PrometheusCredentials
+	PrometheusServers []config.PrometheusServer
 }
 
 // Check queries Prometheus and extracts the metric value.
@@ -121,42 +121,31 @@ func (c *PrometheusMetricChecker) Check(prometheusURL string, promQLQuery string
 
 	// Add authentication if credentials are available
 	var authMethod string
-	if c.Credentials != nil {
+	if c.PrometheusServers != nil {
 		logging.Logger.WithFields(map[string]interface{}{
-			"credentials_count": len(c.Credentials),
-			"prometheus_url":    prometheusURL,
+			"servers_count":  len(c.PrometheusServers),
+			"prometheus_url": prometheusURL,
 		}).Debug("Checking credentials for Prometheus server")
 
-		// Find the Prometheus server name from the URL
-		var prometheusName string
-		for _, server := range prometheusServers {
+		// Find the Prometheus server from the URL
+		for _, server := range c.PrometheusServers {
 			if server.URL == prometheusURL {
-				prometheusName = server.Name
-				break
-			}
-		}
-
-		if prometheusName != "" {
-			// Find matching credentials for this Prometheus server
-			for _, cred := range c.Credentials {
-				if cred.Name == prometheusName {
-					authMethod = cred.Auth
+				if server.Auth != "" && server.Token != "" {
+					authMethod = server.Auth
 					logging.Logger.WithFields(map[string]interface{}{
-						"prometheus": prometheusName,
-						"auth_type":  cred.Auth,
+						"prometheus": server.Name,
+						"auth_type":  server.Auth,
 					}).Debug("Found matching credentials for Prometheus server")
 
-					switch cred.Auth {
+					switch server.Auth {
 					case "bearer":
-						req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cred.Token))
+						req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", server.Token))
 					case "basic":
-						req.Header.Set("Authorization", fmt.Sprintf("Basic %s", cred.Token))
+						req.Header.Set("Authorization", fmt.Sprintf("Basic %s", server.Token))
 					}
-					break
 				}
+				break
 			}
-		} else {
-			logging.Logger.WithField("url", prometheusURL).Warn("Could not find Prometheus server name for URL")
 		}
 	} else {
 		logging.Logger.Debug("No credentials available for authentication")

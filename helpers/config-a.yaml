@@ -1,0 +1,36 @@
+server_settings:
+  port: 8080
+  sync_enable: true
+  sync_port: 3030
+  custom_ca_path: /etc/site-availability/certs/site-b-ca.crt
+
+scraping:
+  interval: "60s"
+  timeout: "15s"
+  max_parallel: 10
+
+documentation:
+  title: "Site A Documentation"
+  url: "https://site-a.example.com/docs"
+
+locations:
+  - name: "site a"
+    latitude: 32.43843612145413
+    longitude: 34.899453546836334
+
+prometheus_servers:
+  - name: prom1
+    url: http://prometheus:9090/
+
+applications:
+  - name: "app 1"
+    location: "site a"
+    metric: 'up{instance="app1"}'
+    prometheus: "prom1"
+
+sites:
+  - name: "Site B"
+    url: "https://site-availability-b:3030"
+    enabled: true
+    timeout: "5s"
+    custom_ca_path: "/etc/site-availability/certs/site-b-ca.crt"

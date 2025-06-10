@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"site-availability/authentication/hmac"
 	"site-availability/config"
 	"site-availability/logging"
 	"sync"
@@ -171,4 +172,33 @@ func GetDocs(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	}
 
 	logging.Logger.WithField("docs response:", response).Debug("Docs response sent")
+}
+
+// HandleSyncRequest handles the /sync endpoint
+func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /sync request")
+
+	// Check if sync is enabled
+	if !cfg.ServerSettings.SyncEnable {
+		http.Error(w, "Sync is disabled", http.StatusForbidden)
+		return
+	}
+
+	// Validate the request using the server's token if available
+	if cfg.ServerSettings.Token != "" {
+		validator := hmac.NewValidator(cfg.ServerSettings.Token)
+		if !validator.ValidateRequest(r) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	// Return current statuses from the global cache
+	statuses := GetAppStatusCache()
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(statuses); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode sync response")
+		http.Error(w, "Failed to encode sync response", http.StatusInternalServerError)
+		return
+	}
 }

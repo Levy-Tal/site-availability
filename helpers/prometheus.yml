@@ -12,3 +12,23 @@ scrape_configs:
   - job_name: "app"
     static_configs:
       - targets: ["app:8080"] # Replace with your app's service name and port
+
+  - job_name: "site-availability-a"
+    static_configs:
+      - targets: ["site-availability-a:8080"]
+    metrics_path: "/metrics"
+
+  - job_name: "site-availability-b"
+    static_configs:
+      - targets: ["site-availability-b:8080"]
+    metrics_path: "/metrics"
+
+  - job_name: "site-sync-a"
+    static_configs:
+      - targets: ["site-availability-a:3030"]
+    metrics_path: "/metrics"
+
+  - job_name: "site-sync-b"
+    static_configs:
+      - targets: ["site-availability-b:3030"]
+    metrics_path: "/metrics"
