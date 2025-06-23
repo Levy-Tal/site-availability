@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: ../../..
+      dockerfile: Dockerfile
+    image: levytal/site-availability
+    environment:
+      - CONFIG_FILE=/app/config.yaml
+    volumes:
+      - ../../config/single-server.yaml:/app/config.yaml
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ../../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    expose:
+      - "9090"

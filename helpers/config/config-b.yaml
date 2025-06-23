@@ -1,0 +1,41 @@
+server_settings:
+  port: 8080
+  sync_enable: true
+
+scraping:
+  interval: "10s"
+  timeout: "1s"
+  max_parallel: 10
+
+documentation:
+  title: "Server B Documentation"
+  url: "https://server-b.example.com/docs"
+
+locations:
+  - name: Beer Sheva
+    latitude: 31.245381
+    longitude: 34.788745
+  - name: Netanya
+    latitude: 33.04198
+    longitude: 35.51537
+
+prometheus_servers:
+  - name: prom1
+    url: http://prometheus-b:9090/
+
+sites:
+  - name: Server A
+    url: http://server-a:8080
+    enabled: true
+    check_interval: "30s"
+    timeout: "5s"
+
+applications:
+  - name: b-app3
+    location: Beer Sheva
+    metric: up{instance="app:8080", job="app"}
+    prometheus: prom1
+  - name: b-app4
+    location: Netanya
+    metric: up{instance="localhost:9090", job="prometheus"}
+    prometheus: prom1

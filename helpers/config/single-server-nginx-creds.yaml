@@ -1,0 +1,7 @@
+prometheus_servers:
+  - name: prom1
+    auth: bearer
+    token: "test-token-123"
+  - name: prom2
+    auth: basic
+    token: "admin:prometheus"

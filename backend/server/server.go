@@ -194,7 +194,7 @@ func (s *Server) gracefulShutdown(srv *http.Server) error {
 }
 
 // Liveness probe handler
-func (s *Server) livenessProbe(w http.ResponseWriter, r *http.Request) {
+func (s *Server) livenessProbe(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("OK")); err != nil {
 		logging.Logger.Errorf("Failed to write liveness probe response: %v", err)
@@ -202,7 +202,7 @@ func (s *Server) livenessProbe(w http.ResponseWriter, r *http.Request) {
 }
 
 // Readiness probe handler
-func (s *Server) readinessProbe(w http.ResponseWriter, r *http.Request) {
+func (s *Server) readinessProbe(w http.ResponseWriter, _ *http.Request) {
 	if handlers.IsAppStatusCacheEmpty() {
 		logging.Logger.Warn("Readiness probe failed: App status cache is empty")
 		w.WriteHeader(http.StatusServiceUnavailable)
