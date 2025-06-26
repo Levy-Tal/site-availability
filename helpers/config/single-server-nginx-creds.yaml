@@ -1,4 +1,4 @@
-credentials:
+sources:
   - name: prom1
     auth: bearer
     token: "test-token-123"

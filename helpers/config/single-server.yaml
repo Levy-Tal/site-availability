@@ -1,0 +1,60 @@
+server_settings:
+  port: 8080
+  sync_enable: false
+
+scraping:
+  interval: "10s"
+  timeout: "1s"
+  max_parallel: 10
+
+documentation:
+  title: "Site A Documentation"
+  url: "https://site-a.example.com/docs"
+
+locations:
+  - name: Hadera
+    latitude: 32.446235
+    longitude: 34.903852
+  - name: Jerusalem
+    latitude: 31.782904
+    longitude: 35.214774
+  - name: Beer Sheva
+    latitude: 31.245381
+    longitude: 34.788745
+  - name: Netanya
+    latitude: 33.04198
+    longitude: 35.51537
+  - name: negev
+    latitude: 29.96649
+    longitude: 34.89450
+
+sources:
+  - name: prom1
+    type: prometheus
+    url: http://prometheus:9090
+    apps:
+      - name: app1
+        location: Hadera
+        metric: up{instance="app:8080", job="app"}
+      - name: app3
+        location: Jerusalem
+        metric: up{instance="localhost:9090", job="prometheus"}
+      - name: app4
+        location: Beer Sheva
+        metric: up{instance="app:8080", job="app"}
+      - name: app5
+        location: Netanya
+        metric: 1 - up{instance="localhost:9090", job="prometheus"}
+      - name: app6
+        location: Beer Sheva
+        metric: up{instance="app:8080", job="app"}
+  - name: prom2
+    type: prometheus
+    url: http://prometheus2:9090
+    apps:
+      - name: app2
+        location: Hadera
+        metric: up{instance="app:8080", job="app"}
+      - name: app7
+        location: Hadera
+        metric: 1 - up{instance="localhost:9090", job="prometheus"}

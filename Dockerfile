@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Build Go backend
-FROM golang:1.23 AS backend-builder
+FROM golang:1.24 AS backend-builder
 WORKDIR /backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
@@ -20,5 +20,4 @@ WORKDIR /app
 COPY --from=backend-builder /backend/site-availability /app/site-availability
 COPY --from=frontend-builder /frontend/build /app/static
 USER 65532
-EXPOSE 8080
 ENTRYPOINT ["/app/site-availability"]
