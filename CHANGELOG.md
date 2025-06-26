@@ -1,3 +1,26 @@
+# [2.0.0](https://github.com/Levy-Tal/site-availability/compare/v1.6.0...v2.0.0) (2025-06-26)
+
+
+* Merge pull request [#2](https://github.com/Levy-Tal/site-availability/issues/2) from Levy-Tal/feat(site-sync) ([612deca](https://github.com/Levy-Tal/site-availability/commit/612deca21e5946c5a3605baf070dc9489b9fd140))
+
+
+### Bug Fixes
+
+* **handlers_test.go:** I've updated another test to not rely on the order of items in the cache. ([63cff8a](https://github.com/Levy-Tal/site-availability/commit/63cff8ad841ffb658f31b927d1d57e11ca8d14d9))
+* **handlers_test.go:** I've updated the test to not rely on the order of items in the cache. ([d64b515](https://github.com/Levy-Tal/site-availability/commit/d64b515bf46a5f3c09b1b0c7e7a3a30bb203aafc))
+
+
+### Features
+
+* **site:** site scraping ([6354381](https://github.com/Levy-Tal/site-availability/commit/6354381ecb9ddb41203ce1aa2ad6b774a7a83df5))
+* **sync:** Add the ability to sync status from other sites ([bf3ed51](https://github.com/Levy-Tal/site-availability/commit/bf3ed51e7039e3e8de57570984378c99f20737ae))
+
+
+### BREAKING CHANGES
+
+* New project structure.
+* **site:** New project structure.
+
 # [1.6.0](https://github.com/Levy-Tal/site-availability/compare/v1.5.0...v1.6.0) (2025-06-08)
 
 
