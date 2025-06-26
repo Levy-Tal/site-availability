@@ -11,16 +11,14 @@ import (
 	"site-availability/logging"
 	"site-availability/metrics"
 	"site-availability/scraping"
-	"site-availability/site"
 	"syscall"
 	"time"
 )
 
 // Server represents the web server instance
 type Server struct {
-	config   *config.Config
-	siteSync *site.SiteSync
-	mux      *http.ServeMux
+	config *config.Config
+	mux    *http.ServeMux
 }
 
 // NewServer creates a new server instance
@@ -33,26 +31,11 @@ func NewServer(cfg *config.Config) *Server {
 
 // Start initializes and starts the server
 func (s *Server) Start() error {
-	// Initialize site sync if enabled
-	if s.config.ServerSettings.SyncEnable {
-		s.siteSync = site.NewSiteSync(s.config)
-		if err := s.siteSync.Start(); err != nil {
-			return err
-		}
-	}
-
-	s.loadCustomCA()
+	scraping.InitScrapers(s.config)
 	metrics.Init()
-	s.startBackgroundStatusFetcher()
+	scraping.Start(s.config)
 	s.setupRoutes()
 	return s.startServer(s.config.ServerSettings.Port)
-}
-
-func (s *Server) loadCustomCA() {
-	caPath := s.config.ServerSettings.CustomCAPath
-	if caPath != "" {
-		scraping.InitCertificate(caPath)
-	}
 }
 
 // Setup HTTP routes and handlers
@@ -102,53 +85,6 @@ func (s *Server) setupRoutes() {
 	}
 
 	logging.Logger.Info("HTTP routes configured")
-}
-
-// Start the background status fetcher
-func (s *Server) startBackgroundStatusFetcher() {
-	scrapeInterval, err := time.ParseDuration(s.config.Scraping.Interval)
-	if err != nil {
-		logging.Logger.Fatalf("Failed to parse ScrapeInterval: %v", err)
-	}
-
-	scrapeTimeout, err := time.ParseDuration(s.config.Scraping.Timeout)
-	if err != nil {
-		logging.Logger.Warnf("Invalid ScrapeTimeout, using default 10s: %v", err)
-		scrapeTimeout = 10 * time.Second
-	}
-
-	scraping.SetScrapeTimeout(scrapeTimeout)
-
-	maxParallelScrapes := s.config.Scraping.MaxParallel
-	if maxParallelScrapes <= 0 {
-		logging.Logger.Warnf("Invalid MaxParallelScrapes value, using default 5")
-		maxParallelScrapes = 5
-	}
-
-	logging.Logger.Infof("Starting background status fetcher with interval: %s and max parallel scrapes: %d", scrapeInterval, maxParallelScrapes)
-
-	go func() {
-		ticker := time.NewTicker(scrapeInterval)
-		defer ticker.Stop()
-
-		checker := &scraping.PrometheusMetricChecker{
-			PrometheusServers: s.config.PrometheusServers,
-		}
-		for range ticker.C {
-			s.statusFetcher(checker, maxParallelScrapes)
-		}
-	}()
-}
-
-// Fetch the application statuses with a worker pool
-func (s *Server) statusFetcher(checker *scraping.PrometheusMetricChecker, maxParallelScrapes int) {
-	logging.Logger.Info("Running status fetcher...")
-
-	apps := s.config.Applications
-	newStatuses := scraping.ParallelScrapeAppStatuses(apps, s.config.PrometheusServers, checker, maxParallelScrapes)
-
-	handlers.UpdateAppStatus(newStatuses)
-	logging.Logger.Info("App statuses updated.")
 }
 
 // Start the HTTP server and handle graceful shutdown
@@ -211,20 +147,8 @@ func (s *Server) readinessProbe(w http.ResponseWriter, _ *http.Request) {
 		}
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte("READY")); err != nil {
+	if _, err := w.Write([]byte("OK")); err != nil {
 		logging.Logger.Errorf("Failed to write readiness probe response: %v", err)
 	}
-}
-
-// Stop gracefully shuts down the server
-func (s *Server) Stop() error {
-	// Stop site sync if enabled
-	if s.siteSync != nil {
-		if err := s.siteSync.Stop(); err != nil {
-			logging.Logger.Errorf("Failed to stop site sync: %v", err)
-		}
-	}
-	return nil
 }

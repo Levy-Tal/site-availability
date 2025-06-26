@@ -19,23 +19,17 @@ locations:
     latitude: 33.04198
     longitude: 35.51537
 
-prometheus_servers:
+sources:
   - name: prom1
-    url: http://prometheus-b:9090/
-
-sites:
+    type: prometheus
+    url: http://prometheus-b:9090
+    apps:
+      - name: b-app3
+        location: Beer Sheva
+        metric: up{instance="app:8080", job="app"}
+      - name: b-app4
+        location: Netanya
+        metric: up{instance="localhost:9090", job="prometheus"}
   - name: Server A
+    type: site
     url: http://server-a:8080
-    enabled: true
-    check_interval: "30s"
-    timeout: "5s"
-
-applications:
-  - name: b-app3
-    location: Beer Sheva
-    metric: up{instance="app:8080", job="app"}
-    prometheus: prom1
-  - name: b-app4
-    location: Netanya
-    metric: up{instance="localhost:9090", job="prometheus"}
-    prometheus: prom1

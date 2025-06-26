@@ -4,20 +4,17 @@ import (
 	"fmt"
 	"os"
 	"site-availability/logging"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
 
 // Config structure defines the combined config.yaml and credentials.yaml structure
 type Config struct {
-	ServerSettings    ServerSettings     `yaml:"server_settings"`
-	Scraping          ScrapingSettings   `yaml:"scraping"`
-	Documentation     Documentation      `yaml:"documentation"`
-	PrometheusServers []PrometheusServer `yaml:"prometheus_servers"`
-	Locations         []Location         `yaml:"locations"`
-	Applications      []Application      `yaml:"applications"`
-	Sites             []Site             `yaml:"sites"`
+	ServerSettings ServerSettings   `yaml:"server_settings"`
+	Scraping       ScrapingSettings `yaml:"scraping"`
+	Documentation  Documentation    `yaml:"documentation"`
+	Locations      []Location       `yaml:"locations"`
+	Sources        []Source         `yaml:"sources"`
 }
 
 type ServerSettings struct {
@@ -38,37 +35,25 @@ type Documentation struct {
 	URL   string `yaml:"url"`
 }
 
-type PrometheusServer struct {
-	Name  string `yaml:"name"`
-	URL   string `yaml:"url"`
-	Auth  string `yaml:"auth"`  // Optional authentication type
-	Token string `yaml:"token"` // Optional token for authentication
-}
-
 type Location struct {
 	Name      string  `yaml:"name" json:"name"`
 	Latitude  float64 `yaml:"latitude" json:"latitude"`
 	Longitude float64 `yaml:"longitude" json:"longitude"`
 }
 
-type Application struct {
-	Name       string `yaml:"name"`
-	Location   string `yaml:"location"`
-	Metric     string `yaml:"metric"`
-	Prometheus string `yaml:"prometheus"`
+type Source struct {
+	Name  string `yaml:"name"`
+	Type  string `yaml:"type"`
+	URL   string `yaml:"url"`
+	Token string `yaml:"token"`
+	Auth  string `yaml:"auth"`
+	Apps  []App  `yaml:"apps"`
 }
 
-type Site struct {
-	Name          string    `yaml:"name"`
-	URL           string    `yaml:"url"`
-	CheckInterval string    `yaml:"check_interval"`
-	Timeout       string    `yaml:"timeout"`
-	Enabled       bool      `yaml:"enabled"`
-	CustomCAPath  string    `yaml:"custom_ca_path"`
-	Token         string    `yaml:"token"` // Optional token for site authentication
-	LastSuccess   time.Time `yaml:"-"`     // Last successful sync
-	ErrorCount    int       `yaml:"-"`     // Number of consecutive errors
-	LastError     string    `yaml:"-"`     // Last error message
+type App struct {
+	Name     string `yaml:"name"`
+	Location string `yaml:"location"`
+	Metric   string `yaml:"metric"`
 }
 
 // LoadConfig loads both the YAML configuration and credentials files
@@ -130,22 +115,12 @@ func mergeCredentials(config, credentials *Config) {
 		config.ServerSettings.Token = credentials.ServerSettings.Token
 	}
 
-	// Merge Prometheus server credentials
-	for i, promServer := range config.PrometheusServers {
-		for _, credPromServer := range credentials.PrometheusServers {
-			if promServer.Name == credPromServer.Name {
-				config.PrometheusServers[i].Auth = credPromServer.Auth
-				config.PrometheusServers[i].Token = credPromServer.Token
-				break
-			}
-		}
-	}
-
-	// Merge site tokens
-	for i, site := range config.Sites {
-		for _, credSite := range credentials.Sites {
-			if site.Name == credSite.Name {
-				config.Sites[i].Token = credSite.Token
+	// Merge source credentials
+	for i, source := range config.Sources {
+		for _, credSource := range credentials.Sources {
+			if source.Name == credSource.Name {
+				config.Sources[i].Auth = credSource.Auth
+				config.Sources[i].Token = credSource.Token
 				break
 			}
 		}
@@ -169,30 +144,30 @@ func validateConfig(config *Config) error {
 		}
 	}
 
-	// Validate that at least one Prometheus server is provided
-	if len(config.PrometheusServers) == 0 {
-		return fmt.Errorf("config validation error: at least one Prometheus server is required")
-	}
+	// Validate sources
+	sourceNames := make(map[string]bool)
+	for _, source := range config.Sources {
+		if source.Name == "" {
+			return fmt.Errorf("source configuration error: source name is required")
+		}
+		if _, exists := sourceNames[source.Name]; exists {
+			return fmt.Errorf("source configuration error: duplicate source name %q", source.Name)
+		}
+		sourceNames[source.Name] = true
 
-	// Validate sites configuration
-	for _, site := range config.Sites {
-		if site.Name == "" {
-			return fmt.Errorf("site configuration error: site name is required")
+		if source.URL == "" {
+			return fmt.Errorf("source configuration error: URL is required for source %s", source.Name)
 		}
-		if site.URL == "" {
-			return fmt.Errorf("site configuration error: URL is required for site %s", site.Name)
-		}
-		if site.CheckInterval == "" {
-			site.CheckInterval = "1m" // Default check interval
-		}
-		if site.Timeout == "" {
-			site.Timeout = "5s" // Default timeout
-		}
-		// If CustomCAPath is set, validate it exists
-		if site.CustomCAPath != "" {
-			if _, err := os.Stat(site.CustomCAPath); err != nil {
-				return fmt.Errorf("site configuration error: CA certificate not found for site %s: %w", site.Name, err)
+
+		appNames := make(map[string]bool)
+		for _, app := range source.Apps {
+			if app.Name == "" {
+				return fmt.Errorf("app configuration error: app name is required for source %s", source.Name)
 			}
+			if _, exists := appNames[app.Name]; exists {
+				return fmt.Errorf("app configuration error: duplicate app name %q in source %s", app.Name, source.Name)
+			}
+			appNames[app.Name] = true
 		}
 	}
 

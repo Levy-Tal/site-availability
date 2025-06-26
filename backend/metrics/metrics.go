@@ -15,7 +15,7 @@ var (
 			Name: "site_availability_status",
 			Help: "Site availability status by app and location (1=up, 0=down)",
 		},
-		[]string{"app", "location"},
+		[]string{"app", "location", "source"},
 	)
 
 	// Per location aggregated metrics
@@ -24,28 +24,28 @@ var (
 			Name: "site_availability_apps",
 			Help: "Total apps monitored in a location",
 		},
-		[]string{"location"},
+		[]string{"location", "source"},
 	)
 	siteAvailabilityAppsUp = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "site_availability_apps_up",
 			Help: "Count of apps in up status per location",
 		},
-		[]string{"location"},
+		[]string{"location", "source"},
 	)
 	siteAvailabilityAppsDown = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "site_availability_apps_down",
 			Help: "Count of apps in down status per location",
 		},
-		[]string{"location"},
+		[]string{"location", "source"},
 	)
 	siteAvailabilityAppsUnavailable = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "site_availability_apps_unavailable",
 			Help: "Count of apps in unavailable status per location",
 		},
-		[]string{"location"},
+		[]string{"location", "source"},
 	)
 
 	// Global metrics
@@ -126,8 +126,12 @@ func SetupMetricsHandler() http.Handler {
 	totalDown := 0
 	totalUnavailable := 0
 
-	// Track per-location counts
-	locationCounts := make(map[string]struct {
+	// Track per-location and per-source counts
+	type locsrc struct {
+		location string
+		source   string
+	}
+	locationSourceCounts := make(map[locsrc]struct {
 		total       int
 		up          int
 		down        int
@@ -137,24 +141,26 @@ func SetupMetricsHandler() http.Handler {
 	for _, appStatus := range appStatuses {
 		app := appStatus.Name
 		location := appStatus.Location
+		source := appStatus.Source
 		status := appStatus.Status
 
-		if _, exists := locationCounts[location]; !exists {
-			locationCounts[location] = struct {
+		key := locsrc{location, source}
+		if _, exists := locationSourceCounts[key]; !exists {
+			locationSourceCounts[key] = struct {
 				total, up, down, unavailable int
 			}{}
 		}
-		counts := locationCounts[location]
+		counts := locationSourceCounts[key]
 		counts.total++
 		totalApps++
 
 		switch status {
 		case "up":
-			siteAvailabilityStatus.WithLabelValues(app, location).Set(1)
+			siteAvailabilityStatus.WithLabelValues(app, location, source).Set(1)
 			counts.up++
 			totalUp++
 		case "down":
-			siteAvailabilityStatus.WithLabelValues(app, location).Set(0)
+			siteAvailabilityStatus.WithLabelValues(app, location, source).Set(0)
 			counts.down++
 			totalDown++
 		default:
@@ -163,15 +169,15 @@ func SetupMetricsHandler() http.Handler {
 			totalUnavailable++
 		}
 
-		locationCounts[location] = counts
+		locationSourceCounts[key] = counts
 	}
 
-	// Update per-location metrics
-	for location, counts := range locationCounts {
-		siteAvailabilityApps.WithLabelValues(location).Set(float64(counts.total))
-		siteAvailabilityAppsUp.WithLabelValues(location).Set(float64(counts.up))
-		siteAvailabilityAppsDown.WithLabelValues(location).Set(float64(counts.down))
-		siteAvailabilityAppsUnavailable.WithLabelValues(location).Set(float64(counts.unavailable))
+	// Update per-location and per-source metrics
+	for key, counts := range locationSourceCounts {
+		siteAvailabilityApps.WithLabelValues(key.location, key.source).Set(float64(counts.total))
+		siteAvailabilityAppsUp.WithLabelValues(key.location, key.source).Set(float64(counts.up))
+		siteAvailabilityAppsDown.WithLabelValues(key.location, key.source).Set(float64(counts.down))
+		siteAvailabilityAppsUnavailable.WithLabelValues(key.location, key.source).Set(float64(counts.unavailable))
 	}
 
 	// Update global metrics

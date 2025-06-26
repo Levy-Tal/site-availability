@@ -28,38 +28,33 @@ locations:
     latitude: 29.96649
     longitude: 34.89450
 
-prometheus_servers:
+sources:
   - name: prom1
-    url: http://prometheus-a:9090/
+    type: prometheus
+    url: http://prometheus-a:9090
+    apps:
+      - name: a-app1
+        location: Hadera
+        metric: up{instance="app:8080", job="app"}
+      - name: a-app2
+        location: Jerusalem
+        metric: up{instance="localhost:9090", job="prometheus"}
+      - name: a-app3
+        location: Jerusalem
+        metric: up{instance="localhost:9090", job="prometheus"}
+      - name: a-app4
+        location: Beer Sheva
+        metric: up{instance="app:8080", job="app"}
+      - name: a-app5
+        location: Netanya
+        metric: 1 - up{instance="localhost:9090", job="prometheus"}
+      - name: a-app6
+        location: Beer Sheva
+        metric: up{instance="app:8080", job="app"}
   - name: prom2
+    type: prometheus
     url: http://nginx:9090
-
-applications:
-  - name: a-app1
-    location: Hadera
-    metric: up{instance="app:8080", job="app"}
-    prometheus: prom1
-  - name: a-app2
-    location: Jerusalem
-    metric: up{instance="localhost:9090", job="prometheus"}
-    prometheus: prom1
-  - name: a-app3
-    location: Jerusalem
-    metric: up{instance="localhost:9090", job="prometheus"}
-    prometheus: prom1
-  - name: a-app4
-    location: Beer Sheva
-    metric: up{instance="app:8080", job="app"}
-    prometheus: prom1
-  - name: a-app5
-    location: Netanya
-    metric: 1 - up{instance="localhost:9090", job="prometheus"}
-    prometheus: prom1
-  - name: a-app6
-    location: Beer Sheva
-    metric: up{instance="app:8080", job="app"}
-    prometheus: prom1
-  - name: a-app7
-    location: Hadera
-    metric: 1 - up{instance="localhost:9090", job="prometheus"}
-    prometheus: prom2
+    apps:
+      - name: a-app7
+        location: Hadera
+        metric: 1 - up{instance="localhost:9090", job="prometheus"}

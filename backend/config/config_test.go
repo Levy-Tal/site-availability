@@ -10,21 +10,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// getSiteSource is a helper function to find a site source from a list of sources
+func getSiteSource(sources []Source) *Source {
+	for i := range sources {
+		if sources[i].Type == "site" {
+			return &sources[i]
+		}
+	}
+	return nil
+}
+
+// Test suite for LoadConfig function
 func TestLoadConfig(t *testing.T) {
-	// Create temporary test files
-	tmpDir := t.TempDir()
+	t.Run("successful config load", func(t *testing.T) {
+		tmpDir := t.TempDir()
 
-	// Create test CA certificates
-	serverCAPath := filepath.Join(tmpDir, "ca.crt")
-	err := os.WriteFile(serverCAPath, []byte("test server certificate"), 0644)
-	require.NoError(t, err)
+		// Create a valid server CA file
+		serverCAPath := filepath.Join(tmpDir, "ca.crt")
+		err := os.WriteFile(serverCAPath, []byte("test server certificate"), 0644)
+		require.NoError(t, err)
 
-	siteCAPath := filepath.Join(tmpDir, "site-ca.crt")
-	err = os.WriteFile(siteCAPath, []byte("test site certificate"), 0644)
-	require.NoError(t, err)
-
-	// Create test config.yaml
-	configContent := fmt.Sprintf(`
+		// Create main config file with proper YAML structure
+		configContent := fmt.Sprintf(`
 server_settings:
   port: "8080"
   sync_enable: true
@@ -44,177 +51,170 @@ locations:
     latitude: 31.782904
     longitude: 35.214774
 
-prometheus_servers:
+sources:
   - name: "prom1"
+    type: "prometheus"
     url: "http://prometheus:9090/"
-
-applications:
-  - name: "test app"
-    location: "test location"
-    metric: 'up{instance="test"}'
-    prometheus: "prom1"
-
-sites:
-  - name: "Test Site"
-    url: "https://test-site:3030"
-    enabled: true
-    timeout: "5s"
-    custom_ca_path: "%s"
-`, serverCAPath, siteCAPath)
-	configPath := filepath.Join(tmpDir, "config.yaml")
-	err = os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
-
-	// Create test credentials.yaml
-	credentialsContent := `
-server_settings:
-  token: "test-server-token"
-
-prometheus_servers:
-  - name: "prom1"
     auth: "bearer"
     token: "test-prometheus-token"
-
-sites:
-  - name: "Test Site"
+    apps:
+      - name: "test app"
+        location: "test location"
+        metric: 'up{instance="test"}'
+  - name: "site-a"
+    type: "site"
+    url: "https://test-site:3030"
     token: "test-site-token"
+`, serverCAPath)
+
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		err = os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		// Create credentials file
+		credentialsContent := `
+server_settings:
+  token: "test-server-token"
 `
-	credentialsPath := filepath.Join(tmpDir, "credentials.yaml")
-	err = os.WriteFile(credentialsPath, []byte(credentialsContent), 0644)
-	require.NoError(t, err)
+		credentialsPath := filepath.Join(tmpDir, "credentials.yaml")
+		err = os.WriteFile(credentialsPath, []byte(credentialsContent), 0644)
+		require.NoError(t, err)
 
-	// Set environment variables
-	os.Setenv("CONFIG_FILE", configPath)
-	os.Setenv("CREDENTIALS_FILE", credentialsPath)
-	defer func() {
-		os.Unsetenv("CONFIG_FILE")
-		os.Unsetenv("CREDENTIALS_FILE")
-	}()
+		// Set environment variables
+		os.Setenv("CONFIG_FILE", configPath)
+		os.Setenv("CREDENTIALS_FILE", credentialsPath)
+		defer func() {
+			os.Unsetenv("CONFIG_FILE")
+			os.Unsetenv("CREDENTIALS_FILE")
+		}()
 
-	// Test loading configuration
-	cfg, err := LoadConfig()
-	require.NoError(t, err)
-	assert.NotNil(t, cfg)
+		// Load and test configuration
+		cfg, err := LoadConfig()
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
 
-	// Verify server settings
-	assert.Equal(t, "8080", cfg.ServerSettings.Port)
-	assert.True(t, cfg.ServerSettings.SyncEnable)
-	assert.Equal(t, serverCAPath, cfg.ServerSettings.CustomCAPath)
-	assert.Equal(t, "test-server-token", cfg.ServerSettings.Token)
+		// Test server settings
+		assert.Equal(t, "8080", cfg.ServerSettings.Port)
+		assert.True(t, cfg.ServerSettings.SyncEnable)
+		assert.Equal(t, serverCAPath, cfg.ServerSettings.CustomCAPath)
+		assert.Equal(t, "test-server-token", cfg.ServerSettings.Token)
 
-	// Verify scraping settings
-	assert.Equal(t, "60s", cfg.Scraping.Interval)
-	assert.Equal(t, "15s", cfg.Scraping.Timeout)
-	assert.Equal(t, 10, cfg.Scraping.MaxParallel)
+		// Test scraping settings
+		assert.Equal(t, "60s", cfg.Scraping.Interval)
+		assert.Equal(t, "15s", cfg.Scraping.Timeout)
+		assert.Equal(t, 10, cfg.Scraping.MaxParallel)
 
-	// Verify documentation
-	assert.Equal(t, "Test Documentation", cfg.Documentation.Title)
-	assert.Equal(t, "https://test.example.com/docs", cfg.Documentation.URL)
+		// Test documentation
+		assert.Equal(t, "Test Documentation", cfg.Documentation.Title)
+		assert.Equal(t, "https://test.example.com/docs", cfg.Documentation.URL)
 
-	// Verify locations
-	require.Len(t, cfg.Locations, 1)
-	assert.Equal(t, "test location", cfg.Locations[0].Name)
-	assert.Equal(t, 31.782904, cfg.Locations[0].Latitude)
-	assert.Equal(t, 35.214774, cfg.Locations[0].Longitude)
+		// Test locations
+		require.Len(t, cfg.Locations, 1)
+		assert.Equal(t, "test location", cfg.Locations[0].Name)
+		assert.Equal(t, 31.782904, cfg.Locations[0].Latitude)
+		assert.Equal(t, 35.214774, cfg.Locations[0].Longitude)
 
-	// Verify Prometheus servers
-	require.Len(t, cfg.PrometheusServers, 1)
-	assert.Equal(t, "prom1", cfg.PrometheusServers[0].Name)
-	assert.Equal(t, "http://prometheus:9090/", cfg.PrometheusServers[0].URL)
-	assert.Equal(t, "bearer", cfg.PrometheusServers[0].Auth)
-	assert.Equal(t, "test-prometheus-token", cfg.PrometheusServers[0].Token)
+		// Test sources
+		require.Len(t, cfg.Sources, 2)
 
-	// Verify applications
-	require.Len(t, cfg.Applications, 1)
-	assert.Equal(t, "test app", cfg.Applications[0].Name)
-	assert.Equal(t, "test location", cfg.Applications[0].Location)
-	assert.Equal(t, `up{instance="test"}`, cfg.Applications[0].Metric)
-	assert.Equal(t, "prom1", cfg.Applications[0].Prometheus)
+		// Test Prometheus source
+		prom := cfg.Sources[0]
+		assert.Equal(t, "prom1", prom.Name)
+		assert.Equal(t, "prometheus", prom.Type)
+		assert.Equal(t, "http://prometheus:9090/", prom.URL)
+		assert.Equal(t, "bearer", prom.Auth)
+		assert.Equal(t, "test-prometheus-token", prom.Token)
+		require.Len(t, prom.Apps, 1)
+		assert.Equal(t, "test app", prom.Apps[0].Name)
+		assert.Equal(t, "test location", prom.Apps[0].Location)
+		assert.Equal(t, `up{instance="test"}`, prom.Apps[0].Metric)
 
-	// Verify sites
-	require.Len(t, cfg.Sites, 1)
-	assert.Equal(t, "Test Site", cfg.Sites[0].Name)
-	assert.Equal(t, "https://test-site:3030", cfg.Sites[0].URL)
-	assert.True(t, cfg.Sites[0].Enabled)
-	assert.Equal(t, "5s", cfg.Sites[0].Timeout)
-	assert.Equal(t, siteCAPath, cfg.Sites[0].CustomCAPath)
-	assert.Equal(t, "test-site-token", cfg.Sites[0].Token)
-}
+		// Test site source
+		site := cfg.Sources[1]
+		assert.Equal(t, "site-a", site.Name)
+		assert.Equal(t, "site", site.Type)
+		assert.Equal(t, "https://test-site:3030", site.URL)
+		assert.Equal(t, "test-site-token", site.Token)
+	})
 
-func TestLoadConfigWithMissingFiles(t *testing.T) {
-	// Test with missing config file
-	os.Setenv("CONFIG_FILE", "nonexistent.yaml")
-	os.Setenv("CREDENTIALS_FILE", "nonexistent-credentials.yaml")
-	defer func() {
-		os.Unsetenv("CONFIG_FILE")
-		os.Unsetenv("CREDENTIALS_FILE")
-	}()
+	t.Run("missing config file", func(t *testing.T) {
+		os.Setenv("CONFIG_FILE", "nonexistent.yaml")
+		os.Setenv("CREDENTIALS_FILE", "nonexistent-credentials.yaml")
+		defer func() {
+			os.Unsetenv("CONFIG_FILE")
+			os.Unsetenv("CREDENTIALS_FILE")
+		}()
 
-	_, err := LoadConfig()
-	assert.Error(t, err)
-}
+		_, err := LoadConfig()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to load config file")
+	})
 
-func TestLoadConfigWithInvalidYAML(t *testing.T) {
-	// Create temporary test file with invalid YAML
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "invalid.yaml")
-	err := os.WriteFile(configPath, []byte("invalid: yaml: content:"), 0644)
-	require.NoError(t, err)
+	t.Run("invalid YAML format", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "invalid.yaml")
+		err := os.WriteFile(configPath, []byte("invalid: yaml: content:"), 0644)
+		require.NoError(t, err)
 
-	os.Setenv("CONFIG_FILE", configPath)
-	defer os.Unsetenv("CONFIG_FILE")
+		os.Setenv("CONFIG_FILE", configPath)
+		defer os.Unsetenv("CONFIG_FILE")
 
-	_, err = LoadConfig()
-	assert.Error(t, err)
-}
+		_, err = LoadConfig()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to decode file")
+	})
 
-func TestLoadConfigWithMissingRequiredFields(t *testing.T) {
-	// Create temporary test file with missing required fields
-	tmpDir := t.TempDir()
-	configContent := `
+	t.Run("missing required fields", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configContent := `
 server_settings:
   port: "8080"
 `
-	configPath := filepath.Join(tmpDir, "incomplete.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
+		configPath := filepath.Join(tmpDir, "incomplete.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
 
-	os.Setenv("CONFIG_FILE", configPath)
-	defer os.Unsetenv("CONFIG_FILE")
+		os.Setenv("CONFIG_FILE", configPath)
+		defer os.Unsetenv("CONFIG_FILE")
 
-	_, err = LoadConfig()
-	assert.Error(t, err)
-}
+		_, err = LoadConfig()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "at least one location is required")
+	})
 
-func TestLoadConfigWithInvalidLocationCoordinates(t *testing.T) {
-	// Create temporary test file with invalid coordinates
-	tmpDir := t.TempDir()
-	configContent := `
+	t.Run("invalid location coordinates", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configContent := `
 server_settings:
   port: "8080"
 
 locations:
   - name: "invalid location"
-    latitude: 200.0  # Invalid latitude
+    latitude: 200.0
     longitude: 35.214774
+
+sources:
+  - name: "prom1"
+    type: "prometheus"
+    url: "http://prometheus:9090/"
 `
-	configPath := filepath.Join(tmpDir, "invalid-coords.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
+		configPath := filepath.Join(tmpDir, "invalid-coords.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
 
-	os.Setenv("CONFIG_FILE", configPath)
-	defer os.Unsetenv("CONFIG_FILE")
+		os.Setenv("CONFIG_FILE", configPath)
+		defer os.Unsetenv("CONFIG_FILE")
 
-	_, err = LoadConfig()
-	assert.Error(t, err)
-}
+		_, err = LoadConfig()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid latitude")
+	})
 
-func TestLoadConfigWithOptionalCredentials(t *testing.T) {
-	// Create temporary test files
-	tmpDir := t.TempDir()
+	t.Run("optional credentials handling", func(t *testing.T) {
+		tmpDir := t.TempDir()
 
-	// Create test config.yaml with minimal required fields
-	configContent := `
+		// Create minimal valid config
+		configContent := `
 server_settings:
   port: "8080"
 
@@ -223,342 +223,382 @@ locations:
     latitude: 31.782904
     longitude: 35.214774
 
-prometheus_servers:
+sources:
   - name: "prom1"
+    type: "prometheus"
     url: "http://prometheus:9090/"
-
-sites:
-  - name: "Test Site"
+  - name: "site-a"
+    type: "site"
     url: "https://test-site:3030"
-    enabled: true
 `
-	configPath := filepath.Join(tmpDir, "minimal-config.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
+		configPath := filepath.Join(tmpDir, "minimal-config.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
 
-	// Create empty credentials file
-	credentialsPath := filepath.Join(tmpDir, "empty-credentials.yaml")
-	err = os.WriteFile(credentialsPath, []byte(""), 0644)
-	require.NoError(t, err)
+		// Create empty credentials file
+		credentialsPath := filepath.Join(tmpDir, "empty-credentials.yaml")
+		err = os.WriteFile(credentialsPath, []byte(""), 0644)
+		require.NoError(t, err)
 
-	os.Setenv("CONFIG_FILE", configPath)
-	os.Setenv("CREDENTIALS_FILE", credentialsPath)
-	defer func() {
-		os.Unsetenv("CONFIG_FILE")
-		os.Unsetenv("CREDENTIALS_FILE")
-	}()
+		os.Setenv("CONFIG_FILE", configPath)
+		os.Setenv("CREDENTIALS_FILE", credentialsPath)
+		defer func() {
+			os.Unsetenv("CONFIG_FILE")
+			os.Unsetenv("CREDENTIALS_FILE")
+		}()
 
-	// Test loading configuration with optional credentials
-	cfg, err := LoadConfig()
-	require.NoError(t, err)
-	assert.NotNil(t, cfg)
+		cfg, err := LoadConfig()
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
 
-	// Verify that optional fields are empty
-	assert.Empty(t, cfg.ServerSettings.Token)
-	assert.Empty(t, cfg.PrometheusServers[0].Auth)
-	assert.Empty(t, cfg.PrometheusServers[0].Token)
-	assert.Empty(t, cfg.Sites[0].Token)
-}
+		// Verify optional fields are empty when not provided
+		assert.Empty(t, cfg.ServerSettings.Token)
+		assert.Empty(t, cfg.Sources[0].Auth)
+		assert.Empty(t, cfg.Sources[0].Token)
+		assert.Empty(t, cfg.Sources[0].Apps)
 
-func TestLoadConfigWithEnvironmentVariables(t *testing.T) {
-	// Create temporary directory for test files
-	tmpDir := t.TempDir()
+		siteSource := getSiteSource(cfg.Sources)
+		if siteSource != nil {
+			assert.Empty(t, siteSource.Token)
+		}
+	})
 
-	// Create test config file
-	configContent := `
+	t.Run("environment variables", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		configContent := `
 server_settings:
   port: "8080"
+
 locations:
   - name: "test location"
     latitude: 31.782904
     longitude: 35.214774
-prometheus_servers:
+
+sources:
   - name: "prom1"
+    type: "prometheus"
     url: "http://prometheus:9090/"
-sites:
-  - name: "Test Site"
-    url: "https://test-site:3030"
-    enabled: true
 `
-	configPath := filepath.Join(tmpDir, "test-config.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
+		configPath := filepath.Join(tmpDir, "test-config.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
 
-	// Set environment variable
-	os.Setenv("CONFIG_FILE", configPath)
-	defer os.Unsetenv("CONFIG_FILE")
+		os.Setenv("CONFIG_FILE", configPath)
+		defer os.Unsetenv("CONFIG_FILE")
 
-	// Test loading configuration with environment variables
-	cfg, err := LoadConfig()
-	require.NoError(t, err)
-	assert.NotNil(t, cfg)
-	assert.Equal(t, "8080", cfg.ServerSettings.Port)
+		cfg, err := LoadConfig()
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
+		assert.Equal(t, "8080", cfg.ServerSettings.Port)
+	})
 }
 
+// Test GetEnv utility function
 func TestGetEnv(t *testing.T) {
-	// Test with environment variable set
-	os.Setenv("TEST_VAR", "test_value")
-	defer os.Unsetenv("TEST_VAR")
+	t.Run("environment variable exists", func(t *testing.T) {
+		os.Setenv("TEST_VAR", "test_value")
+		defer os.Unsetenv("TEST_VAR")
 
-	assert.Equal(t, "test_value", GetEnv("TEST_VAR", "default_value"))
+		result := GetEnv("TEST_VAR", "default_value")
+		assert.Equal(t, "test_value", result)
+	})
 
-	// Test with environment variable not set
-	assert.Equal(t, "default_value", GetEnv("NONEXISTENT_VAR", "default_value"))
+	t.Run("environment variable missing", func(t *testing.T) {
+		result := GetEnv("NONEXISTENT_VAR", "default_value")
+		assert.Equal(t, "default_value", result)
+	})
 }
 
+// Test loadYAMLFile function
 func TestLoadYAMLFile(t *testing.T) {
-	// Create temporary test file
-	tmpDir := t.TempDir()
-	configContent := `
+	t.Run("valid YAML file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configContent := `
 server_settings:
   port: "8080"
 `
-	configPath := filepath.Join(tmpDir, "test.yaml")
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
+		configPath := filepath.Join(tmpDir, "test.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
 
-	// Test loading valid YAML
-	config := &Config{}
-	err = loadYAMLFile(configPath, config)
-	require.NoError(t, err)
-	assert.Equal(t, "8080", config.ServerSettings.Port)
+		config := &Config{}
+		err = loadYAMLFile(configPath, config)
+		require.NoError(t, err)
+		assert.Equal(t, "8080", config.ServerSettings.Port)
+	})
 
-	// Test loading nonexistent file
-	err = loadYAMLFile("nonexistent.yaml", config)
-	assert.Error(t, err)
+	t.Run("nonexistent file", func(t *testing.T) {
+		config := &Config{}
+		err := loadYAMLFile("nonexistent.yaml", config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to open file")
+	})
 
-	// Test loading invalid YAML
-	invalidPath := filepath.Join(tmpDir, "invalid.yaml")
-	err = os.WriteFile(invalidPath, []byte("invalid: yaml: content:"), 0644)
-	require.NoError(t, err)
+	t.Run("invalid YAML content", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		invalidPath := filepath.Join(tmpDir, "invalid.yaml")
+		err := os.WriteFile(invalidPath, []byte("invalid: yaml: content:"), 0644)
+		require.NoError(t, err)
 
-	err = loadYAMLFile(invalidPath, config)
-	assert.Error(t, err)
+		config := &Config{}
+		err = loadYAMLFile(invalidPath, config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to decode file")
+	})
 }
 
+// Test mergeCredentials function
 func TestMergeCredentials(t *testing.T) {
-	// Create main config
-	mainConfig := &Config{
-		ServerSettings: ServerSettings{
-			Port: "8080",
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+	t.Run("merge server token and source credentials", func(t *testing.T) {
+		mainConfig := &Config{
+			ServerSettings: ServerSettings{
+				Port: "8080",
 			},
-		},
-		Sites: []Site{
-			{
-				Name:    "Test Site",
-				URL:     "https://test-site:3030",
-				Enabled: true,
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
+				{
+					Name: "site-a",
+					Type: "site",
+					URL:  "https://test-site:3030",
+				},
 			},
-		},
-	}
+		}
 
-	// Create credentials config
-	credentials := &Config{
-		ServerSettings: ServerSettings{
-			Token: "test-server-token",
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name:  "prom1",
-				Auth:  "bearer",
-				Token: "test-prometheus-token",
+		credentials := &Config{
+			ServerSettings: ServerSettings{
+				Token: "test-server-token",
 			},
-		},
-		Sites: []Site{
-			{
-				Name:  "Test Site",
-				Token: "test-site-token",
+			Sources: []Source{
+				{
+					Name:  "prom1",
+					Auth:  "bearer",
+					Token: "test-prometheus-token",
+				},
+				{
+					Name:  "site-a",
+					Token: "test-site-token",
+				},
 			},
-		},
-	}
+		}
 
-	// Merge credentials
-	mergeCredentials(mainConfig, credentials)
+		mergeCredentials(mainConfig, credentials)
 
-	// Verify merged values
-	assert.Equal(t, "test-server-token", mainConfig.ServerSettings.Token)
-	assert.Equal(t, "bearer", mainConfig.PrometheusServers[0].Auth)
-	assert.Equal(t, "test-prometheus-token", mainConfig.PrometheusServers[0].Token)
-	assert.Equal(t, "test-site-token", mainConfig.Sites[0].Token)
+		// Verify server token was merged
+		assert.Equal(t, "test-server-token", mainConfig.ServerSettings.Token)
+
+		// Verify Prometheus source credentials were merged
+		assert.Equal(t, "bearer", mainConfig.Sources[0].Auth)
+		assert.Equal(t, "test-prometheus-token", mainConfig.Sources[0].Token)
+
+		// Verify site source token was merged
+		siteSource := getSiteSource(mainConfig.Sources)
+		require.NotNil(t, siteSource)
+		assert.Equal(t, "test-site-token", siteSource.Token)
+	})
 }
 
+// Test validateConfig function
 func TestValidateConfig(t *testing.T) {
-	// Test valid configuration
-	validConfig := &Config{
-		Locations: []Location{
-			{
-				Name:      "test location",
-				Latitude:  31.782904,
-				Longitude: 35.214774,
+	t.Run("valid configuration", func(t *testing.T) {
+		validConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
 			},
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
+				{
+					Name: "site-a",
+					Type: "site",
+					URL:  "https://test-site:3030",
+				},
 			},
-		},
-		Sites: []Site{
-			{
-				Name:    "Test Site",
-				URL:     "https://test-site:3030",
-				Enabled: true,
-			},
-		},
-	}
+		}
 
-	err := validateConfig(validConfig)
-	assert.NoError(t, err)
+		err := validateConfig(validConfig)
+		assert.NoError(t, err)
+	})
 
-	// Test missing locations
-	invalidConfig := &Config{
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+	t.Run("missing locations", func(t *testing.T) {
+		invalidConfig := &Config{
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
 			},
-		},
-	}
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "at least one location is required")
+	})
 
-	// Test invalid latitude
-	invalidConfig = &Config{
-		Locations: []Location{
-			{
-				Name:      "invalid location",
-				Latitude:  200.0,
-				Longitude: 35.214774,
+	t.Run("invalid latitude", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "invalid location",
+					Latitude:  200.0, // Invalid latitude
+					Longitude: 35.214774,
+				},
 			},
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
 			},
-		},
-	}
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid latitude")
+	})
 
-	// Test invalid longitude
-	invalidConfig = &Config{
-		Locations: []Location{
-			{
-				Name:      "invalid location",
-				Latitude:  31.782904,
-				Longitude: 200.0,
+	t.Run("invalid longitude", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "invalid location",
+					Latitude:  31.782904,
+					Longitude: 200.0, // Invalid longitude
+				},
 			},
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
 			},
-		},
-	}
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid longitude")
+	})
 
-	// Test missing Prometheus servers
-	invalidConfig = &Config{
-		Locations: []Location{
-			{
-				Name:      "test location",
-				Latitude:  31.782904,
-				Longitude: 35.214774,
+	t.Run("source missing name", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
 			},
-		},
-	}
+			Sources: []Source{
+				{
+					// Missing name
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
+			},
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "source name is required")
+	})
 
-	// Test invalid site configuration
-	invalidConfig = &Config{
-		Locations: []Location{
-			{
-				Name:      "test location",
-				Latitude:  31.782904,
-				Longitude: 35.214774,
+	t.Run("source missing URL", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
 			},
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					// Missing URL
+				},
 			},
-		},
-		Sites: []Site{
-			{
-				Name: "", // Missing name
-				URL:  "https://test-site:3030",
-			},
-		},
-	}
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "URL is required")
+	})
 
-	// Test site with missing URL
-	invalidConfig = &Config{
-		Locations: []Location{
-			{
-				Name:      "test location",
-				Latitude:  31.782904,
-				Longitude: 35.214774,
+	t.Run("duplicate source names", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
 			},
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
+				{
+					Name: "prom1", // Duplicate name
+					Type: "prometheus",
+					URL:  "http://prometheus2:9090/",
+				},
 			},
-		},
-		Sites: []Site{
-			{
-				Name: "Test Site",
-				URL:  "", // Missing URL
-			},
-		},
-	}
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicate source name")
+	})
 
-	// Test site with invalid CA path
-	tmpDir := t.TempDir()
-	invalidConfig = &Config{
-		Locations: []Location{
-			{
-				Name:      "test location",
-				Latitude:  31.782904,
-				Longitude: 35.214774,
+	t.Run("duplicate app names in source", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
 			},
-		},
-		PrometheusServers: []PrometheusServer{
-			{
-				Name: "prom1",
-				URL:  "http://prometheus:9090/",
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+					Apps: []App{
+						{
+							Name:     "app1",
+							Location: "test location",
+							Metric:   "up",
+						},
+						{
+							Name:     "app1", // Duplicate app name
+							Location: "test location",
+							Metric:   "up2",
+						},
+					},
+				},
 			},
-		},
-		Sites: []Site{
-			{
-				Name:         "Test Site",
-				URL:          "https://test-site:3030",
-				CustomCAPath: filepath.Join(tmpDir, "nonexistent.crt"),
-			},
-		},
-	}
+		}
 
-	err = validateConfig(invalidConfig)
-	assert.Error(t, err)
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicate app name")
+	})
 }

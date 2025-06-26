@@ -1,4 +1,4 @@
-prometheus_servers:
+sources:
   - name: prom1
     auth: bearer
     token: "test-token-123"

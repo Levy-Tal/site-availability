@@ -14,6 +14,7 @@ type AppStatus struct {
 	Name     string `json:"name"`
 	Location string `json:"location"`
 	Status   string `json:"status"`
+	Source   string `json:"source"`
 }
 
 type StatusResponse struct {
@@ -28,7 +29,7 @@ type Location struct {
 }
 
 var (
-	appStatusCache = make(map[string]AppStatus)
+	appStatusCache = make(map[string]map[string]AppStatus)
 	cacheMutex     sync.RWMutex
 )
 
@@ -38,26 +39,45 @@ func GetAppStatusCache() []AppStatus {
 	defer cacheMutex.RUnlock()
 
 	var apps []AppStatus
-	for _, status := range appStatusCache {
-		apps = append(apps, status)
+	for _, sourceApps := range appStatusCache {
+		for _, status := range sourceApps {
+			apps = append(apps, status)
+		}
 	}
 	return apps
 }
 
-// UpdateAppStatus updates the appStatusCache
-func UpdateAppStatus(newStatuses []AppStatus) {
-	logging.Logger.WithField("count", len(newStatuses)).Info("Updating app status cache")
+// UpdateAppStatus updates the appStatusCache for a given source
+func UpdateAppStatus(sourceName string, newStatuses []AppStatus) {
+	logging.Logger.WithFields(map[string]interface{}{
+		"count":  len(newStatuses),
+		"source": sourceName,
+	}).Info("Updating app status cache for source")
 
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
-	appStatusCache = make(map[string]AppStatus)
+
+	// If no statuses provided, remove the source from cache
+	if len(newStatuses) == 0 {
+		delete(appStatusCache, sourceName)
+		return
+	}
+
+	if _, ok := appStatusCache[sourceName]; !ok {
+		appStatusCache[sourceName] = make(map[string]AppStatus)
+	} else {
+		// Clear existing statuses for this source
+		appStatusCache[sourceName] = make(map[string]AppStatus)
+	}
+
 	for _, app := range newStatuses {
 		logging.Logger.WithFields(map[string]interface{}{
 			"app":      app.Name,
 			"status":   app.Status,
 			"location": app.Location,
+			"source":   app.Source,
 		}).Debug("Caching app status")
-		appStatusCache[app.Name] = app
+		appStatusCache[sourceName][app.Name] = app
 	}
 }
 
@@ -65,13 +85,7 @@ func UpdateAppStatus(newStatuses []AppStatus) {
 func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/status request")
 
-	cacheMutex.RLock()
-	defer cacheMutex.RUnlock()
-
-	var apps []AppStatus
-	for _, status := range appStatusCache {
-		apps = append(apps, status)
-	}
+	apps := GetAppStatusCache()
 
 	response := StatusResponse{
 		Locations: convertToHandlersLocation(cfg.Locations),
@@ -118,8 +132,20 @@ func IsAppStatusCacheEmpty() bool {
 
 	cacheMutex.RLock()
 	defer cacheMutex.RUnlock()
-	empty := len(appStatusCache) == 0
 
+	// Check if there are no sources or all sources are empty
+	if len(appStatusCache) == 0 {
+		logging.Logger.WithField("empty", true).Debug("Cache is empty - no sources")
+		return true
+	}
+
+	// Count total apps across all sources
+	totalApps := 0
+	for _, sourceApps := range appStatusCache {
+		totalApps += len(sourceApps)
+	}
+
+	empty := totalApps == 0
 	logging.Logger.WithField("empty", empty).Debug("Checking if app status cache is empty")
 	return empty
 }
