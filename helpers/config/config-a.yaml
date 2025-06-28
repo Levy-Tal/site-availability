@@ -39,8 +39,8 @@ sources:
       - name: a-app2
         location: Jerusalem
         metric: up{instance="localhost:9090", job="prometheus"}
-      - name: a-app3
-        location: Jerusalem
+      - name: app3
+        location: Beer Sheva
         metric: up{instance="localhost:9090", job="prometheus"}
       - name: a-app4
         location: Beer Sheva

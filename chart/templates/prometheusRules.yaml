@@ -4,7 +4,7 @@ metadata:
   name: {{ include "site-availability.fullname" . }}-rules
   labels:
     release: "kube-prometheus-stack"
-    {{- include "site-availability.labels" . | nindent 6 }}
+    {{- include "site-availability.labels" . | nindent 4 }}
 spec:
   groups:
   - name: site-availability
@@ -61,4 +61,4 @@ spec:
         severity: critical
       annotations:
         summary: "Site sync down"
-        description: "Site sync is down for site {{ $labels.site }}."
+        description: "Site sync is down for site {{ "{{" }} $labels.site }}."

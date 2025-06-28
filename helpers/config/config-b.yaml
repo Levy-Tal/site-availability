@@ -24,7 +24,7 @@ sources:
     type: prometheus
     url: http://prometheus-b:9090
     apps:
-      - name: b-app3
+      - name: app3
         location: Beer Sheva
         metric: up{instance="app:8080", job="app"}
       - name: b-app4
