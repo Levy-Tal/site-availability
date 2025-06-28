@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/Levy-Tal/site-availability/compare/v2.0.0...v2.0.1) (2025-06-28)
+
+
+### Bug Fixes
+
+* **location:** locations from other sites are not showing ([4c2a7f1](https://github.com/Levy-Tal/site-availability/commit/4c2a7f15fbb8954bbed33f1c46d2c13ae44e0dca))
+
 # [2.0.0](https://github.com/Levy-Tal/site-availability/compare/v1.6.0...v2.0.0) (2025-06-26)
 
 
