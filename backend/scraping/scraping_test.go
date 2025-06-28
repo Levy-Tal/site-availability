@@ -33,14 +33,15 @@ func TestMain(m *testing.M) {
 
 // Mock scraper for testing
 type MockScraper struct {
-	results []handlers.AppStatus
-	err     error
-	delay   time.Duration
-	mutex   sync.Mutex
-	calls   int
+	results   []handlers.AppStatus
+	locations []handlers.Location
+	err       error
+	delay     time.Duration
+	mutex     sync.Mutex
+	calls     int
 }
 
-func (m *MockScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, error) {
+func (m *MockScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
 	m.mutex.Lock()
 	m.calls++
 	m.mutex.Unlock()
@@ -50,7 +51,7 @@ func (m *MockScraper) Scrape(source config.Source, timeout time.Duration, maxPar
 	}
 
 	if m.err != nil {
-		return nil, m.err
+		return nil, nil, m.err
 	}
 
 	// Add source to results
@@ -60,7 +61,14 @@ func (m *MockScraper) Scrape(source config.Source, timeout time.Duration, maxPar
 		results[i].Source = source.Name
 	}
 
-	return results, nil
+	// Add source to locations
+	locations := make([]handlers.Location, len(m.locations))
+	copy(locations, m.locations)
+	for i := range locations {
+		locations[i].Source = source.Name
+	}
+
+	return results, locations, nil
 }
 
 func (m *MockScraper) GetCallCount() int {

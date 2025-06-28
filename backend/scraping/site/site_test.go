@@ -67,7 +67,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			// Return successful response
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(expectedStatuses)
+			response := handlers.StatusResponse{Apps: expectedStatuses, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -79,7 +80,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			// No token - no authentication
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 2)
 
@@ -120,7 +121,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			// Return successful response
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(expectedStatuses)
+			response := handlers.StatusResponse{Apps: expectedStatuses, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -132,7 +134,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			Token: token,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 
@@ -153,7 +155,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(expectedStatuses)
+			response := handlers.StatusResponse{Apps: expectedStatuses, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -167,7 +170,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		// Use insecure TLS config for testing
 		tlsConfig := &tls.Config{InsecureSkipVerify: true}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, tlsConfig)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, tlsConfig)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 
@@ -179,7 +182,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode([]handlers.AppStatus{})
+			response := handlers.StatusResponse{Apps: []handlers.AppStatus{}, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -190,7 +194,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 	})
@@ -203,7 +207,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  "http://invalid url with spaces", // Invalid URL
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		assert.Error(t, err)
 		assert.Nil(t, results)
 		assert.Contains(t, err.Error(), "failed to create request")
@@ -218,7 +222,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  "http://localhost:99999", // Non-existent server
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err) // Network errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -249,7 +253,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 					URL:  server.URL,
 				}
 
-				results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+				results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 				require.NoError(t, err) // HTTP errors are handled gracefully
 				assert.Empty(t, results)
 			})
@@ -271,7 +275,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err) // JSON errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -292,7 +296,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err) // JSON structure errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -313,7 +317,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		}
 
 		// Use very short timeout
-		results, err := scraper.Scrape(source, 10*time.Millisecond, 1, nil)
+		results, _, err := scraper.Scrape(source, 10*time.Millisecond, 1, nil)
 		require.NoError(t, err) // Timeout errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -326,7 +330,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			requestCount++
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode([]handlers.AppStatus{})
+			response := handlers.StatusResponse{Apps: []handlers.AppStatus{}, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -338,7 +343,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		}
 
 		// Try with different maxParallel values - should always make only 1 request
-		results, err := scraper.Scrape(source, 5*time.Second, 100, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 100, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 		assert.Equal(t, 1, requestCount)
@@ -349,7 +354,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			// Verify the exact URL path
 			assert.Equal(t, "/sync", r.URL.Path)
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode([]handlers.AppStatus{})
+			response := handlers.StatusResponse{Apps: []handlers.AppStatus{}, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -360,7 +366,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL, // Should append /sync to this
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 	})
@@ -376,7 +382,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			assert.True(t, time.Since(ts) < time.Minute)
 
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode([]handlers.AppStatus{})
+			response := handlers.StatusResponse{Apps: []handlers.AppStatus{}, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -387,7 +394,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 	})
@@ -411,7 +418,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(originalStatuses)
+			response := handlers.StatusResponse{Apps: originalStatuses, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -422,7 +430,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 2)
 
@@ -463,7 +471,8 @@ func TestSiteScraper_Scrape(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(expectedStatuses)
+			response := handlers.StatusResponse{Apps: expectedStatuses, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -475,7 +484,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			Token: token,
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, "special-token-site", results[0].Source)

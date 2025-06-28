@@ -441,11 +441,13 @@ func TestHandleSyncRequest(t *testing.T) {
 		HandleSyncRequest(w, req, cfg)
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response []AppStatus
+		var response StatusResponse
 		err := json.NewDecoder(w.Body).Decode(&response)
 		require.NoError(t, err)
-		require.Len(t, response, 1)
-		assert.Equal(t, "app1", response[0].Name)
+		require.Len(t, response.Apps, 1)
+		assert.Equal(t, "app1", response.Apps[0].Name)
+		// Should have no locations since we didn't add any to the location cache
+		assert.Len(t, response.Locations, 0)
 	})
 
 	t.Run("sync enabled with token but no signature", func(t *testing.T) {
