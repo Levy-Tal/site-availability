@@ -85,14 +85,14 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
-		require.Len(t, results, 1)
+		require.Len(t, statuses, 1)
 
-		assert.Equal(t, "test-app", results[0].Name)
-		assert.Equal(t, "test-location", results[0].Location)
-		assert.Equal(t, "up", results[0].Status)
-		assert.Equal(t, "test-prometheus", results[0].Source)
+		assert.Equal(t, "test-app", statuses[0].Name)
+		assert.Equal(t, "test-location", statuses[0].Location)
+		assert.Equal(t, "up", statuses[0].Status)
+		assert.Equal(t, "test-prometheus", statuses[0].Source)
 	})
 
 	t.Run("successful scrape with down status", func(t *testing.T) {
@@ -139,10 +139,10 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
-		require.Len(t, results, 1)
-		assert.Equal(t, "down", results[0].Status)
+		require.Len(t, statuses, 1)
+		assert.Equal(t, "down", statuses[0].Status)
 	})
 
 	t.Run("scrape with unavailable status due to error", func(t *testing.T) {
@@ -165,10 +165,10 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err) // Scrape method always returns success
-		require.Len(t, results, 1)
-		assert.Equal(t, "unavailable", results[0].Status)
+		require.Len(t, statuses, 1)
+		assert.Equal(t, "unavailable", statuses[0].Status)
 	})
 
 	t.Run("scrape multiple apps concurrently", func(t *testing.T) {
@@ -226,13 +226,13 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 2, nil)
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 2, nil)
 		require.NoError(t, err)
-		require.Len(t, results, 2)
+		require.Len(t, statuses, 2)
 
 		// Verify both apps were processed
-		assert.Contains(t, []string{"app1", "app2"}, results[0].Name)
-		assert.Contains(t, []string{"app1", "app2"}, results[1].Name)
+		assert.Contains(t, []string{"app1", "app2"}, statuses[0].Name)
+		assert.Contains(t, []string{"app1", "app2"}, statuses[1].Name)
 	})
 
 	t.Run("scrape with TLS config", func(t *testing.T) {
@@ -281,10 +281,10 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		// Use insecure TLS config for testing
 		tlsConfig := &tls.Config{InsecureSkipVerify: true}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, tlsConfig)
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, tlsConfig)
 		require.NoError(t, err)
-		require.Len(t, results, 1)
-		assert.Equal(t, "up", results[0].Status)
+		require.Len(t, statuses, 1)
+		assert.Equal(t, "up", statuses[0].Status)
 	})
 
 	t.Run("scrape with empty apps", func(t *testing.T) {
@@ -295,9 +295,9 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			Apps: []config.App{}, // Empty apps
 		}
 
-		results, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
 		require.NoError(t, err)
-		assert.Empty(t, results)
+		assert.Empty(t, statuses)
 	})
 }
 
@@ -811,11 +811,11 @@ func TestPrometheusScraper_EdgeCases(t *testing.T) {
 		}
 
 		start := time.Now()
-		results, err := scraper.Scrape(source, 5*time.Second, 2, nil) // max 2 concurrent
+		statuses, _, err := scraper.Scrape(source, 5*time.Second, 2, nil) // max 2 concurrent
 		duration := time.Since(start)
 
 		require.NoError(t, err)
-		require.Len(t, results, 5)
+		require.Len(t, statuses, 5)
 
 		// With 2 concurrent requests max, 5 requests should take at least 30ms
 		// (3 batches * 10ms per request)
@@ -845,9 +845,9 @@ func TestPrometheusScraper_EdgeCases(t *testing.T) {
 		}
 
 		// Use very short timeout
-		results, err := scraper.Scrape(source, 10*time.Millisecond, 1, nil)
+		statuses, _, err := scraper.Scrape(source, 10*time.Millisecond, 1, nil)
 		require.NoError(t, err) // Scrape method always returns success
-		require.Len(t, results, 1)
-		assert.Equal(t, "unavailable", results[0].Status) // Should be unavailable due to timeout
+		require.Len(t, statuses, 1)
+		assert.Equal(t, "unavailable", statuses[0].Status) // Should be unavailable due to timeout
 	})
 }

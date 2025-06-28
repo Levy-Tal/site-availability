@@ -17,8 +17,8 @@ import (
 // Source defines the interface for all data sources (Prometheus, Site, etc.)
 type Source interface {
 	// Scrape performs a single scrape operation for a source with the given timeout and max parallel settings.
-	// It returns the app statuses and an error if scraping fails.
-	Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, error)
+	// It returns the app statuses, locations, and an error if scraping fails.
+	Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error)
 }
 
 var (
@@ -112,30 +112,34 @@ func Start(cfg *config.Config) {
 			defer ticker.Stop()
 
 			// Perform initial scrape immediately
-			statuses, err := scraper.Scrape(source, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
+			statuses, locations, err := scraper.Scrape(source, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
 			if err != nil {
 				logging.Logger.WithError(err).WithField("source", source.Name).Error("Initial scraper failed")
 			} else {
-				// Update the app status cache
+				// Update the app status and location caches
 				handlers.UpdateAppStatus(source.Name, statuses)
+				handlers.UpdateLocationCache(source.Name, locations)
 				logging.Logger.WithFields(map[string]interface{}{
-					"source":    source.Name,
-					"app_count": len(statuses),
-				}).Info("Updated app status cache after initial scrape")
+					"source":         source.Name,
+					"app_count":      len(statuses),
+					"location_count": len(locations),
+				}).Info("Updated app status and location caches after initial scrape")
 			}
 
 			// Continue scraping at intervals
 			for range ticker.C {
-				statuses, err := scraper.Scrape(source, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
+				statuses, locations, err := scraper.Scrape(source, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
 				if err != nil {
 					logging.Logger.WithError(err).WithField("source", source.Name).Error("Scraper failed")
 				} else {
-					// Update the app status cache
+					// Update the app status and location caches
 					handlers.UpdateAppStatus(source.Name, statuses)
+					handlers.UpdateLocationCache(source.Name, locations)
 					logging.Logger.WithFields(map[string]interface{}{
-						"source":    source.Name,
-						"app_count": len(statuses),
-					}).Debug("Updated app status cache after scrape")
+						"source":         source.Name,
+						"app_count":      len(statuses),
+						"location_count": len(locations),
+					}).Debug("Updated app status and location caches after scrape")
 				}
 			}
 		}(source)

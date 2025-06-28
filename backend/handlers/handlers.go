@@ -26,10 +26,12 @@ type Location struct {
 	Name      string  `yaml:"name" json:"name"`
 	Latitude  float64 `yaml:"latitude" json:"latitude"`
 	Longitude float64 `yaml:"longitude" json:"longitude"`
+	Source    string  `json:"source"`
 }
 
 var (
 	appStatusCache = make(map[string]map[string]AppStatus)
+	locationCache  = make(map[string][]Location)
 	cacheMutex     sync.RWMutex
 )
 
@@ -45,6 +47,54 @@ func GetAppStatusCache() []AppStatus {
 		}
 	}
 	return apps
+}
+
+// GetLocationCache returns a copy of all locations from all sources
+func GetLocationCache() []Location {
+	cacheMutex.RLock()
+	defer cacheMutex.RUnlock()
+
+	var locations []Location
+	for _, sourceLocations := range locationCache {
+		locations = append(locations, sourceLocations...)
+	}
+	return locations
+}
+
+// UpdateLocationCache updates the locationCache for a given source
+func UpdateLocationCache(sourceName string, newLocations []Location) {
+	logging.Logger.WithFields(map[string]interface{}{
+		"count":  len(newLocations),
+		"source": sourceName,
+	}).Info("Updating location cache for source")
+
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	// If no locations provided, remove the source from cache
+	if len(newLocations) == 0 {
+		delete(locationCache, sourceName)
+		return
+	}
+
+	// Set the source for all locations and update cache
+	locations := make([]Location, len(newLocations))
+	for i, loc := range newLocations {
+		locations[i] = Location{
+			Name:      loc.Name,
+			Latitude:  loc.Latitude,
+			Longitude: loc.Longitude,
+			Source:    sourceName,
+		}
+		logging.Logger.WithFields(map[string]interface{}{
+			"name":      loc.Name,
+			"latitude":  loc.Latitude,
+			"longitude": loc.Longitude,
+			"source":    sourceName,
+		}).Debug("Caching location")
+	}
+
+	locationCache[sourceName] = locations
 }
 
 // UpdateAppStatus updates the appStatusCache for a given source
@@ -86,9 +136,14 @@ func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/status request")
 
 	apps := GetAppStatusCache()
+	locations := GetLocationCache()
+
+	// Add server's own locations from config with empty source
+	serverLocations := convertToHandlersLocation(cfg.Locations)
+	locations = append(locations, serverLocations...)
 
 	response := StatusResponse{
-		Locations: convertToHandlersLocation(cfg.Locations),
+		Locations: locations,
 		Apps:      apps,
 	}
 
@@ -121,6 +176,7 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 			Name:      loc.Name,
 			Latitude:  loc.Latitude,
 			Longitude: loc.Longitude,
+			Source:    "", // Empty source indicates this server's locations
 		})
 	}
 	return locations
@@ -219,10 +275,21 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 		}
 	}
 
-	// Return current statuses from the global cache
-	statuses := GetAppStatusCache()
+	// Return current statuses and locations from the global cache
+	apps := GetAppStatusCache()
+	locations := GetLocationCache()
+
+	// Add server's own locations from config with empty source
+	serverLocations := convertToHandlersLocation(cfg.Locations)
+	locations = append(locations, serverLocations...)
+
+	response := StatusResponse{
+		Locations: locations,
+		Apps:      apps,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(statuses); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logging.Logger.WithError(err).Error("Failed to encode sync response")
 		http.Error(w, "Failed to encode sync response", http.StatusInternalServerError)
 		return

@@ -33,7 +33,7 @@ func NewPrometheusScraper() *PrometheusScraper {
 	return &PrometheusScraper{}
 }
 
-func (p *PrometheusScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, error) {
+func (p *PrometheusScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
 	results := make([]handlers.AppStatus, len(source.Apps))
 	sem := make(chan struct{}, maxParallel)
 	var wg sync.WaitGroup
@@ -88,7 +88,8 @@ func (p *PrometheusScraper) Scrape(source config.Source, timeout time.Duration, 
 	wg.Wait()
 
 	// Always return success - check errors are handled by marking apps as unavailable
-	return results, nil
+	// Prometheus scraper returns nil for locations since it only provides app statuses
+	return results, nil, nil
 }
 
 func (p *PrometheusScraper) check(client *http.Client, prometheusURL, promQLQuery, auth, token string) (int, error) {
