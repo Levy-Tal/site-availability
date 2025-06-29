@@ -1342,13 +1342,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(site_sync_attempts_total[5m])",
+          "expr": "rate(site_availability_sync_attempts_total[5m])",
           "legendFormat": "Sync Attempts",
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "rate(site_sync_failures_total[5m])",
+          "expr": "rate(site_availability_sync_failures_total[5m])",
           "legendFormat": "Sync Failures",
           "refId": "B"
         }
@@ -1405,7 +1405,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(site_sync_latency_seconds_sum[5m]) / rate(site_sync_latency_seconds_count[5m])",
+          "expr": "rate(site_availability_sync_latency_seconds_sum[5m]) / rate(site_availability_sync_latency_seconds_count[5m])",
           "legendFormat": "Average Latency",
           "refId": "A"
         }
@@ -1462,7 +1462,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "site_sync_status",
+          "expr": "site_availability_sync_status",
           "legendFormat": "{{site}} - {{status}}",
           "refId": "A"
         }

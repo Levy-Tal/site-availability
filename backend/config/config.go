@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"site-availability/logging"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -18,10 +19,11 @@ type Config struct {
 }
 
 type ServerSettings struct {
-	Port         string `yaml:"port"`
-	CustomCAPath string `yaml:"custom_ca_path"`
-	SyncEnable   bool   `yaml:"sync_enable"`
-	Token        string `yaml:"token"` // Optional token for server authentication
+	Port         string            `yaml:"port"`
+	CustomCAPath string            `yaml:"custom_ca_path"`
+	SyncEnable   bool              `yaml:"sync_enable"`
+	Token        string            `yaml:"token"`            // Optional token for server authentication
+	Labels       map[string]string `yaml:"labels,omitempty"` // Server-level labels
 }
 
 type ScrapingSettings struct {
@@ -42,18 +44,20 @@ type Location struct {
 }
 
 type Source struct {
-	Name  string `yaml:"name"`
-	Type  string `yaml:"type"`
-	URL   string `yaml:"url"`
-	Token string `yaml:"token"`
-	Auth  string `yaml:"auth"`
-	Apps  []App  `yaml:"apps"`
+	Name   string            `yaml:"name"`
+	Type   string            `yaml:"type"`
+	URL    string            `yaml:"url"`
+	Token  string            `yaml:"token"`
+	Auth   string            `yaml:"auth"`
+	Labels map[string]string `yaml:"labels,omitempty"` // Source-level labels
+	Apps   []App             `yaml:"apps"`
 }
 
 type App struct {
-	Name     string `yaml:"name"`
-	Location string `yaml:"location"`
-	Metric   string `yaml:"metric"`
+	Name     string            `yaml:"name"`
+	Location string            `yaml:"location"`
+	Metric   string            `yaml:"metric"`
+	Labels   map[string]string `yaml:"labels,omitempty"` // App-level labels
 }
 
 // LoadConfig loads both the YAML configuration and credentials files
@@ -115,20 +119,81 @@ func mergeCredentials(config, credentials *Config) {
 		config.ServerSettings.Token = credentials.ServerSettings.Token
 	}
 
+	// Merge server settings labels if present
+	if credentials.ServerSettings.Labels != nil {
+		if config.ServerSettings.Labels == nil {
+			config.ServerSettings.Labels = make(map[string]string)
+		}
+		for key, value := range credentials.ServerSettings.Labels {
+			config.ServerSettings.Labels[key] = value
+		}
+	}
+
 	// Merge source credentials
 	for i, source := range config.Sources {
 		for _, credSource := range credentials.Sources {
 			if source.Name == credSource.Name {
 				config.Sources[i].Auth = credSource.Auth
 				config.Sources[i].Token = credSource.Token
+
+				// Merge source labels if present
+				if credSource.Labels != nil {
+					if config.Sources[i].Labels == nil {
+						config.Sources[i].Labels = make(map[string]string)
+					}
+					for key, value := range credSource.Labels {
+						config.Sources[i].Labels[key] = value
+					}
+				}
 				break
 			}
 		}
 	}
 }
 
+// validateLabels validates that labels don't contain reserved URL characters
+// and meet basic requirements (no empty keys, reasonable lengths)
+func validateLabels(labels map[string]string, context string) error {
+	// Reserved characters that could interfere with URL query parameters
+	reservedChars := []string{"&", "=", "?", "#", "/", ":"}
+
+	for key, value := range labels {
+		// Check for empty keys
+		if strings.TrimSpace(key) == "" {
+			return fmt.Errorf("label validation error in %s: label key cannot be empty", context)
+		}
+
+		// Check key length (reasonable limit)
+		if len(key) > 100 {
+			return fmt.Errorf("label validation error in %s: label key %q exceeds maximum length of 100 characters", context, key)
+		}
+
+		// Check value length (reasonable limit)
+		if len(value) > 500 {
+			return fmt.Errorf("label validation error in %s: label value for key %q exceeds maximum length of 500 characters", context, key)
+		}
+
+		// Check for reserved characters in keys
+		for _, reserved := range reservedChars {
+			if strings.Contains(key, reserved) {
+				return fmt.Errorf("label validation error in %s: label key %q contains reserved character %q", context, key, reserved)
+			}
+			if strings.Contains(value, reserved) {
+				return fmt.Errorf("label validation error in %s: label value %q for key %q contains reserved character %q", context, value, key, reserved)
+			}
+		}
+	}
+
+	return nil
+}
+
 // validateConfig performs validation on the combined configuration
 func validateConfig(config *Config) error {
+	// Validate server labels
+	if err := validateLabels(config.ServerSettings.Labels, "server settings"); err != nil {
+		return err
+	}
+
 	// Validate that at least one location is provided
 	if len(config.Locations) == 0 {
 		return fmt.Errorf("config validation error: at least one location is required")
@@ -159,6 +224,11 @@ func validateConfig(config *Config) error {
 			return fmt.Errorf("source configuration error: URL is required for source %s", source.Name)
 		}
 
+		// Validate source labels
+		if err := validateLabels(source.Labels, fmt.Sprintf("source %s", source.Name)); err != nil {
+			return err
+		}
+
 		appNames := make(map[string]bool)
 		for _, app := range source.Apps {
 			if app.Name == "" {
@@ -168,6 +238,11 @@ func validateConfig(config *Config) error {
 				return fmt.Errorf("app configuration error: duplicate app name %q in source %s", app.Name, source.Name)
 			}
 			appNames[app.Name] = true
+
+			// Validate app labels
+			if err := validateLabels(app.Labels, fmt.Sprintf("app %s in source %s", app.Name, source.Name)); err != nil {
+				return err
+			}
 		}
 	}
 

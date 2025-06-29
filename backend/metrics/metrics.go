@@ -74,35 +74,49 @@ var (
 		},
 	)
 
+	// Essential label metrics only
+	labelQueries = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "site_availability_label_queries_total",
+			Help: "Total number of label-based queries",
+		},
+	)
+	labelKeys = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "site_availability_label_keys",
+			Help: "Number of unique label keys",
+		},
+	)
+
 	// Site sync metrics
 	siteSyncAttempts = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "site_sync_attempts_total",
+			Name: "site_availability_sync_attempts_total",
 			Help: "Total number of sync attempts",
 		},
 	)
 	siteSyncFailures = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "site_sync_failures_total",
+			Name: "site_availability_sync_failures_total",
 			Help: "Total number of sync failures",
 		},
 	)
 	siteSyncLatency = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "site_sync_latency_seconds",
+			Name:    "site_availability_sync_latency_seconds",
 			Help:    "Sync operation latency in seconds",
 			Buckets: prometheus.DefBuckets,
 		},
 	)
 	siteSyncLastSuccess = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "site_sync_last_success_timestamp",
+			Name: "site_availability_sync_last_success_timestamp",
 			Help: "Timestamp of last successful sync",
 		},
 	)
 	siteSyncStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "site_sync_status",
+			Name: "site_availability_sync_status",
 			Help: "Status of each synced site",
 		},
 		[]string{"site", "status"},
@@ -186,10 +200,28 @@ func SetupMetricsHandler() http.Handler {
 	siteAvailabilityTotalAppsDown.Set(float64(totalDown))
 	siteAvailabilityTotalAppsUnavailable.Set(float64(totalUnavailable))
 
+	// Update simple label metrics
+	updateLabelMetrics()
+
 	return promhttp.Handler()
 }
 
-// Init registers all Prometheus metrics and starts any background collectors
+// updateLabelMetrics updates essential label metrics
+func updateLabelMetrics() {
+	cacheStats := handlers.GetCacheStats()
+
+	// Update label queries counter
+	if queries, ok := cacheStats["label_queries"].(int64); ok {
+		labelQueries.Add(float64(queries))
+	}
+
+	// Update label keys count
+	if keys, ok := cacheStats["label_keys"].(int); ok {
+		labelKeys.Set(float64(keys))
+	}
+}
+
+// Init registers all Prometheus metrics
 func Init() {
 	prometheus.MustRegister(siteAvailabilityStatus)
 	prometheus.MustRegister(siteAvailabilityApps)
@@ -200,6 +232,12 @@ func Init() {
 	prometheus.MustRegister(siteAvailabilityTotalAppsUp)
 	prometheus.MustRegister(siteAvailabilityTotalAppsDown)
 	prometheus.MustRegister(siteAvailabilityTotalAppsUnavailable)
+
+	// Register essential label metrics
+	prometheus.MustRegister(labelQueries)
+	prometheus.MustRegister(labelKeys)
+
+	// Register site sync metrics
 	prometheus.MustRegister(siteSyncAttempts)
 	prometheus.MustRegister(siteSyncFailures)
 	prometheus.MustRegister(siteSyncLatency)

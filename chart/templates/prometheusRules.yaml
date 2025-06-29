@@ -37,7 +37,7 @@ spec:
         description: "No site availability metrics received from the exporter in the last 5 minutes."
 
     - alert: SiteSyncFailure
-      expr: site_sync_failures_total > 0
+      expr: site_availability_sync_failures_total > 0
       for: 5m
       labels:
         severity: warning
@@ -46,7 +46,7 @@ spec:
         description: "Site sync has failed in the last 5 minutes."
 
     - alert: SiteSyncHighLatency
-      expr: rate(site_sync_latency_seconds_sum[5m]) / rate(site_sync_latency_seconds_count[5m]) > 1
+      expr: rate(site_availability_sync_latency_seconds_sum[5m]) / rate(site_availability_sync_latency_seconds_count[5m]) > 1
       for: 5m
       labels:
         severity: warning
@@ -55,7 +55,7 @@ spec:
         description: "Site sync operations are taking longer than 1 second on average."
 
     - alert: SiteSyncDown
-      expr: site_sync_status{status="down"} == 1
+      expr: site_availability_sync_status{status="down"} == 1
       for: 5m
       labels:
         severity: critical

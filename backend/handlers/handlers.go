@@ -3,18 +3,23 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"site-availability/authentication/hmac"
 	"site-availability/config"
+	"site-availability/labels"
 	"site-availability/logging"
+	"strings"
 	"sync"
 	"time"
 )
 
 type AppStatus struct {
-	Name     string `json:"name"`
-	Location string `json:"location"`
-	Status   string `json:"status"`
-	Source   string `json:"source"`
+	Name      string            `json:"name"`
+	Location  string            `json:"location"`
+	Status    string            `json:"status"`
+	Source    string            `json:"source"`
+	OriginURL string            `json:"origin_url,omitempty"` // URL where app originally came from
+	Labels    map[string]string `json:"labels,omitempty"`     // App labels (merged from app + source + server)
 }
 
 type StatusResponse struct {
@@ -29,10 +34,25 @@ type Location struct {
 	Source    string  `json:"source"`
 }
 
+// Simple cache with label manager integration
 var (
 	appStatusCache = make(map[string]map[string]AppStatus)
 	locationCache  = make(map[string][]Location)
 	cacheMutex     sync.RWMutex
+
+	// Global deduplication to prevent circular scraping issues
+	seenApps = make(map[string]bool)
+
+	// Label manager for fast label queries
+	labelManager = labels.NewLabelManager()
+
+	// Simple performance counters
+	cacheStats = struct {
+		sync.RWMutex
+		LabelQueries int64
+		CacheHits    int64
+		CacheMisses  int64
+	}{}
 )
 
 // GetAppStatusCache returns a copy of the appStatusCache
@@ -97,8 +117,8 @@ func UpdateLocationCache(sourceName string, newLocations []Location) {
 	locationCache[sourceName] = locations
 }
 
-// UpdateAppStatus updates the appStatusCache for a given source
-func UpdateAppStatus(sourceName string, newStatuses []AppStatus) {
+// UpdateAppStatus updates the appStatusCache for a given source and merges labels
+func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.Source, serverSettings config.ServerSettings) {
 	logging.Logger.WithFields(map[string]interface{}{
 		"count":  len(newStatuses),
 		"source": sourceName,
@@ -110,6 +130,7 @@ func UpdateAppStatus(sourceName string, newStatuses []AppStatus) {
 	// If no statuses provided, remove the source from cache
 	if len(newStatuses) == 0 {
 		delete(appStatusCache, sourceName)
+		updateLabelManager()
 		return
 	}
 
@@ -121,22 +142,79 @@ func UpdateAppStatus(sourceName string, newStatuses []AppStatus) {
 	}
 
 	for _, app := range newStatuses {
+		// Only apply deduplication for apps with valid origin URLs to prevent circular scraping
+		// Empty origin URLs are allowed (for direct prometheus scrapers, etc.)
+		if app.OriginURL != "" {
+			dedupKey := app.Name + "|" + app.Location + "|" + app.OriginURL
+
+			// Skip if we've already seen this app from the same origin
+			if seenApps[dedupKey] {
+				logging.Logger.WithFields(map[string]interface{}{
+					"app":        app.Name,
+					"location":   app.Location,
+					"origin_url": app.OriginURL,
+					"source":     sourceName,
+				}).Debug("Skipping duplicate app from circular scraping")
+				continue
+			}
+
+			// Mark as seen
+			seenApps[dedupKey] = true
+		}
+
+		// Merge labels: App labels > Source labels > Server labels
+		app.Labels = labels.MergeLabels(serverSettings.Labels, source.Labels, app.Labels)
+
 		logging.Logger.WithFields(map[string]interface{}{
-			"app":      app.Name,
-			"status":   app.Status,
-			"location": app.Location,
-			"source":   app.Source,
-		}).Debug("Caching app status")
+			"app":         app.Name,
+			"status":      app.Status,
+			"location":    app.Location,
+			"source":      app.Source,
+			"origin_url":  app.OriginURL,
+			"label_count": len(app.Labels),
+		}).Debug("Caching app status with merged labels")
 		appStatusCache[sourceName][app.Name] = app
 	}
+
+	// Update label manager for fast label queries
+	updateLabelManager()
+}
+
+// updateLabelManager updates the label manager with current app data
+func updateLabelManager() {
+	// Get all current apps
+	var apps []labels.AppInfo
+	for sourceName, sourceApps := range appStatusCache {
+		for _, app := range sourceApps {
+			apps = append(apps, labels.AppInfo{
+				Name:   app.Name,
+				Source: sourceName, // Include source to ensure uniqueness
+				Labels: app.Labels,
+			})
+		}
+	}
+
+	// Update label manager
+	labelManager.UpdateAppLabels(apps)
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"total_apps": len(apps),
+		"label_keys": len(labelManager.GetLabelKeys()),
+	}).Debug("Updated label manager")
 }
 
 // GetAppStatus handles the /api/status endpoint
 func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/status request")
 
+	// Parse query parameters for label filtering
+	labelFilters := parseLabelFilters(r.URL.Query())
+
 	apps := GetAppStatusCache()
 	locations := GetLocationCache()
+
+	// Apply label filters if any were specified
+	filteredApps, filteredCount := filterAppsByLabels(apps, labelFilters)
 
 	// Add server's own locations from config with empty source
 	serverLocations := convertToHandlersLocation(cfg.Locations)
@@ -144,7 +222,7 @@ func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 
 	response := StatusResponse{
 		Locations: locations,
-		Apps:      apps,
+		Apps:      filteredApps,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -155,8 +233,10 @@ func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	}
 
 	logging.Logger.WithFields(map[string]interface{}{
-		"apps":      len(response.Apps),
-		"locations": len(response.Locations),
+		"apps":           len(response.Apps),
+		"locations":      len(response.Locations),
+		"label_filters":  labelFilters,
+		"filtered_count": filteredCount,
 	}).Debug("Status response sent")
 }
 
@@ -180,6 +260,109 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 		})
 	}
 	return locations
+}
+
+// parseLabelFilters extracts label filters from query parameters
+// Supports format: ?labels.key1=value1&labels.key2=value2
+func parseLabelFilters(queryParams url.Values) map[string]string {
+	labelFilters := make(map[string]string)
+
+	for key, values := range queryParams {
+		// Check if this is a label filter parameter
+		if strings.HasPrefix(key, "labels.") && len(values) > 0 {
+			// Extract the label key (remove "labels." prefix)
+			labelKey := strings.TrimPrefix(key, "labels.")
+			if labelKey != "" && values[0] != "" {
+				labelFilters[labelKey] = values[0] // Use first value if multiple provided
+			}
+		}
+	}
+
+	logging.Logger.WithField("label_filters", labelFilters).Debug("Parsed label filters from query parameters")
+	return labelFilters
+}
+
+// filterAppsByLabels filters apps using the label manager for fast queries
+// Returns filtered apps and the count of apps that were filtered out
+func filterAppsByLabels(apps []AppStatus, labelFilters map[string]string) ([]AppStatus, int) {
+	start := time.Now()
+
+	// Update stats
+	cacheStats.Lock()
+	cacheStats.LabelQueries++
+	cacheStats.Unlock()
+
+	if len(labelFilters) == 0 {
+		return apps, 0 // No filters, return all apps
+	}
+
+	// Use LabelManager for fast filtering - returns unique IDs like "source:appname"
+	matchingAppIDs := labelManager.FindAppsByLabels(labelFilters)
+
+	// Convert unique IDs back to full AppStatus objects
+	// Use source:name as key to handle apps with same names from different sources
+	idToApp := make(map[string]AppStatus, len(apps))
+	for _, app := range apps {
+		uniqueID := app.Source + ":" + app.Name
+		idToApp[uniqueID] = app
+	}
+
+	filteredApps := make([]AppStatus, 0, len(matchingAppIDs))
+	for _, appID := range matchingAppIDs {
+		if app, exists := idToApp[appID]; exists {
+			filteredApps = append(filteredApps, app)
+		}
+	}
+
+	filteredCount := len(apps) - len(filteredApps)
+	duration := time.Since(start)
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"total_apps":    len(apps),
+		"filtered_apps": len(filteredApps),
+		"filtered_out":  filteredCount,
+		"duration_μs":   duration.Microseconds(),
+		"label_filters": labelFilters,
+	}).Debug("Applied label filters using label manager")
+
+	return filteredApps, filteredCount
+}
+
+// GetCacheStats returns simple cache statistics
+func GetCacheStats() map[string]interface{} {
+	cacheStats.RLock()
+	defer cacheStats.RUnlock()
+
+	cacheMutex.RLock()
+	totalApps := 0
+	for _, sourceApps := range appStatusCache {
+		totalApps += len(sourceApps)
+	}
+	cacheMutex.RUnlock()
+
+	return map[string]interface{}{
+		"total_apps":    totalApps,
+		"label_queries": cacheStats.LabelQueries,
+		"label_keys":    len(labelManager.GetLabelKeys()),
+		"label_manager": labelManager.GetStats(),
+	}
+}
+
+// ResetCacheForTesting resets all global cache state for test isolation
+func ResetCacheForTesting() {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	appStatusCache = make(map[string]map[string]AppStatus)
+	locationCache = make(map[string][]Location)
+	seenApps = make(map[string]bool) // Reset deduplication map
+	labelManager = labels.NewLabelManager()
+
+	cacheStats.Lock()
+	cacheStats.LabelQueries = 0
+	cacheStats.CacheHits = 0
+	cacheStats.CacheMisses = 0
+	cacheStats.Unlock()
 }
 
 // IsAppStatusCacheEmpty checks if the app status cache is empty
@@ -275,9 +458,15 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 		}
 	}
 
+	// Parse query parameters for label filtering
+	labelFilters := parseLabelFilters(r.URL.Query())
+
 	// Return current statuses and locations from the global cache
 	apps := GetAppStatusCache()
 	locations := GetLocationCache()
+
+	// Apply label filters if any were specified
+	filteredApps, filteredCount := filterAppsByLabels(apps, labelFilters)
 
 	// Add server's own locations from config with empty source
 	serverLocations := convertToHandlersLocation(cfg.Locations)
@@ -285,7 +474,7 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 
 	response := StatusResponse{
 		Locations: locations,
-		Apps:      apps,
+		Apps:      filteredApps,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -294,4 +483,11 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 		http.Error(w, "Failed to encode sync response", http.StatusInternalServerError)
 		return
 	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"apps":           len(response.Apps),
+		"locations":      len(response.Locations),
+		"label_filters":  labelFilters,
+		"filtered_count": filteredCount,
+	}).Debug("Sync response sent")
 }

@@ -18,7 +18,8 @@ import (
 type Source interface {
 	// Scrape performs a single scrape operation for a source with the given timeout and max parallel settings.
 	// It returns the app statuses, locations, and an error if scraping fails.
-	Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error)
+	// The serverSettings parameter is passed for label merging purposes.
+	Scrape(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error)
 }
 
 var (
@@ -112,12 +113,12 @@ func Start(cfg *config.Config) {
 			defer ticker.Stop()
 
 			// Perform initial scrape immediately
-			statuses, locations, err := scraper.Scrape(source, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
+			statuses, locations, err := scraper.Scrape(source, cfg.ServerSettings, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
 			if err != nil {
 				logging.Logger.WithError(err).WithField("source", source.Name).Error("Initial scraper failed")
 			} else {
 				// Update the app status and location caches
-				handlers.UpdateAppStatus(source.Name, statuses)
+				handlers.UpdateAppStatus(source.Name, statuses, source, cfg.ServerSettings)
 				handlers.UpdateLocationCache(source.Name, locations)
 				logging.Logger.WithFields(map[string]interface{}{
 					"source":         source.Name,
@@ -128,12 +129,12 @@ func Start(cfg *config.Config) {
 
 			// Continue scraping at intervals
 			for range ticker.C {
-				statuses, locations, err := scraper.Scrape(source, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
+				statuses, locations, err := scraper.Scrape(source, cfg.ServerSettings, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
 				if err != nil {
 					logging.Logger.WithError(err).WithField("source", source.Name).Error("Scraper failed")
 				} else {
 					// Update the app status and location caches
-					handlers.UpdateAppStatus(source.Name, statuses)
+					handlers.UpdateAppStatus(source.Name, statuses, source, cfg.ServerSettings)
 					handlers.UpdateLocationCache(source.Name, locations)
 					logging.Logger.WithFields(map[string]interface{}{
 						"source":         source.Name,

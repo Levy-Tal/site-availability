@@ -33,7 +33,7 @@ func NewPrometheusScraper() *PrometheusScraper {
 	return &PrometheusScraper{}
 }
 
-func (p *PrometheusScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
+func (p *PrometheusScraper) Scrape(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
 	results := make([]handlers.AppStatus, len(source.Apps))
 	sem := make(chan struct{}, maxParallel)
 	var wg sync.WaitGroup
@@ -77,10 +77,12 @@ func (p *PrometheusScraper) Scrape(source config.Source, timeout time.Duration, 
 
 			mu.Lock()
 			results[i] = handlers.AppStatus{
-				Name:     app.Name,
-				Location: app.Location,
-				Status:   status,
-				Source:   source.Name,
+				Name:      app.Name,
+				Location:  app.Location,
+				Status:    status,
+				Source:    source.Name,
+				OriginURL: source.URL, // Set origin URL for deduplication
+				Labels:    app.Labels, // Will be merged in UpdateAppStatus
 			}
 			mu.Unlock()
 		}(i, app)

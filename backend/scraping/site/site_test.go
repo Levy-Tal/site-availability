@@ -40,16 +40,18 @@ func TestSiteScraper_Scrape(t *testing.T) {
 	t.Run("successful scrape without authentication", func(t *testing.T) {
 		expectedStatuses := []handlers.AppStatus{
 			{
-				Name:     "app1",
-				Location: "location1",
-				Status:   "up",
-				Source:   "", // Will be set by scraper
+				Name:      "app1",
+				Location:  "location1",
+				Status:    "up",
+				Source:    "",
+				OriginURL: "http://test-origin.com", // Will be set by scraper
 			},
 			{
-				Name:     "app2",
-				Location: "location2",
-				Status:   "down",
-				Source:   "", // Will be set by scraper
+				Name:      "app2",
+				Location:  "location2",
+				Status:    "down",
+				Source:    "",
+				OriginURL: "http://test-origin.com", // Will be set by scraper
 			},
 		}
 
@@ -80,25 +82,28 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			// No token - no authentication
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 2)
 
-		// Verify the source was set correctly
+		// Verify the source and origin URL were set correctly
 		assert.Equal(t, "app1", results[0].Name)
 		assert.Equal(t, "test-site", results[0].Source)
+		assert.Equal(t, server.URL, results[0].OriginURL)
 		assert.Equal(t, "app2", results[1].Name)
 		assert.Equal(t, "test-site", results[1].Source)
+		assert.Equal(t, server.URL, results[1].OriginURL)
 	})
 
 	t.Run("successful scrape with HMAC authentication", func(t *testing.T) {
 		token := "test-secret-token"
 		expectedStatuses := []handlers.AppStatus{
 			{
-				Name:     "authenticated-app",
-				Location: "secure-location",
-				Status:   "up",
-				Source:   "",
+				Name:      "authenticated-app",
+				Location:  "secure-location",
+				Status:    "up",
+				Source:    "",
+				OriginURL: "http://test-origin.com",
 			},
 		}
 
@@ -134,7 +139,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			Token: token,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 
@@ -145,10 +150,11 @@ func TestSiteScraper_Scrape(t *testing.T) {
 	t.Run("successful scrape with TLS config", func(t *testing.T) {
 		expectedStatuses := []handlers.AppStatus{
 			{
-				Name:     "tls-app",
-				Location: "secure-location",
-				Status:   "up",
-				Source:   "",
+				Name:      "tls-app",
+				Location:  "secure-location",
+				Status:    "up",
+				Source:    "",
+				OriginURL: "http://test-origin.com",
 			},
 		}
 
@@ -170,7 +176,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		// Use insecure TLS config for testing
 		tlsConfig := &tls.Config{InsecureSkipVerify: true}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, tlsConfig)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, tlsConfig)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 
@@ -194,7 +200,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 	})
@@ -207,7 +213,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  "http://invalid url with spaces", // Invalid URL
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		assert.Error(t, err)
 		assert.Nil(t, results)
 		assert.Contains(t, err.Error(), "failed to create request")
@@ -222,7 +228,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  "http://localhost:99999", // Non-existent server
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err) // Network errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -253,7 +259,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 					URL:  server.URL,
 				}
 
-				results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+				results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 				require.NoError(t, err) // HTTP errors are handled gracefully
 				assert.Empty(t, results)
 			})
@@ -275,7 +281,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err) // JSON errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -296,7 +302,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err) // JSON structure errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -317,7 +323,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		}
 
 		// Use very short timeout
-		results, _, err := scraper.Scrape(source, 10*time.Millisecond, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 10*time.Millisecond, 1, nil)
 		require.NoError(t, err) // Timeout errors are handled gracefully
 		assert.Empty(t, results)
 	})
@@ -343,7 +349,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		}
 
 		// Try with different maxParallel values - should always make only 1 request
-		results, _, err := scraper.Scrape(source, 5*time.Second, 100, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 100, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 		assert.Equal(t, 1, requestCount)
@@ -366,7 +372,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL, // Should append /sync to this
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 	})
@@ -394,7 +400,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, results)
 	})
@@ -402,16 +408,18 @@ func TestSiteScraper_Scrape(t *testing.T) {
 	t.Run("source name override for multiple apps", func(t *testing.T) {
 		originalStatuses := []handlers.AppStatus{
 			{
-				Name:     "app1",
-				Location: "location1",
-				Status:   "up",
-				Source:   "original-source", // This should be overridden
+				Name:      "app1",
+				Location:  "location1",
+				Status:    "up",
+				Source:    "original-source",
+				OriginURL: "http://test-origin.com", // This should be overridden
 			},
 			{
-				Name:     "app2",
-				Location: "location2",
-				Status:   "down",
-				Source:   "another-source", // This should also be overridden
+				Name:      "app2",
+				Location:  "location2",
+				Status:    "down",
+				Source:    "another-source",
+				OriginURL: "http://test-origin.com", // This should also be overridden
 			},
 		}
 
@@ -430,7 +438,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			URL:  server.URL,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 2)
 
@@ -453,10 +461,11 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		token := "test-token-with-special-chars!@#$%^&*()"
 		expectedStatuses := []handlers.AppStatus{
 			{
-				Name:     "special-app",
-				Location: "special-location",
-				Status:   "up",
-				Source:   "",
+				Name:      "special-app",
+				Location:  "special-location",
+				Status:    "up",
+				Source:    "",
+				OriginURL: "http://test-origin.com",
 			},
 		}
 
@@ -484,9 +493,77 @@ func TestSiteScraper_Scrape(t *testing.T) {
 			Token: token,
 		}
 
-		results, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, "special-token-site", results[0].Source)
+	})
+
+	t.Run("scrape with label merging", func(t *testing.T) {
+		// Create remote app statuses with labels
+		remoteStatuses := []handlers.AppStatus{
+			{
+				Name:      "remote-app",
+				Location:  "remote-location",
+				Status:    "up",
+				Source:    "original-remote-source",
+				OriginURL: "http://test-origin.com", // Will be overridden
+				Labels: map[string]string{
+					"remote_version": "v2.1.0",
+					"remote_tier":    "backend",
+					"common_label":   "remote_value", // Highest priority
+				},
+			},
+		}
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			response := handlers.StatusResponse{Apps: remoteStatuses, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		scraper := NewSiteScraper()
+
+		// Set up server settings with labels
+		serverSettings := config.ServerSettings{
+			Labels: map[string]string{
+				"server_env":    "production",
+				"server_region": "eu-central",
+				"common_label":  "server_value", // Will be overridden by source
+			},
+		}
+
+		source := config.Source{
+			Name: "labeled-site",
+			Type: "site",
+			URL:  server.URL,
+			Labels: map[string]string{
+				"source_type":    "site",
+				"source_cluster": "west",
+				"common_label":   "source_value", // Will be overridden by remote app
+			},
+		}
+
+		results, _, err := scraper.Scrape(source, serverSettings, 5*time.Second, 1, nil)
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+
+		app := results[0]
+		assert.Equal(t, "remote-app", app.Name)
+		assert.Equal(t, "up", app.Status)
+		assert.Equal(t, "labeled-site", app.Source) // Source name is overridden by scraper
+
+		// Verify label merging with correct priority (Remote App > Source > Server)
+		expectedLabels := map[string]string{
+			// Only remote app labels should be present (merging happens in UpdateAppStatus)
+			"remote_version": "v2.1.0",
+			"remote_tier":    "backend",
+			"common_label":   "remote_value",
+		}
+
+		assert.Equal(t, expectedLabels, app.Labels)
+		assert.Len(t, app.Labels, 3) // Only remote app labels
 	})
 }
