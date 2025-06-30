@@ -30,9 +30,15 @@ const Sidebar = ({
     const loadLabels = async () => {
       try {
         const labels = await fetchLabels();
-        const keys = [...new Set(labels.map((label) => label.key))];
+        // Filter out any invalid labels
+        const validLabels = labels.filter(
+          (label) => label && label.key && label.value,
+        );
+        const keys = [...new Set(validLabels.map((label) => label.key))].filter(
+          (key) => key,
+        );
         setLabelKeys(keys);
-        setLabelSuggestions(labels);
+        setLabelSuggestions(validLabels);
       } catch (error) {
         console.error("Error loading labels:", error);
       }
@@ -109,7 +115,9 @@ const Sidebar = ({
         const filteredSuggestions = labelSuggestions
           .filter(
             (label) =>
+              label &&
               label.key === key &&
+              label.value &&
               label.value.toLowerCase().includes(val.toLowerCase()),
           )
           .map((label) => `${label.key}=${label.value}`);
@@ -117,14 +125,14 @@ const Sidebar = ({
       } else if (key && val.length === 0) {
         // Show all values for the key
         const filteredSuggestions = labelSuggestions
-          .filter((label) => label.key === key)
+          .filter((label) => label && label.key === key)
           .map((label) => `${label.key}=${label.value}`);
         setShowLabelSuggestions(filteredSuggestions.length > 0);
       }
     } else {
       // Filter suggestions for keys
-      const filteredKeys = labelKeys.filter((key) =>
-        key.toLowerCase().includes(value.toLowerCase()),
+      const filteredKeys = labelKeys.filter(
+        (key) => key && key.toLowerCase().includes(value.toLowerCase()),
       );
       setShowLabelSuggestions(filteredKeys.length > 0 && value.length > 0);
     }
@@ -167,13 +175,17 @@ const Sidebar = ({
       return labelSuggestions
         .filter(
           (label) =>
+            label &&
             label.key === key &&
+            label.value &&
             label.value.toLowerCase().includes(val.toLowerCase()),
         )
         .map((label) => `${label.key}=${label.value}`);
     } else {
       return labelKeys
-        .filter((key) => key.toLowerCase().includes(labelInput.toLowerCase()))
+        .filter(
+          (key) => key && key.toLowerCase().includes(labelInput.toLowerCase()),
+        )
         .map((key) => `${key}=`);
     }
   };
