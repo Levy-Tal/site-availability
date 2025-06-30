@@ -930,11 +930,6 @@ func TestLabelManagerIntegration(t *testing.T) {
 
 		updateAppStatusTest("test-source", testApps)
 
-		// Test cache stats
-		stats := GetCacheStats()
-		assert.Equal(t, 3, stats["total_apps"])
-		assert.Equal(t, 6, stats["label_keys"]) // env, tier (app) + source_env, source_type (source) + server_env, server_region (server)
-
 		// Test label filtering
 		apps := GetAppStatusCache()
 		filteredApps, filteredCount := filterAppsByLabels(apps, map[string]string{"env": "prod"})

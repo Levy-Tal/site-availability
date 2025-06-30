@@ -197,28 +197,6 @@ func (lm *LabelManager) GetLabelValues(labelKey string) []string {
 	return []string{}
 }
 
-// GetStats returns statistics about the current label mappings
-func (lm *LabelManager) GetStats() map[string]interface{} {
-	lm.mutex.RLock()
-	defer lm.mutex.RUnlock()
-
-	totalMappings := 0
-	totalValues := 0
-
-	for _, valueMap := range lm.appsByLabel {
-		totalValues += len(valueMap)
-		for _, appList := range valueMap {
-			totalMappings += len(appList)
-		}
-	}
-
-	return map[string]interface{}{
-		"label_keys":     len(lm.appsByLabel),
-		"label_values":   totalValues,
-		"total_mappings": totalMappings,
-	}
-}
-
 // intersectSlices returns elements that exist in both slices
 func intersectSlices(slice1, slice2 []string) []string {
 	if len(slice1) == 0 || len(slice2) == 0 {

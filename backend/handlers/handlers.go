@@ -45,14 +45,6 @@ var (
 
 	// Label manager for fast label queries
 	labelManager = labels.NewLabelManager()
-
-	// Simple performance counters
-	cacheStats = struct {
-		sync.RWMutex
-		LabelQueries int64
-		CacheHits    int64
-		CacheMisses  int64
-	}{}
 )
 
 // GetAppStatusCache returns a copy of the appStatusCache
@@ -296,11 +288,6 @@ func parseLabelFilters(queryParams url.Values) map[string]string {
 func filterAppsByLabels(apps []AppStatus, labelFilters map[string]string) ([]AppStatus, int) {
 	start := time.Now()
 
-	// Update stats
-	cacheStats.Lock()
-	cacheStats.LabelQueries++
-	cacheStats.Unlock()
-
 	if len(labelFilters) == 0 {
 		return apps, 0 // No filters, return all apps
 	}
@@ -337,26 +324,6 @@ func filterAppsByLabels(apps []AppStatus, labelFilters map[string]string) ([]App
 	return filteredApps, filteredCount
 }
 
-// GetCacheStats returns simple cache statistics
-func GetCacheStats() map[string]interface{} {
-	cacheStats.RLock()
-	defer cacheStats.RUnlock()
-
-	cacheMutex.RLock()
-	totalApps := 0
-	for _, sourceApps := range appStatusCache {
-		totalApps += len(sourceApps)
-	}
-	cacheMutex.RUnlock()
-
-	return map[string]interface{}{
-		"total_apps":    totalApps,
-		"label_queries": cacheStats.LabelQueries,
-		"label_keys":    len(labelManager.GetLabelKeys()),
-		"label_manager": labelManager.GetStats(),
-	}
-}
-
 // ResetCacheForTesting resets all global cache state for test isolation
 func ResetCacheForTesting() {
 	cacheMutex.Lock()
@@ -366,12 +333,6 @@ func ResetCacheForTesting() {
 	locationCache = make(map[string][]Location)
 	seenApps = make(map[string]bool) // Reset deduplication map
 	labelManager = labels.NewLabelManager()
-
-	cacheStats.Lock()
-	cacheStats.LabelQueries = 0
-	cacheStats.CacheHits = 0
-	cacheStats.CacheMisses = 0
-	cacheStats.Unlock()
 }
 
 // IsAppStatusCacheEmpty checks if the app status cache is empty

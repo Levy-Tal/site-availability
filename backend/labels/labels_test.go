@@ -263,10 +263,6 @@ func TestLabelManager(t *testing.T) {
 
 		lm.UpdateAppLabels(apps)
 
-		stats := lm.GetStats()
-		assert.Equal(t, 2, stats["label_keys"])     // team, environment
-		assert.Equal(t, 3, stats["label_values"])   // platform, production, staging
-		assert.Equal(t, 4, stats["total_mappings"]) // app1->team:platform, app1->env:production, app2->team:platform, app2->env:staging
 	})
 
 	t.Run("update with empty apps", func(t *testing.T) {
@@ -315,9 +311,6 @@ func TestLabelManager(t *testing.T) {
 
 		// Should handle gracefully
 		assert.Empty(t, lm.GetLabelKeys())
-		stats := lm.GetStats()
-		assert.Equal(t, 0, stats["label_keys"])
-		assert.Equal(t, 0, stats["total_mappings"])
 	})
 
 	t.Run("apps with same name from different sources", func(t *testing.T) {
@@ -377,10 +370,6 @@ func TestLabelManager(t *testing.T) {
 		assert.ElementsMatch(t, []string{"prom1:app1"}, platformProdApps)
 
 		// Verify stats are correct
-		stats := lm.GetStats()
-		assert.Equal(t, 2, stats["label_keys"])     // team, environment
-		assert.Equal(t, 5, stats["label_values"])   // platform, backend, production, staging, development
-		assert.Equal(t, 6, stats["total_mappings"]) // Each app contributes 2 mappings (team + environment)
 	})
 }
 
