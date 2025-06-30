@@ -580,15 +580,60 @@ type LabelsResponse struct {
 func GetLocations(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/locations request")
 
+	// Parse query parameters for filtering
+	filters := parseFilters(r.URL.Query())
+
+	// Get all apps first
+	allApps := GetAppStatusCache()
+
+	// Apply filters if any were specified
+	var filteredApps []AppStatus
+	var filteredCount int
+
+	if len(filters) > 0 {
+		filteredApps, filteredCount = filterApps(allApps, filters)
+		logging.Logger.WithFields(map[string]interface{}{
+			"filters":        filters,
+			"filtered_count": filteredCount,
+			"filtered_apps":  len(filteredApps),
+		}).Debug("Applied filters to apps for location status calculation")
+	} else {
+		filteredApps = allApps
+	}
+
+	// Get all locations but calculate status based on filtered apps only
 	locations := GetLocationsWithStatus()
 
-	// Add server's own locations from config with calculated status
+	// Recalculate status for each location based on filtered apps
+	for i := range locations {
+		locations[i].Status = calculateLocationStatus(locations[i].Name, filteredApps)
+	}
+
+	// Add server's own locations from config with status calculated from filtered apps
 	serverLocations := convertToHandlersLocation(cfg.Locations)
 	for i := range serverLocations {
-		apps := GetAppStatusCache()
-		serverLocations[i].Status = calculateLocationStatus(serverLocations[i].Name, apps)
+		serverLocations[i].Status = calculateLocationStatus(serverLocations[i].Name, filteredApps)
 	}
 	locations = append(locations, serverLocations...)
+
+	// If filtering is applied, only return locations that have apps matching the filter
+	if len(filters) > 0 {
+		locationsWithApps := make([]Location, 0)
+		locationHasApps := make(map[string]bool)
+
+		// Mark locations that have filtered apps
+		for _, app := range filteredApps {
+			locationHasApps[app.Location] = true
+		}
+
+		// Only include locations that have matching apps or explicitly include all locations
+		for _, location := range locations {
+			if locationHasApps[location.Name] || location.Status == nil {
+				locationsWithApps = append(locationsWithApps, location)
+			}
+		}
+		locations = locationsWithApps
+	}
 
 	response := LocationStatusResponse{
 		Locations: locations,
@@ -602,8 +647,10 @@ func GetLocations(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	}
 
 	logging.Logger.WithFields(map[string]interface{}{
-		"locations": len(response.Locations),
-	}).Debug("Locations response sent")
+		"locations":      len(response.Locations),
+		"filters":        filters,
+		"filtered_count": filteredCount,
+	}).Debug("Locations response sent with filtered status calculation")
 }
 
 // GetApps handles the /api/apps endpoint
@@ -655,6 +702,45 @@ func GetApps(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 func GetLabels(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/labels request")
 
+	// Check if a specific label name is requested (e.g., /api/labels?env)
+	queryParams := r.URL.Query()
+
+	// Find the first non-empty query parameter as the label name
+	var requestedLabelKey string
+	for key, values := range queryParams {
+		if len(values) > 0 && values[0] != "" {
+			requestedLabelKey = key
+			break
+		} else if len(values) == 0 || values[0] == "" {
+			// Handle case where parameter exists but has no value (e.g., ?env)
+			requestedLabelKey = key
+			break
+		}
+	}
+
+	if requestedLabelKey != "" {
+		// Return all values for the specific label key
+		labelValues := labelManager.GetLabelValues("labels." + requestedLabelKey)
+
+		response := LabelsResponse{
+			Labels: labelValues,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			logging.Logger.WithError(err).Error("Failed to encode label values response")
+			http.Error(w, "Failed to encode label values", http.StatusInternalServerError)
+			return
+		}
+
+		logging.Logger.WithFields(map[string]interface{}{
+			"label_key":    requestedLabelKey,
+			"label_values": len(response.Labels),
+		}).Debug("Label values response sent")
+		return
+	}
+
+	// Default behavior: return all available label keys
 	labelKeys := labelManager.GetLabelKeys()
 
 	// Filter out system fields, only return user labels
