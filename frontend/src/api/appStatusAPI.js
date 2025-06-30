@@ -1,7 +1,9 @@
 // frontend/src/api/appStatusAPI.js
-export const fetchAppStatuses = async () => {
+
+// Fetch locations with their calculated status
+export const fetchLocations = async () => {
   try {
-    const response = await fetch("/api/status");
+    const response = await fetch("/api/locations");
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -9,9 +11,51 @@ export const fetchAppStatuses = async () => {
     if (!contentType || !contentType.includes("application/json")) {
       throw new Error("Received non-JSON response");
     }
-    return await response.json();
+    const data = await response.json();
+    return data.locations || [];
   } catch (error) {
-    console.error("Error fetching app statuses:", error);
-    return { locations: [], apps: [] }; // Return empty data instead of null
+    console.error("Error fetching locations:", error);
+    return [];
+  }
+};
+
+// Fetch apps for a specific location or all apps
+export const fetchApps = async (locationName = null) => {
+  try {
+    const url = locationName
+      ? `/api/apps?location=${encodeURIComponent(locationName)}`
+      : "/api/apps";
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Received non-JSON response");
+    }
+    const data = await response.json();
+    return data.apps || [];
+  } catch (error) {
+    console.error("Error fetching apps:", error);
+    return [];
+  }
+};
+
+// Fetch available labels
+export const fetchLabels = async () => {
+  try {
+    const response = await fetch("/api/labels");
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Received non-JSON response");
+    }
+    const data = await response.json();
+    return data.labels || [];
+  } catch (error) {
+    console.error("Error fetching labels:", error);
+    return [];
   }
 };

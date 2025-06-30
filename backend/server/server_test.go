@@ -113,7 +113,9 @@ func TestSetupRoutes(t *testing.T) {
 			method     string
 			statusCode int
 		}{
-			{"/api/status", "GET", http.StatusOK},
+			{"/api/locations", "GET", http.StatusOK},
+			{"/api/apps", "GET", http.StatusOK},
+			{"/api/labels", "GET", http.StatusOK},
 			{"/api/scrape-interval", "GET", http.StatusOK},
 			{"/api/docs", "GET", http.StatusOK},
 			{"/healthz", "GET", http.StatusOK},
@@ -275,7 +277,7 @@ func TestHealthProbes(t *testing.T) {
 func TestRouteHandlers(t *testing.T) {
 	setupServerTest()
 
-	t.Run("api status endpoint", func(t *testing.T) {
+	t.Run("api locations endpoint", func(t *testing.T) {
 		cfg := &config.Config{
 			Locations: []config.Location{
 				{
@@ -289,7 +291,7 @@ func TestRouteHandlers(t *testing.T) {
 		server := NewServer(cfg)
 		server.setupRoutes()
 
-		req := httptest.NewRequest("GET", "/api/status", nil)
+		req := httptest.NewRequest("GET", "/api/locations", nil)
 		w := httptest.NewRecorder()
 		server.mux.ServeHTTP(w, req)
 
@@ -426,7 +428,9 @@ func TestServerBehavior(t *testing.T) {
 
 		// Test that specific API paths work correctly
 		validPaths := map[string]int{
-			"/api/status":          http.StatusOK,
+			"/api/locations":       http.StatusOK,
+			"/api/apps":            http.StatusOK,
+			"/api/labels":          http.StatusOK,
 			"/api/scrape-interval": http.StatusOK,
 			"/api/docs":            http.StatusOK,
 			"/healthz":             http.StatusOK,
@@ -488,11 +492,11 @@ func TestServerBehavior(t *testing.T) {
 			assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 		})
 
-		t.Run("PUT /api/status", func(t *testing.T) {
-			req := httptest.NewRequest("PUT", "/api/status", nil)
+		t.Run("PUT /api/locations", func(t *testing.T) {
+			req := httptest.NewRequest("PUT", "/api/locations", nil)
 			w := httptest.NewRecorder()
 			server.mux.ServeHTTP(w, req)
-			// The status handler doesn't check method, so it returns 200
+			// The locations handler doesn't check method, so it returns 200
 			assert.Equal(t, http.StatusOK, w.Code)
 		})
 	})

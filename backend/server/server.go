@@ -40,9 +40,17 @@ func (s *Server) Start() error {
 
 // Setup HTTP routes and handlers
 func (s *Server) setupRoutes() {
-	s.mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
-		logging.Logger.Debug("Handling /api/status request")
-		handlers.GetAppStatus(w, r, s.config)
+	s.mux.HandleFunc("/api/locations", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /api/locations request")
+		handlers.GetLocations(w, r, s.config)
+	})
+	s.mux.HandleFunc("/api/apps", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /api/apps request")
+		handlers.GetApps(w, r, s.config)
+	})
+	s.mux.HandleFunc("/api/labels", func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Debug("Handling /api/labels request")
+		handlers.GetLabels(w, r, s.config)
 	})
 	s.mux.HandleFunc("/api/scrape-interval", func(w http.ResponseWriter, r *http.Request) {
 		logging.Logger.Debug("Handling /api/scrape-interval request")

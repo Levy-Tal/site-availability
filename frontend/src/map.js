@@ -10,7 +10,7 @@ import {
 const INITIAL_ZOOM = 1;
 const MIN_SCALE = 250;
 
-export const MapComponent = ({ locations, onSiteClick, apps }) => {
+export const MapComponent = ({ locations, onSiteClick }) => {
   const geoUrl = "/data/countries-50m.json";
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [scale, setScale] = useState(MIN_SCALE);
@@ -150,22 +150,16 @@ export const MapComponent = ({ locations, onSiteClick, apps }) => {
           </Geographies>
 
           {locations.map((site, index) => {
-            const appsInSite = apps.filter((app) => app.location === site.name);
-            const allAppsUp =
-              appsInSite.length > 0 &&
-              appsInSite.every((app) => app.status === "up");
-            const anyAppDown = appsInSite.some((app) => app.status === "down");
-            const anyAppUnavailable = appsInSite.some(
-              (app) => app.status === "unavailable",
-            );
-
-            const color = allAppsUp
-              ? "#10B981"
-              : anyAppDown
-                ? "#EF4444"
-                : anyAppUnavailable
-                  ? "#F59E0B"
-                  : "#D6D6DA";
+            // Use server-calculated status directly (no client-side calculation needed)
+            // null status means no apps in location, show gray
+            const color =
+              site.status === "up"
+                ? "#10B981" // green
+                : site.status === "down"
+                  ? "#EF4444" // red
+                  : site.status === "unavailable"
+                    ? "#F59E0B" // yellow
+                    : "#D6D6DA"; // gray (null status or unknown/default)
 
             const isHovered = hoveredMarker === site.name;
             const markerScale =

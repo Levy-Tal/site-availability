@@ -71,8 +71,8 @@ func TestLabelManager(t *testing.T) {
 	t.Run("new label manager", func(t *testing.T) {
 		lm := NewLabelManager()
 		assert.NotNil(t, lm)
-		assert.NotNil(t, lm.appsByLabel)
-		assert.Len(t, lm.appsByLabel, 0)
+		assert.NotNil(t, lm.appsByField)
+		assert.Len(t, lm.appsByField, 0)
 	})
 
 	t.Run("update app labels and find apps", func(t *testing.T) {
@@ -111,22 +111,26 @@ func TestLabelManager(t *testing.T) {
 
 		lm.UpdateAppLabels(apps)
 
-		// Test finding apps by single label - now returns unique IDs
-		platformApps := lm.FindAppsByLabel("team", "platform")
+		// Test finding apps by single label - now uses "labels." prefix
+		platformApps := lm.FindAppsByLabel("labels.team", "platform")
 		assert.ElementsMatch(t, []string{"prom1:app1", "prom1:app2"}, platformApps)
 
-		prodApps := lm.FindAppsByLabel("environment", "production")
+		prodApps := lm.FindAppsByLabel("labels.environment", "production")
 		assert.ElementsMatch(t, []string{"prom1:app1", "prom2:app3"}, prodApps)
 
-		eastApps := lm.FindAppsByLabel("cluster", "east")
+		eastApps := lm.FindAppsByLabel("labels.cluster", "east")
 		assert.ElementsMatch(t, []string{"prom1:app1", "prom2:app3"}, eastApps)
+
+		// Test finding apps by system fields (no prefix)
+		sourceApps := lm.FindAppsByLabel("source", "prom1")
+		assert.ElementsMatch(t, []string{"prom1:app1", "prom1:app2"}, sourceApps)
 
 		// Test finding apps by non-existent label
 		nonExistent := lm.FindAppsByLabel("nonexistent", "value")
 		assert.Empty(t, nonExistent)
 
 		// Test finding apps by non-existent value
-		nonExistentValue := lm.FindAppsByLabel("team", "nonexistent")
+		nonExistentValue := lm.FindAppsByLabel("labels.team", "nonexistent")
 		assert.Empty(t, nonExistentValue)
 	})
 
@@ -167,25 +171,25 @@ func TestLabelManager(t *testing.T) {
 
 		// Test AND logic: find apps that are platform AND production
 		filters := map[string]string{
-			"team":        "platform",
-			"environment": "production",
+			"labels.team":        "platform",
+			"labels.environment": "production",
 		}
 		result := lm.FindAppsByLabels(filters)
 		assert.ElementsMatch(t, []string{"prom1:app1"}, result)
 
 		// Test AND logic: find apps in east cluster AND platform team
 		filters = map[string]string{
-			"team":    "platform",
-			"cluster": "east",
+			"labels.team":    "platform",
+			"labels.cluster": "east",
 		}
 		result = lm.FindAppsByLabels(filters)
 		assert.ElementsMatch(t, []string{"prom1:app1", "prom1:app2"}, result)
 
 		// Test no matches
 		filters = map[string]string{
-			"team":        "platform",
-			"environment": "production",
-			"cluster":     "west", // No apps match this combination
+			"labels.team":        "platform",
+			"labels.environment": "production",
+			"labels.cluster":     "west", // No apps match this combination
 		}
 		result = lm.FindAppsByLabels(filters)
 		assert.Empty(t, result)
@@ -220,19 +224,27 @@ func TestLabelManager(t *testing.T) {
 
 		lm.UpdateAppLabels(apps)
 
-		// Test getting all label keys
+		// Test getting all field keys (now includes both system fields and labels with prefix)
 		keys := lm.GetLabelKeys()
-		assert.ElementsMatch(t, []string{"team", "environment", "cluster"}, keys)
+		expectedKeys := []string{"name", "source", "labels.team", "labels.environment", "labels.cluster"}
+		assert.ElementsMatch(t, expectedKeys, keys)
 
-		// Test getting values for specific keys
-		teamValues := lm.GetLabelValues("team")
+		// Test getting values for specific label keys (with prefix)
+		teamValues := lm.GetLabelValues("labels.team")
 		assert.ElementsMatch(t, []string{"platform", "backend"}, teamValues)
 
-		envValues := lm.GetLabelValues("environment")
+		envValues := lm.GetLabelValues("labels.environment")
 		assert.ElementsMatch(t, []string{"production", "staging"}, envValues)
 
-		clusterValues := lm.GetLabelValues("cluster")
+		clusterValues := lm.GetLabelValues("labels.cluster")
 		assert.ElementsMatch(t, []string{"east"}, clusterValues)
+
+		// Test getting values for system fields (without prefix)
+		sourceValues := lm.GetLabelValues("source")
+		assert.ElementsMatch(t, []string{"prom1", "prom2"}, sourceValues)
+
+		nameValues := lm.GetLabelValues("name")
+		assert.ElementsMatch(t, []string{"app1", "app2"}, nameValues)
 
 		// Test non-existent key
 		nonExistent := lm.GetLabelValues("nonexistent")
@@ -280,15 +292,15 @@ func TestLabelManager(t *testing.T) {
 		}
 		lm.UpdateAppLabels(apps)
 
-		// Verify it was added
-		assert.Len(t, lm.GetLabelKeys(), 1)
+		// Verify it was added (name, source + labels.team = 3 fields)
+		assert.Len(t, lm.GetLabelKeys(), 3)
 
 		// Now update with empty list (should clear everything)
 		lm.UpdateAppLabels([]AppInfo{})
 
 		// Should be empty now
 		assert.Empty(t, lm.GetLabelKeys())
-		assert.Empty(t, lm.FindAppsByLabel("team", "platform"))
+		assert.Empty(t, lm.FindAppsByLabel("labels.team", "platform"))
 	})
 
 	t.Run("apps without labels", func(t *testing.T) {
@@ -309,8 +321,11 @@ func TestLabelManager(t *testing.T) {
 
 		lm.UpdateAppLabels(apps)
 
-		// Should handle gracefully
-		assert.Empty(t, lm.GetLabelKeys())
+		// Should handle gracefully and still index system fields
+		keys := lm.GetLabelKeys()
+		// Even without user labels, we should have system fields: name, source
+		expectedKeys := []string{"name", "source"}
+		assert.ElementsMatch(t, expectedKeys, keys)
 	})
 
 	t.Run("apps with same name from different sources", func(t *testing.T) {
@@ -347,25 +362,25 @@ func TestLabelManager(t *testing.T) {
 		lm.UpdateAppLabels(apps)
 
 		// Test that all three apps are properly indexed despite having the same name
-		platformApps := lm.FindAppsByLabel("team", "platform")
+		platformApps := lm.FindAppsByLabel("labels.team", "platform")
 		assert.ElementsMatch(t, []string{"prom1:app1", "site:app1"}, platformApps)
 
-		backendApps := lm.FindAppsByLabel("team", "backend")
+		backendApps := lm.FindAppsByLabel("labels.team", "backend")
 		assert.ElementsMatch(t, []string{"prom2:app1"}, backendApps)
 
-		prodApps := lm.FindAppsByLabel("environment", "production")
+		prodApps := lm.FindAppsByLabel("labels.environment", "production")
 		assert.ElementsMatch(t, []string{"prom1:app1"}, prodApps)
 
-		stagingApps := lm.FindAppsByLabel("environment", "staging")
+		stagingApps := lm.FindAppsByLabel("labels.environment", "staging")
 		assert.ElementsMatch(t, []string{"prom2:app1"}, stagingApps)
 
-		devApps := lm.FindAppsByLabel("environment", "development")
+		devApps := lm.FindAppsByLabel("labels.environment", "development")
 		assert.ElementsMatch(t, []string{"site:app1"}, devApps)
 
 		// Test multi-label filtering
 		platformProdApps := lm.FindAppsByLabels(map[string]string{
-			"team":        "platform",
-			"environment": "production",
+			"labels.team":        "platform",
+			"labels.environment": "production",
 		})
 		assert.ElementsMatch(t, []string{"prom1:app1"}, platformProdApps)
 

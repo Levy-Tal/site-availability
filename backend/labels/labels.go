@@ -2,15 +2,19 @@ package labels
 
 import (
 	"site-availability/logging"
+	"strings"
 	"sync"
 )
 
 // AppInfo represents the minimal app information needed for label management
 // This avoids circular imports with the handlers package
 type AppInfo struct {
-	Name   string
-	Source string // New field to ensure uniqueness
-	Labels map[string]string
+	Name      string
+	Location  string
+	Status    string
+	Source    string
+	OriginURL string
+	Labels    map[string]string
 }
 
 // getUniqueID creates a unique identifier for an app by combining source and name
@@ -21,20 +25,22 @@ func (app AppInfo) getUniqueID() string {
 	return app.Source + ":" + app.Name
 }
 
-// LabelManager manages label-to-app mappings for fast queries and provides
-// label merging functionality for the application
+// LabelManager manages field-to-app mappings for fast queries and provides
+// label merging functionality for the application.
+// It indexes both system fields (name, location, etc.) and user labels.
 type LabelManager struct {
-	// Performance optimization: map[label_key][label_value] -> []unique_app_ids
-	// This enables O(1) lookups for "find all apps with label X=Y"
+	// Performance optimization: map[field_name][field_value] -> []unique_app_ids
+	// This enables O(1) lookups for "find all apps with field X=Y"
+	// Works for both system fields and labels with "labels." prefix
 	// unique_app_ids are in format "source:appname" to avoid conflicts
-	appsByLabel map[string]map[string][]string
+	appsByField map[string]map[string][]string
 	mutex       sync.RWMutex
 }
 
 // NewLabelManager creates a new LabelManager instance
 func NewLabelManager() *LabelManager {
 	return &LabelManager{
-		appsByLabel: make(map[string]map[string][]string),
+		appsByField: make(map[string]map[string][]string),
 	}
 }
 
@@ -73,46 +79,79 @@ func MergeLabels(serverLabels, sourceLabels, appLabels map[string]string) map[st
 	return merged
 }
 
-// UpdateAppLabels updates the internal label-to-app mapping for fast label-based queries.
+// UpdateAppLabels updates the internal field-to-app mapping for fast queries.
+// This indexes both system fields and user labels for O(1) filtering.
 // This should be called whenever the app status cache is updated.
 func (lm *LabelManager) UpdateAppLabels(apps []AppInfo) {
 	lm.mutex.Lock()
 	defer lm.mutex.Unlock()
 
 	// Clear existing mappings
-	lm.appsByLabel = make(map[string]map[string][]string)
+	lm.appsByField = make(map[string]map[string][]string)
 
-	logging.Logger.WithField("app_count", len(apps)).Debug("Updating label-to-app mappings")
+	logging.Logger.WithField("app_count", len(apps)).Debug("Updating field-to-app mappings")
 
 	// Build new mappings using unique identifiers
 	for _, app := range apps {
 		uniqueID := app.getUniqueID()
-		for labelKey, labelValue := range app.Labels {
-			// Initialize key map if it doesn't exist
-			if lm.appsByLabel[labelKey] == nil {
-				lm.appsByLabel[labelKey] = make(map[string][]string)
-			}
 
-			// Add app unique ID to the mapping
-			lm.appsByLabel[labelKey][labelValue] = append(
-				lm.appsByLabel[labelKey][labelValue],
-				uniqueID,
-			)
+		// Index system fields for direct filtering (e.g., ?location=Hadera)
+		systemFields := map[string]string{
+			"name":       app.Name,
+			"location":   app.Location,
+			"status":     app.Status,
+			"source":     app.Source,
+			"origin_url": app.OriginURL,
+		}
+
+		for fieldName, fieldValue := range systemFields {
+			if fieldValue != "" { // Only index non-empty values
+				lm.indexField(fieldName, fieldValue, uniqueID)
+			}
+		}
+
+		// Index user labels with "labels." prefix (e.g., ?labels.env=prod)
+		for labelKey, labelValue := range app.Labels {
+			if labelValue != "" { // Only index non-empty values
+				lm.indexField("labels."+labelKey, labelValue, uniqueID)
+			}
 		}
 	}
 
 	// Log statistics for observability
 	totalMappings := 0
-	for _, valueMap := range lm.appsByLabel {
+	systemFieldCount := 0
+	labelFieldCount := 0
+
+	for fieldName, valueMap := range lm.appsByField {
+		if strings.HasPrefix(fieldName, "labels.") {
+			labelFieldCount++
+		} else {
+			systemFieldCount++
+		}
 		for _, appList := range valueMap {
 			totalMappings += len(appList)
 		}
 	}
 
 	logging.Logger.WithFields(map[string]interface{}{
-		"label_keys":     len(lm.appsByLabel),
+		"total_fields":   len(lm.appsByField),
+		"system_fields":  systemFieldCount,
+		"label_fields":   labelFieldCount,
 		"total_mappings": totalMappings,
-	}).Debug("Label-to-app mappings updated with unique identifiers")
+	}).Debug("Field-to-app mappings updated with system fields and labels")
+}
+
+// indexField adds an app to the field index
+func (lm *LabelManager) indexField(fieldName, fieldValue, uniqueID string) {
+	if lm.appsByField[fieldName] == nil {
+		lm.appsByField[fieldName] = make(map[string][]string)
+	}
+
+	lm.appsByField[fieldName][fieldValue] = append(
+		lm.appsByField[fieldName][fieldValue],
+		uniqueID,
+	)
 }
 
 // FindAppsByLabel returns a list of unique app identifiers that have the specified label key-value pair.
@@ -122,7 +161,7 @@ func (lm *LabelManager) FindAppsByLabel(labelKey, labelValue string) []string {
 	lm.mutex.RLock()
 	defer lm.mutex.RUnlock()
 
-	if valueMap, exists := lm.appsByLabel[labelKey]; exists {
+	if valueMap, exists := lm.appsByField[labelKey]; exists {
 		if appIDs, exists := valueMap[labelValue]; exists {
 			// Return a copy to prevent external modification
 			result := make([]string, len(appIDs))
@@ -175,8 +214,8 @@ func (lm *LabelManager) GetLabelKeys() []string {
 	lm.mutex.RLock()
 	defer lm.mutex.RUnlock()
 
-	keys := make([]string, 0, len(lm.appsByLabel))
-	for key := range lm.appsByLabel {
+	keys := make([]string, 0, len(lm.appsByField))
+	for key := range lm.appsByField {
 		keys = append(keys, key)
 	}
 	return keys
@@ -187,7 +226,7 @@ func (lm *LabelManager) GetLabelValues(labelKey string) []string {
 	lm.mutex.RLock()
 	defer lm.mutex.RUnlock()
 
-	if valueMap, exists := lm.appsByLabel[labelKey]; exists {
+	if valueMap, exists := lm.appsByField[labelKey]; exists {
 		values := make([]string, 0, len(valueMap))
 		for value := range valueMap {
 			values = append(values, value)

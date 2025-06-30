@@ -8,6 +8,7 @@ import (
 	"site-availability/config"
 	"site-availability/labels"
 	"site-availability/logging"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +33,13 @@ type Location struct {
 	Latitude  float64 `yaml:"latitude" json:"latitude"`
 	Longitude float64 `yaml:"longitude" json:"longitude"`
 	Source    string  `json:"source"`
+	Status    *string `json:"status"` // "up", "down", "unavailable", or nil for no apps
+}
+
+// FilterParams represents both system field and label filters
+type FilterParams struct {
+	SystemFields map[string]string // location=siteA, origin_url=http://a.com
+	Labels       map[string]string // env=prod, team=platform
 }
 
 // Simple cache with label manager integration
@@ -97,6 +105,7 @@ func UpdateLocationCache(sourceName string, newLocations []Location) {
 			Latitude:  loc.Latitude,
 			Longitude: loc.Longitude,
 			Source:    sourceName,
+			Status:    loc.Status,
 		}
 		logging.Logger.WithFields(map[string]interface{}{
 			"name":      loc.Name,
@@ -183,62 +192,105 @@ func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.S
 
 // updateLabelManager updates the label manager with current app data
 func updateLabelManager() {
-	// Get all current apps
+	// Get all current apps with full system field information
 	var apps []labels.AppInfo
-	for sourceName, sourceApps := range appStatusCache {
+	for _, sourceApps := range appStatusCache {
 		for _, app := range sourceApps {
 			apps = append(apps, labels.AppInfo{
-				Name:   app.Name,
-				Source: sourceName, // Include source to ensure uniqueness
-				Labels: app.Labels,
+				Name:      app.Name,
+				Location:  app.Location,
+				Status:    app.Status,
+				Source:    app.Source,
+				OriginURL: app.OriginURL,
+				Labels:    app.Labels,
 			})
 		}
 	}
 
-	// Update label manager
+	// Update label manager with both system fields and user labels
 	labelManager.UpdateAppLabels(apps)
 
 	logging.Logger.WithFields(map[string]interface{}{
-		"total_apps": len(apps),
-		"label_keys": len(labelManager.GetLabelKeys()),
-	}).Debug("Updated label manager")
+		"total_apps":   len(apps),
+		"total_fields": len(labelManager.GetLabelKeys()),
+	}).Debug("Updated label manager with system fields and labels")
 }
 
-// GetAppStatus handles the /api/status endpoint
-func GetAppStatus(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
-	logging.Logger.Debug("Handling /api/status request")
+// calculateLocationStatus calculates the status of a location based on its apps
+// Returns: "up" if all apps are up, "down" if any app is down, "unavailable" if any app is unavailable but none down, nil if no apps
+func calculateLocationStatus(locationName string, apps []AppStatus) *string {
+	appsInLocation := make([]AppStatus, 0)
+	for _, app := range apps {
+		if app.Location == locationName {
+			appsInLocation = append(appsInLocation, app)
+		}
+	}
 
-	// Parse query parameters for label filtering
-	labelFilters := parseLabelFilters(r.URL.Query())
+	if len(appsInLocation) == 0 {
+		return nil // No apps means location status is null
+	}
 
+	hasDown := false
+	hasUnavailable := false
+	allUp := true
+
+	for _, app := range appsInLocation {
+		switch app.Status {
+		case "down":
+			hasDown = true
+			allUp = false
+		case "unavailable":
+			hasUnavailable = true
+			allUp = false
+		case "up":
+			// Keep allUp true
+		default:
+			// Unknown status treated as unavailable
+			hasUnavailable = true
+			allUp = false
+		}
+	}
+
+	if allUp {
+		status := "up"
+		return &status
+	} else if hasDown {
+		status := "down"
+		return &status
+	} else if hasUnavailable {
+		status := "unavailable"
+		return &status
+	}
+
+	status := "unavailable" // Default fallback
+	return &status
+}
+
+// GetLocationsWithStatus returns locations with calculated status
+func GetLocationsWithStatus() []Location {
+	cacheMutex.RLock()
+	defer cacheMutex.RUnlock()
+
+	var locations []Location
 	apps := GetAppStatusCache()
-	locations := GetLocationCache()
 
-	// Apply label filters if any were specified
-	filteredApps, filteredCount := filterAppsByLabels(apps, labelFilters)
-
-	// Add server's own locations from config with empty source
-	serverLocations := convertToHandlersLocation(cfg.Locations)
-	locations = append(locations, serverLocations...)
-
-	response := StatusResponse{
-		Locations: locations,
-		Apps:      filteredApps,
+	// Get all locations from cache
+	for _, sourceLocations := range locationCache {
+		for _, location := range sourceLocations {
+			// Calculate status for this location
+			status := calculateLocationStatus(location.Name, apps)
+			locationWithStatus := Location{
+				Name:      location.Name,
+				Latitude:  location.Latitude,
+				Longitude: location.Longitude,
+				Source:    location.Source,
+				Status:    status,
+			}
+			locations = append(locations, locationWithStatus)
+		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logging.Logger.WithError(err).Error("Failed to encode status response")
-		http.Error(w, "Failed to encode status", http.StatusInternalServerError)
-		return
-	}
-
-	logging.Logger.WithFields(map[string]interface{}{
-		"apps":           len(response.Apps),
-		"locations":      len(response.Locations),
-		"label_filters":  labelFilters,
-		"filtered_count": filteredCount,
-	}).Debug("Status response sent")
+	return locations
 }
 
 // convertToHandlersLocation converts config.Locations to handlers.Location
@@ -246,6 +298,8 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 	logging.Logger.Debug("Converting config locations to handler format")
 
 	var locations []Location
+	apps := GetAppStatusCache()
+
 	for _, loc := range configLocations {
 		logging.Logger.WithFields(map[string]interface{}{
 			"name":      loc.Name,
@@ -253,11 +307,15 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 			"longitude": loc.Longitude,
 		}).Debug("Processing location")
 
+		// Calculate status for this location
+		status := calculateLocationStatus(loc.Name, apps)
+
 		locations = append(locations, Location{
 			Name:      loc.Name,
 			Latitude:  loc.Latitude,
 			Longitude: loc.Longitude,
 			Source:    "", // Empty source indicates this server's locations
+			Status:    status,
 		})
 	}
 	return locations
@@ -283,20 +341,56 @@ func parseLabelFilters(queryParams url.Values) map[string]string {
 	return labelFilters
 }
 
-// filterAppsByLabels filters apps using the label manager for fast queries
-// Returns filtered apps and the count of apps that were filtered out
-func filterAppsByLabels(apps []AppStatus, labelFilters map[string]string) ([]AppStatus, int) {
-	start := time.Now()
+// parseFilters extracts both system field and label filters from query parameters
+// Returns a single map where system fields use their direct names (location, status, etc.)
+// and user labels use "labels." prefix (labels.env, labels.team, etc.)
+// Supports: ?location=siteA&origin_url=http://a.com&labels.env=production
+func parseFilters(queryParams url.Values) map[string]string {
+	filters := make(map[string]string)
 
-	if len(labelFilters) == 0 {
-		return apps, 0 // No filters, return all apps
+	// Define allowed system fields for filtering
+	allowedSystemFields := map[string]bool{
+		"name":       true,
+		"location":   true,
+		"status":     true,
+		"source":     true,
+		"origin_url": true,
 	}
 
-	// Use LabelManager for fast filtering - returns unique IDs like "source:appname"
-	matchingAppIDs := labelManager.FindAppsByLabels(labelFilters)
+	for key, values := range queryParams {
+		if len(values) == 0 || values[0] == "" {
+			continue
+		}
+
+		if strings.HasPrefix(key, "labels.") {
+			// Label filter: labels.env=production -> store as "labels.env"
+			filters[key] = values[0]
+		} else if allowedSystemFields[key] {
+			// System field filter: location=siteA -> store as "location"
+			filters[key] = values[0]
+		}
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"filters": filters,
+	}).Debug("Parsed unified filters from query parameters")
+
+	return filters
+}
+
+// filterApps applies unified filtering using the LabelManager for O(1) performance
+// Works for both system fields (name, location, etc.) and user labels (labels.env, etc.)
+func filterApps(apps []AppStatus, filters map[string]string) ([]AppStatus, int) {
+	start := time.Now()
+
+	if len(filters) == 0 {
+		return apps, 0 // No filters
+	}
+
+	// Use LabelManager for O(1) filtering of all field types
+	matchingAppIDs := labelManager.FindAppsByLabels(filters)
 
 	// Convert unique IDs back to full AppStatus objects
-	// Use source:name as key to handle apps with same names from different sources
 	idToApp := make(map[string]AppStatus, len(apps))
 	for _, app := range apps {
 		uniqueID := app.Source + ":" + app.Name
@@ -310,6 +404,11 @@ func filterAppsByLabels(apps []AppStatus, labelFilters map[string]string) ([]App
 		}
 	}
 
+	// Sort filtered apps by name for deterministic ordering
+	sort.Slice(filteredApps, func(i, j int) bool {
+		return filteredApps[i].Name < filteredApps[j].Name
+	})
+
 	filteredCount := len(apps) - len(filteredApps)
 	duration := time.Since(start)
 
@@ -318,8 +417,8 @@ func filterAppsByLabels(apps []AppStatus, labelFilters map[string]string) ([]App
 		"filtered_apps": len(filteredApps),
 		"filtered_out":  filteredCount,
 		"duration_μs":   duration.Microseconds(),
-		"label_filters": labelFilters,
-	}).Debug("Applied label filters using label manager")
+		"filters":       filters,
+	}).Debug("Applied unified filters using field manager")
 
 	return filteredApps, filteredCount
 }
@@ -428,15 +527,15 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 		}
 	}
 
-	// Parse query parameters for label filtering
-	labelFilters := parseLabelFilters(r.URL.Query())
+	// Parse query parameters for both system field and label filtering
+	filters := parseFilters(r.URL.Query())
 
 	// Return current statuses and locations from the global cache
 	apps := GetAppStatusCache()
 	locations := GetLocationCache()
 
-	// Apply label filters if any were specified
-	filteredApps, filteredCount := filterAppsByLabels(apps, labelFilters)
+	// Apply all filters if any were specified
+	filteredApps, filteredCount := filterApps(apps, filters)
 
 	// Add server's own locations from config with empty source
 	serverLocations := convertToHandlersLocation(cfg.Locations)
@@ -457,7 +556,129 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 	logging.Logger.WithFields(map[string]interface{}{
 		"apps":           len(response.Apps),
 		"locations":      len(response.Locations),
-		"label_filters":  labelFilters,
+		"system_filters": filters,
 		"filtered_count": filteredCount,
 	}).Debug("Sync response sent")
+}
+
+// LocationStatusResponse represents the response for /api/locations
+type LocationStatusResponse struct {
+	Locations []Location `json:"locations"`
+}
+
+// AppsResponse represents the response for /api/apps
+type AppsResponse struct {
+	Apps []AppStatus `json:"apps"`
+}
+
+// LabelsResponse represents the response for /api/labels
+type LabelsResponse struct {
+	Labels []string `json:"labels"`
+}
+
+// GetLocations handles the /api/locations endpoint
+func GetLocations(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /api/locations request")
+
+	locations := GetLocationsWithStatus()
+
+	// Add server's own locations from config with calculated status
+	serverLocations := convertToHandlersLocation(cfg.Locations)
+	for i := range serverLocations {
+		apps := GetAppStatusCache()
+		serverLocations[i].Status = calculateLocationStatus(serverLocations[i].Name, apps)
+	}
+	locations = append(locations, serverLocations...)
+
+	response := LocationStatusResponse{
+		Locations: locations,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode locations response")
+		http.Error(w, "Failed to encode locations", http.StatusInternalServerError)
+		return
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"locations": len(response.Locations),
+	}).Debug("Locations response sent")
+}
+
+// GetApps handles the /api/apps endpoint
+func GetApps(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /api/apps request")
+
+	// Parse query parameters for location filtering
+	locationFilter := r.URL.Query().Get("location")
+
+	// Parse other filters for backwards compatibility
+	filters := parseFilters(r.URL.Query())
+
+	apps := GetAppStatusCache()
+
+	// If location filter is specified, filter by location
+	if locationFilter != "" {
+		filteredApps := make([]AppStatus, 0)
+		for _, app := range apps {
+			if app.Location == locationFilter {
+				filteredApps = append(filteredApps, app)
+			}
+		}
+		apps = filteredApps
+	} else if len(filters) > 0 {
+		// Apply other filters if no location filter
+		var filteredCount int
+		apps, filteredCount = filterApps(apps, filters)
+		logging.Logger.WithField("filtered_count", filteredCount).Debug("Applied filters to apps")
+	}
+
+	response := AppsResponse{
+		Apps: apps,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode apps response")
+		http.Error(w, "Failed to encode apps", http.StatusInternalServerError)
+		return
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"apps":            len(response.Apps),
+		"location_filter": locationFilter,
+	}).Debug("Apps response sent")
+}
+
+// GetLabels handles the /api/labels endpoint
+func GetLabels(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+	logging.Logger.Debug("Handling /api/labels request")
+
+	labelKeys := labelManager.GetLabelKeys()
+
+	// Filter out system fields, only return user labels
+	userLabels := make([]string, 0)
+	for _, key := range labelKeys {
+		if strings.HasPrefix(key, "labels.") {
+			// Remove "labels." prefix to return clean label key
+			userLabel := strings.TrimPrefix(key, "labels.")
+			userLabels = append(userLabels, userLabel)
+		}
+	}
+
+	response := LabelsResponse{
+		Labels: userLabels,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.Logger.WithError(err).Error("Failed to encode labels response")
+		http.Error(w, "Failed to encode labels", http.StatusInternalServerError)
+		return
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"labels": len(response.Labels),
+	}).Debug("Labels response sent")
 }
