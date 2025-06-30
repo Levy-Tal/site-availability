@@ -2,7 +2,13 @@ import React, { useRef, useEffect, useState } from "react";
 import { FaSortAmountDownAlt, FaSearch } from "react-icons/fa";
 import { fetchApps } from "./api/appStatusAPI";
 
-export const AppStatusPanel = ({ site, onClose, scrapeInterval }) => {
+export const AppStatusPanel = ({
+  site,
+  onClose,
+  scrapeInterval,
+  statusFilter,
+  labelFilters,
+}) => {
   const panelRef = useRef(null);
 
   const [apps, setApps] = useState([]);
@@ -14,7 +20,7 @@ export const AppStatusPanel = ({ site, onClose, scrapeInterval }) => {
   // Fetch apps for this location
   const refreshApps = async () => {
     try {
-      const appsData = await fetchApps(site.name);
+      const appsData = await fetchApps(site.name, statusFilter, labelFilters);
       setApps(appsData);
     } catch (error) {
       console.error("Error fetching apps for location:", error);
@@ -24,7 +30,7 @@ export const AppStatusPanel = ({ site, onClose, scrapeInterval }) => {
   // Initial fetch when panel opens
   useEffect(() => {
     refreshApps();
-  }, [site.name]);
+  }, [site.name, statusFilter, labelFilters]);
 
   // Set up periodic refresh while panel is open
   useEffect(() => {
@@ -35,7 +41,7 @@ export const AppStatusPanel = ({ site, onClose, scrapeInterval }) => {
 
       return () => clearInterval(intervalId);
     }
-  }, [scrapeInterval, site.name]);
+  }, [scrapeInterval, site.name, statusFilter, labelFilters]);
 
   // Close sort dropdown on outside click
   useEffect(() => {

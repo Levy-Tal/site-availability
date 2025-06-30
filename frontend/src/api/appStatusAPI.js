@@ -1,9 +1,24 @@
 // frontend/src/api/appStatusAPI.js
 
 // Fetch locations with their calculated status
-export const fetchLocations = async () => {
+export const fetchLocations = async (statusFilter = "", labelFilters = []) => {
   try {
-    const response = await fetch("/api/locations");
+    const params = new URLSearchParams();
+
+    if (statusFilter) {
+      params.append("status", statusFilter);
+    }
+
+    labelFilters.forEach((label) => {
+      params.append(`label[${label.key}]`, label.value);
+    });
+
+    const queryString = params.toString();
+    const url = queryString
+      ? `/api/locations?${queryString}`
+      : "/api/locations";
+
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -20,11 +35,29 @@ export const fetchLocations = async () => {
 };
 
 // Fetch apps for a specific location or all apps
-export const fetchApps = async (locationName = null) => {
+export const fetchApps = async (
+  locationName = null,
+  statusFilter = "",
+  labelFilters = [],
+) => {
   try {
-    const url = locationName
-      ? `/api/apps?location=${encodeURIComponent(locationName)}`
-      : "/api/apps";
+    const params = new URLSearchParams();
+
+    if (locationName) {
+      params.append("location", locationName);
+    }
+
+    if (statusFilter) {
+      params.append("status", statusFilter);
+    }
+
+    labelFilters.forEach((label) => {
+      params.append(`label[${label.key}]`, label.value);
+    });
+
+    const queryString = params.toString();
+    const url = queryString ? `/api/apps?${queryString}` : "/api/apps";
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
@@ -42,9 +75,10 @@ export const fetchApps = async (locationName = null) => {
 };
 
 // Fetch available labels
-export const fetchLabels = async () => {
+export const fetchLabels = async (key = null) => {
   try {
-    const response = await fetch("/api/labels");
+    const url = key ? `/api/labels?${encodeURIComponent(key)}` : "/api/labels";
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }

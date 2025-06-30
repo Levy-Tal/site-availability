@@ -1,0 +1,270 @@
+import React, { useState, useEffect } from "react";
+import {
+  FaMap,
+  FaUser,
+  FaBook,
+  FaChevronLeft,
+  FaChevronRight,
+  FaTimes,
+} from "react-icons/fa";
+import { fetchLabels } from "./api/appStatusAPI";
+
+const Sidebar = ({
+  onStatusFilterChange,
+  onLabelFilterChange,
+  onDocsClick,
+  isCollapsed,
+  onToggleCollapse,
+  selectedStatusFilter,
+  selectedLabels,
+}) => {
+  const [labelSuggestions, setLabelSuggestions] = useState([]);
+  const [labelKeys, setLabelKeys] = useState([]);
+  const [labelInput, setLabelInput] = useState("");
+  const [showLabelSuggestions, setShowLabelSuggestions] = useState(false);
+  const [currentLabelKey, setCurrentLabelKey] = useState("");
+
+  useEffect(() => {
+    // Fetch available labels for autocomplete
+    const loadLabels = async () => {
+      try {
+        const labels = await fetchLabels();
+        const keys = [...new Set(labels.map((label) => label.key))];
+        setLabelKeys(keys);
+        setLabelSuggestions(labels);
+      } catch (error) {
+        console.error("Error loading labels:", error);
+      }
+    };
+    loadLabels();
+  }, []);
+
+  const handleLabelInputChange = (e) => {
+    const value = e.target.value;
+    setLabelInput(value);
+
+    if (value.includes("=")) {
+      const [key, val] = value.split("=", 2);
+      setCurrentLabelKey(key);
+
+      if (key && val.length > 0) {
+        // Filter suggestions for values of the specific key
+        const filteredSuggestions = labelSuggestions
+          .filter(
+            (label) =>
+              label.key === key &&
+              label.value.toLowerCase().includes(val.toLowerCase()),
+          )
+          .map((label) => `${label.key}=${label.value}`);
+        setShowLabelSuggestions(filteredSuggestions.length > 0);
+      } else if (key && val.length === 0) {
+        // Show all values for the key
+        const filteredSuggestions = labelSuggestions
+          .filter((label) => label.key === key)
+          .map((label) => `${label.key}=${label.value}`);
+        setShowLabelSuggestions(filteredSuggestions.length > 0);
+      }
+    } else {
+      // Filter suggestions for keys
+      const filteredKeys = labelKeys.filter((key) =>
+        key.toLowerCase().includes(value.toLowerCase()),
+      );
+      setShowLabelSuggestions(filteredKeys.length > 0 && value.length > 0);
+    }
+  };
+
+  const handleLabelInputKeyPress = (e) => {
+    if (e.key === "Enter" && labelInput.trim()) {
+      addLabelFilter(labelInput.trim());
+    }
+  };
+
+  const addLabelFilter = (labelFilter) => {
+    if (labelFilter.includes("=")) {
+      const [key, value] = labelFilter.split("=", 2);
+      if (key && value) {
+        const newLabel = { key: key.trim(), value: value.trim() };
+        const exists = selectedLabels.some(
+          (label) =>
+            label.key === newLabel.key && label.value === newLabel.value,
+        );
+        if (!exists) {
+          onLabelFilterChange([...selectedLabels, newLabel]);
+        }
+        setLabelInput("");
+        setShowLabelSuggestions(false);
+      }
+    }
+  };
+
+  const removeLabelFilter = (indexToRemove) => {
+    const updatedLabels = selectedLabels.filter(
+      (_, index) => index !== indexToRemove,
+    );
+    onLabelFilterChange(updatedLabels);
+  };
+
+  const getSuggestionsList = () => {
+    if (labelInput.includes("=")) {
+      const [key, val] = labelInput.split("=", 2);
+      return labelSuggestions
+        .filter(
+          (label) =>
+            label.key === key &&
+            label.value.toLowerCase().includes(val.toLowerCase()),
+        )
+        .map((label) => `${label.key}=${label.value}`);
+    } else {
+      return labelKeys
+        .filter((key) => key.toLowerCase().includes(labelInput.toLowerCase()))
+        .map((key) => `${key}=`);
+    }
+  };
+
+  const selectSuggestion = (suggestion) => {
+    if (suggestion.endsWith("=")) {
+      setLabelInput(suggestion);
+      setShowLabelSuggestions(false);
+    } else {
+      addLabelFilter(suggestion);
+    }
+  };
+
+  return (
+    <div className={`sidebar ${isCollapsed ? "sidebar--collapsed" : ""}`}>
+      <div className="sidebar__container">
+        {/* Header with logo and collapse button */}
+        <div className="sidebar__header">
+          <div className="sidebar__collapse-button" onClick={onToggleCollapse}>
+            {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+          </div>
+          {!isCollapsed && (
+            <div className="sidebar__logo">
+              <span className="sidebar__logo-text">Site Monitor</span>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation items */}
+        <div className="sidebar__nav">
+          <div className="sidebar__nav-item sidebar__nav-item--active">
+            <FaMap className="sidebar__nav-icon" />
+            {!isCollapsed && <span>Map</span>}
+          </div>
+          <div className="sidebar__nav-item">
+            <FaUser className="sidebar__nav-icon" />
+            {!isCollapsed && <span>User Info</span>}
+          </div>
+          <div className="sidebar__nav-item" onClick={onDocsClick}>
+            <FaBook className="sidebar__nav-icon" />
+            {!isCollapsed && <span>Documentation</span>}
+          </div>
+        </div>
+
+        {/* Filters section */}
+        {!isCollapsed && (
+          <div className="sidebar__filters">
+            <div className="sidebar__filters-title">Filters</div>
+
+            {/* Status Filter */}
+            <div className="sidebar__filter-group">
+              <div className="sidebar__filter-header">STATUS</div>
+              <div className="sidebar__filter-options">
+                <label className="sidebar__filter-option">
+                  <input
+                    type="radio"
+                    name="status"
+                    value=""
+                    checked={selectedStatusFilter === ""}
+                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                  />
+                  <span className="sidebar__radio"></span>
+                  All
+                </label>
+                <label className="sidebar__filter-option">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="up"
+                    checked={selectedStatusFilter === "up"}
+                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                  />
+                  <span className="sidebar__radio"></span>
+                  UP
+                </label>
+                <label className="sidebar__filter-option">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="down"
+                    checked={selectedStatusFilter === "down"}
+                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                  />
+                  <span className="sidebar__radio"></span>
+                  DOWN
+                </label>
+                <label className="sidebar__filter-option">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="unavailable"
+                    checked={selectedStatusFilter === "unavailable"}
+                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                  />
+                  <span className="sidebar__radio"></span>
+                  UNAVAILABLE
+                </label>
+              </div>
+            </div>
+
+            {/* Labels Filter */}
+            <div className="sidebar__filter-group">
+              <div className="sidebar__filter-header">LABELS</div>
+              <div className="sidebar__label-input-container">
+                <input
+                  type="text"
+                  placeholder="key=value"
+                  value={labelInput}
+                  onChange={handleLabelInputChange}
+                  onKeyPress={handleLabelInputKeyPress}
+                  onFocus={() => setShowLabelSuggestions(true)}
+                  className="sidebar__label-input"
+                />
+                {showLabelSuggestions && (
+                  <div className="sidebar__suggestions">
+                    {getSuggestionsList().map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="sidebar__suggestion"
+                        onClick={() => selectSuggestion(suggestion)}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Labels */}
+              <div className="sidebar__selected-labels">
+                {selectedLabels.map((label, index) => (
+                  <div key={index} className="sidebar__selected-label">
+                    <span>
+                      {label.key}={label.value}
+                    </span>
+                    <FaTimes
+                      className="sidebar__remove-label"
+                      onClick={() => removeLabelFilter(index)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Sidebar;
