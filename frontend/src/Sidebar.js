@@ -299,7 +299,7 @@ const Sidebar = ({
         {/* Filters section */}
         {!isCollapsed && (
           <div className="sidebar__filters">
-            <div className="sidebar__filters-title">Filters</div>
+            <div className="sidebar__filters-title"></div>
 
             {/* Status Filter */}
             <div className="sidebar__filter-group">
