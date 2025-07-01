@@ -137,6 +137,27 @@ circle {
   animation: slideIn 0.3s ease-out;
 }
 
+/* Custom scrollbar styling for status panel */
+.status-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.status-panel::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.status-panel::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.status-panel::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
+}
+
 .status-panel h2 {
   font-size: 24px;
   /* Larger for emphasis */
@@ -679,6 +700,48 @@ circle {
   z-index: 15;
 }
 
+/* Custom scrollbar styling for sidebar filters */
+.sidebar__filters::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar__filters::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.sidebar__filters::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar__filters::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
+}
+
+/* Custom scrollbar styling for sidebar filters */
+.sidebar__filters::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar__filters::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.sidebar__filters::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar__filters::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
+}
+
 .sidebar__filters-title {
   width: 100%;
   height: 1px;
@@ -893,12 +956,13 @@ circle {
 }
 
 .sidebar__suggestions::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #ffffff;
   border-radius: 4px;
 }
 
 .sidebar__suggestions::-webkit-scrollbar-thumb {
   background: #2d2d2d;
+  border: 1px solid #ffffff;
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
@@ -987,4 +1051,25 @@ circle {
 .app-container--with-sidebar.app-container--sidebar-collapsed {
   width: calc(100vw - 60px);
   margin-left: 60px;
+}
+
+/* Status Panel scrollbar styling */
+.status-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.status-panel::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.status-panel::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.status-panel::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
 }
