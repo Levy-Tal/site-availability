@@ -631,6 +631,7 @@ circle {
 
 .sidebar__nav-item--active:hover {
   background-color: #e2e8f0;
+  color: #2d2d2d;
   transform: translateX(4px);
 }
 
@@ -880,9 +881,30 @@ circle {
   margin-top: 4px;
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 10;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   animation: fadeIn 0.2s ease-out;
+}
+
+/* Custom scrollbar styling for suggestions dropdown */
+.sidebar__suggestions::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar__suggestions::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.sidebar__suggestions::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar__suggestions::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
 }
 
 .sidebar__suggestion {

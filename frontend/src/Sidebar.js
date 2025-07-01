@@ -19,6 +19,8 @@ const Sidebar = ({
   selectedLabels,
 }) => {
   const sidebarRef = useRef(null);
+  const keyDropdownRef = useRef(null);
+  const valueDropdownRef = useRef(null);
   const [labelKeys, setLabelKeys] = useState([]);
   const [keyInput, setKeyInput] = useState("");
   const [valueInput, setValueInput] = useState("");
@@ -32,6 +34,32 @@ const Sidebar = ({
   useEffect(() => {
     // Labels are now loaded dynamically when user focuses on input
   }, []);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      // Close key suggestions if clicking outside key dropdown
+      if (
+        showKeySuggestions &&
+        keyDropdownRef.current &&
+        !keyDropdownRef.current.contains(e.target)
+      ) {
+        setShowKeySuggestions(false);
+      }
+
+      // Close value suggestions if clicking outside value dropdown
+      if (
+        showValueSuggestions &&
+        valueDropdownRef.current &&
+        !valueDropdownRef.current.contains(e.target)
+      ) {
+        setShowValueSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showKeySuggestions, showValueSuggestions]);
 
   // Resize functionality
   useEffect(() => {
@@ -275,7 +303,7 @@ const Sidebar = ({
           </div>
           {!isCollapsed && (
             <div className="sidebar__logo">
-              <span className="sidebar__logo-text">Site Monitor</span>
+              <span className="sidebar__logo-text">Site Availability</span>
             </div>
           )}
         </div>
@@ -344,7 +372,10 @@ const Sidebar = ({
             {/* Labels Filter */}
             <div className="sidebar__filter-group">
               <div className="sidebar__filter-header">LABELS</div>
-              <div className="sidebar__label-input-container">
+              <div
+                className="sidebar__label-input-container"
+                ref={keyDropdownRef}
+              >
                 <input
                   type="text"
                   placeholder="key"
@@ -375,7 +406,10 @@ const Sidebar = ({
                 )}
               </div>
 
-              <div className="sidebar__label-input-container">
+              <div
+                className="sidebar__label-input-container"
+                ref={valueDropdownRef}
+              >
                 <input
                   type="text"
                   placeholder="value"
