@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"site-availability/authentication/hmac"
@@ -347,6 +348,7 @@ func parseLabelFilters(queryParams url.Values) map[string]string {
 // Supports: ?location=siteA&origin_url=http://a.com&labels.env=production
 func parseFilters(queryParams url.Values) map[string]string {
 	filters := make(map[string]string)
+	unrecognizedParams := make([]string, 0)
 
 	// Define allowed system fields for filtering
 	allowedSystemFields := map[string]bool{
@@ -368,7 +370,23 @@ func parseFilters(queryParams url.Values) map[string]string {
 		} else if allowedSystemFields[key] {
 			// System field filter: location=siteA -> store as "location"
 			filters[key] = values[0]
+		} else {
+			// Check for common mistakes and log them
+			if strings.HasPrefix(key, "label[") && strings.HasSuffix(key, "]") {
+				// Extract key from label[key] format
+				labelKey := strings.TrimSuffix(strings.TrimPrefix(key, "label["), "]")
+				unrecognizedParams = append(unrecognizedParams, fmt.Sprintf("'%s' (should be 'labels.%s')", key, labelKey))
+			} else {
+				unrecognizedParams = append(unrecognizedParams, fmt.Sprintf("'%s'", key))
+			}
 		}
+	}
+
+	if len(unrecognizedParams) > 0 {
+		logging.Logger.WithFields(map[string]interface{}{
+			"unrecognized_params": unrecognizedParams,
+			"recognized_filters":  filters,
+		}).Warn("Some query parameters were not recognized as valid filters")
 	}
 
 	logging.Logger.WithFields(map[string]interface{}{
@@ -657,28 +675,19 @@ func GetLocations(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 func GetApps(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	logging.Logger.Debug("Handling /api/apps request")
 
-	// Parse query parameters for location filtering
-	locationFilter := r.URL.Query().Get("location")
-
-	// Parse other filters for backwards compatibility
+	// Parse all query parameters for filtering (including location)
 	filters := parseFilters(r.URL.Query())
 
 	apps := GetAppStatusCache()
 
-	// If location filter is specified, filter by location
-	if locationFilter != "" {
-		filteredApps := make([]AppStatus, 0)
-		for _, app := range apps {
-			if app.Location == locationFilter {
-				filteredApps = append(filteredApps, app)
-			}
-		}
-		apps = filteredApps
-	} else if len(filters) > 0 {
-		// Apply other filters if no location filter
+	// Apply all filters if any were specified
+	if len(filters) > 0 {
 		var filteredCount int
 		apps, filteredCount = filterApps(apps, filters)
-		logging.Logger.WithField("filtered_count", filteredCount).Debug("Applied filters to apps")
+		logging.Logger.WithFields(map[string]interface{}{
+			"filters":        filters,
+			"filtered_count": filteredCount,
+		}).Debug("Applied filters to apps")
 	}
 
 	response := AppsResponse{
@@ -693,8 +702,8 @@ func GetApps(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	}
 
 	logging.Logger.WithFields(map[string]interface{}{
-		"apps":            len(response.Apps),
-		"location_filter": locationFilter,
+		"apps":    len(response.Apps),
+		"filters": filters,
 	}).Debug("Apps response sent")
 }
 

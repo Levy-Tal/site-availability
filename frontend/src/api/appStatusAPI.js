@@ -10,7 +10,7 @@ export const fetchLocations = async (statusFilter = "", labelFilters = []) => {
     }
 
     labelFilters.forEach((label) => {
-      params.append(`label[${label.key}]`, label.value);
+      params.append(`labels.${label.key}`, label.value);
     });
 
     const queryString = params.toString();
@@ -52,7 +52,7 @@ export const fetchApps = async (
     }
 
     labelFilters.forEach((label) => {
-      params.append(`label[${label.key}]`, label.value);
+      params.append(`labels.${label.key}`, label.value);
     });
 
     const queryString = params.toString();

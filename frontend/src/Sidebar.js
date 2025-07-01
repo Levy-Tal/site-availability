@@ -19,31 +19,18 @@ const Sidebar = ({
   selectedLabels,
 }) => {
   const sidebarRef = useRef(null);
-  const [labelSuggestions, setLabelSuggestions] = useState([]);
   const [labelKeys, setLabelKeys] = useState([]);
-  const [labelInput, setLabelInput] = useState("");
-  const [showLabelSuggestions, setShowLabelSuggestions] = useState(false);
-  const [currentLabelKey, setCurrentLabelKey] = useState("");
+  const [keyInput, setKeyInput] = useState("");
+  const [valueInput, setValueInput] = useState("");
+  const [selectedKey, setSelectedKey] = useState("");
+  const [keySuggestions, setKeySuggestions] = useState([]);
+  const [valueSuggestions, setValueSuggestions] = useState([]);
+  const [showKeySuggestions, setShowKeySuggestions] = useState(false);
+  const [showValueSuggestions, setShowValueSuggestions] = useState(false);
 
+  // Load labels on component mount - now done dynamically on user interaction
   useEffect(() => {
-    // Fetch available labels for autocomplete
-    const loadLabels = async () => {
-      try {
-        const labels = await fetchLabels();
-        // Filter out any invalid labels
-        const validLabels = labels.filter(
-          (label) => label && label.key && label.value,
-        );
-        const keys = [...new Set(validLabels.map((label) => label.key))].filter(
-          (key) => key,
-        );
-        setLabelKeys(keys);
-        setLabelSuggestions(validLabels);
-      } catch (error) {
-        console.error("Error loading labels:", error);
-      }
-    };
-    loadLabels();
+    // Labels are now loaded dynamically when user focuses on input
   }, []);
 
   // Resize functionality
@@ -102,63 +89,167 @@ const Sidebar = ({
     };
   }, [isCollapsed]);
 
-  const handleLabelInputChange = (e) => {
+  // Handle key input changes
+  const handleKeyInputChange = async (e) => {
     const value = e.target.value;
-    setLabelInput(value);
+    setKeyInput(value);
 
-    if (value.includes("=")) {
-      const [key, val] = value.split("=", 2);
-      setCurrentLabelKey(key);
+    // If key input is cleared, reset selected key and disable value input
+    if (value.trim() === "") {
+      setSelectedKey("");
+      setValueInput("");
+      setValueSuggestions([]);
+      setShowValueSuggestions(false);
+    }
 
-      if (key && val.length > 0) {
-        // Filter suggestions for values of the specific key
-        const filteredSuggestions = labelSuggestions
-          .filter(
-            (label) =>
-              label &&
-              label.key === key &&
-              label.value &&
-              label.value.toLowerCase().includes(val.toLowerCase()),
-          )
-          .map((label) => `${label.key}=${label.value}`);
-        setShowLabelSuggestions(filteredSuggestions.length > 0);
-      } else if (key && val.length === 0) {
-        // Show all values for the key
-        const filteredSuggestions = labelSuggestions
-          .filter((label) => label && label.key === key)
-          .map((label) => `${label.key}=${label.value}`);
-        setShowLabelSuggestions(filteredSuggestions.length > 0);
-      }
-    } else {
-      // Filter suggestions for keys
+    if (value.length > 0) {
+      // Filter existing key suggestions
       const filteredKeys = labelKeys.filter(
         (key) => key && key.toLowerCase().includes(value.toLowerCase()),
       );
-      setShowLabelSuggestions(filteredKeys.length > 0 && value.length > 0);
+      setKeySuggestions(filteredKeys);
+      setShowKeySuggestions(filteredKeys.length > 0);
+    } else {
+      setKeySuggestions(labelKeys);
+      setShowKeySuggestions(labelKeys.length > 0);
     }
   };
 
-  const handleLabelInputKeyPress = (e) => {
-    if (e.key === "Enter" && labelInput.trim()) {
-      addLabelFilter(labelInput.trim());
-    }
-  };
-
-  const addLabelFilter = (labelFilter) => {
-    if (labelFilter.includes("=")) {
-      const [key, value] = labelFilter.split("=", 2);
-      if (key && value) {
-        const newLabel = { key: key.trim(), value: value.trim() };
-        const exists = selectedLabels.some(
-          (label) =>
-            label.key === newLabel.key && label.value === newLabel.value,
-        );
-        if (!exists) {
-          onLabelFilterChange([...selectedLabels, newLabel]);
-        }
-        setLabelInput("");
-        setShowLabelSuggestions(false);
+  // Toggle key suggestions
+  const toggleKeySuggestions = async () => {
+    if (showKeySuggestions) {
+      setShowKeySuggestions(false);
+    } else {
+      if (labelKeys.length === 0) {
+        // Load keys if not already loaded
+        await handleKeyInputFocus();
+      } else {
+        setKeySuggestions(labelKeys);
+        setShowKeySuggestions(true);
       }
+    }
+  };
+
+  // Toggle value suggestions
+  const toggleValueSuggestions = async () => {
+    if (!selectedKey) return; // Can't toggle if no key selected
+
+    if (showValueSuggestions) {
+      setShowValueSuggestions(false);
+    } else {
+      if (valueSuggestions.length === 0) {
+        // Load values if not already loaded
+        await handleValueInputFocus();
+      } else {
+        setShowValueSuggestions(true);
+      }
+    }
+  };
+
+  // Handle value input changes
+  const handleValueInputChange = async (e) => {
+    const value = e.target.value;
+    setValueInput(value);
+
+    if (selectedKey && value.length > 0) {
+      // Filter existing value suggestions
+      const filteredValues = valueSuggestions.filter(
+        (val) => val && val.toLowerCase().includes(value.toLowerCase()),
+      );
+      setShowValueSuggestions(filteredValues.length > 0);
+    } else if (selectedKey) {
+      setShowValueSuggestions(valueSuggestions.length > 0);
+    }
+  };
+
+  // Handle key input focus
+  const handleKeyInputFocus = async () => {
+    try {
+      const response = await fetchLabels();
+      const keys = response.filter((key) => key && typeof key === "string");
+      setLabelKeys(keys);
+      setKeySuggestions(keys);
+      setShowKeySuggestions(keys.length > 0);
+    } catch (error) {
+      console.error("Error loading keys on focus:", error);
+    }
+  };
+
+  // Handle value input focus
+  const handleValueInputFocus = async () => {
+    if (selectedKey) {
+      try {
+        const response = await fetchLabels(selectedKey);
+        // The API may return different formats for values
+        let values = [];
+        if (Array.isArray(response)) {
+          // If response is an array of strings (value names)
+          values = response.filter(
+            (value) => value && typeof value === "string",
+          );
+        } else if (response && Array.isArray(response.labels)) {
+          // If response contains a labels array with objects
+          values = response.labels
+            .filter((label) => label && label.value)
+            .map((label) => label.value);
+        }
+        setValueSuggestions(values);
+        setShowValueSuggestions(values.length > 0);
+      } catch (error) {
+        console.error("Error loading values on focus:", error);
+      }
+    }
+  };
+
+  // Handle key selection
+  const selectKey = (key) => {
+    setKeyInput(key);
+    setSelectedKey(key);
+    setShowKeySuggestions(false);
+    setValueInput("");
+    setValueSuggestions([]);
+    setShowValueSuggestions(false);
+  };
+
+  // Handle value selection
+  const selectValue = (value) => {
+    setValueInput(value);
+    setShowValueSuggestions(false);
+    // Automatically add the label when value is selected - pass both key and value directly
+    addLabelFilter(value, selectedKey);
+  };
+
+  // Handle key press events
+  const handleKeyInputKeyPress = (e) => {
+    if (e.key === "Enter" && keyInput.trim()) {
+      selectKey(keyInput.trim());
+    }
+  };
+
+  const handleValueInputKeyPress = (e) => {
+    if (e.key === "Enter" && valueInput.trim() && selectedKey) {
+      addLabelFilter();
+    }
+  };
+
+  const addLabelFilter = (directValue = null, directKey = null) => {
+    const value = directValue || valueInput.trim();
+    const key = directKey || selectedKey;
+
+    if (key && value) {
+      const newLabel = { key: key.trim(), value: value.trim() };
+      const exists = selectedLabels.some(
+        (label) => label.key === newLabel.key && label.value === newLabel.value,
+      );
+      if (!exists) {
+        onLabelFilterChange([...selectedLabels, newLabel]);
+      }
+      // Reset inputs
+      setKeyInput("");
+      setValueInput("");
+      setSelectedKey("");
+      setShowKeySuggestions(false);
+      setShowValueSuggestions(false);
     }
   };
 
@@ -167,36 +258,6 @@ const Sidebar = ({
       (_, index) => index !== indexToRemove,
     );
     onLabelFilterChange(updatedLabels);
-  };
-
-  const getSuggestionsList = () => {
-    if (labelInput.includes("=")) {
-      const [key, val] = labelInput.split("=", 2);
-      return labelSuggestions
-        .filter(
-          (label) =>
-            label &&
-            label.key === key &&
-            label.value &&
-            label.value.toLowerCase().includes(val.toLowerCase()),
-        )
-        .map((label) => `${label.key}=${label.value}`);
-    } else {
-      return labelKeys
-        .filter(
-          (key) => key && key.toLowerCase().includes(labelInput.toLowerCase()),
-        )
-        .map((key) => `${key}=`);
-    }
-  };
-
-  const selectSuggestion = (suggestion) => {
-    if (suggestion.endsWith("=")) {
-      setLabelInput(suggestion);
-      setShowLabelSuggestions(false);
-    } else {
-      addLabelFilter(suggestion);
-    }
   };
 
   return (
@@ -297,22 +358,64 @@ const Sidebar = ({
               <div className="sidebar__label-input-container">
                 <input
                   type="text"
-                  placeholder="key=value"
-                  value={labelInput}
-                  onChange={handleLabelInputChange}
-                  onKeyPress={handleLabelInputKeyPress}
-                  onFocus={() => setShowLabelSuggestions(true)}
+                  placeholder="key"
+                  value={keyInput}
+                  onChange={handleKeyInputChange}
+                  onFocus={handleKeyInputFocus}
+                  onKeyPress={handleKeyInputKeyPress}
                   className="sidebar__label-input"
                 />
-                {showLabelSuggestions && (
+                <div
+                  className="sidebar__input-arrow"
+                  onClick={toggleKeySuggestions}
+                >
+                  {showKeySuggestions ? "▲" : "▼"}
+                </div>
+                {showKeySuggestions && (
                   <div className="sidebar__suggestions">
-                    {getSuggestionsList().map((suggestion, index) => (
+                    {keySuggestions.map((key, index) => (
                       <div
                         key={index}
                         className="sidebar__suggestion"
-                        onClick={() => selectSuggestion(suggestion)}
+                        onClick={() => selectKey(key)}
                       >
-                        {suggestion}
+                        {key}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="sidebar__label-input-container">
+                <input
+                  type="text"
+                  placeholder="value"
+                  value={valueInput}
+                  onChange={handleValueInputChange}
+                  onFocus={handleValueInputFocus}
+                  onKeyPress={handleValueInputKeyPress}
+                  className={`sidebar__label-input ${
+                    !selectedKey ? "sidebar__label-input--disabled" : ""
+                  }`}
+                  disabled={!selectedKey}
+                />
+                <div
+                  className={`sidebar__input-arrow ${
+                    !selectedKey ? "sidebar__input-arrow--disabled" : ""
+                  }`}
+                  onClick={toggleValueSuggestions}
+                >
+                  {showValueSuggestions ? "▲" : "▼"}
+                </div>
+                {showValueSuggestions && selectedKey && (
+                  <div className="sidebar__suggestions">
+                    {valueSuggestions.map((value, index) => (
+                      <div
+                        key={index}
+                        className="sidebar__suggestion"
+                        onClick={() => selectValue(value)}
+                      >
+                        {value}
                       </div>
                     ))}
                   </div>

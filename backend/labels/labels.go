@@ -189,7 +189,15 @@ func (lm *LabelManager) FindAppsByLabels(labels map[string]string) []string {
 
 	// For each required label, find matching apps
 	for labelKey, labelValue := range labels {
-		currentApps := lm.FindAppsByLabel(labelKey, labelValue)
+		// Look up apps with this specific label/value pair (inline to avoid nested locking)
+		var currentApps []string
+		if valueMap, exists := lm.appsByField[labelKey]; exists {
+			if appIDs, exists := valueMap[labelValue]; exists {
+				// Return a copy to prevent external modification
+				currentApps = make([]string, len(appIDs))
+				copy(currentApps, appIDs)
+			}
+		}
 
 		if isFirst {
 			// First iteration: start with all apps that match this label

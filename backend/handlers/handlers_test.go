@@ -710,3 +710,223 @@ func TestFilterAppsByLabels(t *testing.T) {
 func TestGetAppStatusWithLabelFiltering_DISABLED(t *testing.T) {
 	t.Skip("TODO: Update this test to use new endpoints")
 }
+func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T) {
+	ResetCacheForTesting()
+
+	// Create test apps: some with version label, some without
+	testApps := []AppStatus{
+		{
+			Name:     "app-with-version",
+			Location: "test-location",
+			Status:   "up",
+			Source:   "test-source",
+			Labels:   map[string]string{"version": "v1.0", "environment": "prod"},
+		},
+		{
+			Name:     "app-without-version",
+			Location: "test-location",
+			Status:   "up",
+			Source:   "test-source",
+			Labels:   map[string]string{"environment": "prod"}, // No version label
+		},
+		{
+			Name:     "app-with-different-version",
+			Location: "test-location",
+			Status:   "up",
+			Source:   "test-source",
+			Labels:   map[string]string{"version": "v2.0", "environment": "prod"},
+		},
+		{
+			Name:     "app-with-empty-version",
+			Location: "test-location",
+			Status:   "up",
+			Source:   "test-source",
+			Labels:   map[string]string{"version": "", "environment": "prod"}, // Empty version
+		},
+	}
+
+	// Update the cache with test apps
+	UpdateAppStatus("test-source", testApps, config.Source{}, config.ServerSettings{})
+
+	t.Run("filter by version=v1.0 should only return apps with that exact label", func(t *testing.T) {
+		filters := map[string]string{
+			"labels.version": "v1.0",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Should only return the one app with version=v1.0
+		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with version=v1.0")
+		assert.Equal(t, "app-with-version", filteredApps[0].Name, "Should return the app with version=v1.0")
+
+		// Verify it has the correct label
+		assert.Equal(t, "v1.0", filteredApps[0].Labels["version"], "Returned app should have version=v1.0")
+	})
+
+	t.Run("filter by version=v2.0 should only return apps with that exact label", func(t *testing.T) {
+		filters := map[string]string{
+			"labels.version": "v2.0",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Should only return the one app with version=v2.0
+		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with version=v2.0")
+		assert.Equal(t, "app-with-different-version", filteredApps[0].Name, "Should return the app with version=v2.0")
+	})
+
+	t.Run("filter by non-existent version should return no apps", func(t *testing.T) {
+		filters := map[string]string{
+			"labels.version": "v3.0",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Should return no apps
+		assert.Equal(t, 0, len(filteredApps), "Should return no apps with non-existent version")
+	})
+
+	t.Run("apps without version label should never be returned when filtering by version", func(t *testing.T) {
+		filters := map[string]string{
+			"labels.version": "v1.0",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Check that none of the returned apps are missing the version label
+		for _, app := range filteredApps {
+			version, hasVersion := app.Labels["version"]
+			assert.True(t, hasVersion, "App %s should have version label when filtering by version", app.Name)
+			assert.NotEmpty(t, version, "App %s should have non-empty version label", app.Name)
+			assert.Equal(t, "v1.0", version, "App %s should have version=v1.0", app.Name)
+		}
+	})
+}
+
+func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
+	ResetCacheForTesting()
+
+	// Create test apps matching the user's actual data
+	testApps := []AppStatus{
+		{
+			Name:      "app1",
+			Location:  "Hadera",
+			Status:    "unavailable",
+			Source:    "prom1",
+			OriginURL: "http://prometheus:9090",
+			Labels: map[string]string{
+				"app_type":    "web-service",
+				"criticality": "low",
+				"datacenter":  "dev",
+				"environment": "development",
+				"importance":  "low",
+				"owner":       "dev-team",
+				"region":      "local",
+				"service":     "dev-monitoring",
+				"team":        "development",
+				"tier":        "backend",
+				"version":     "v1.0", // HAS version label
+			},
+		},
+		{
+			Name:      "app2",
+			Location:  "Hadera",
+			Status:    "unavailable",
+			Source:    "prom2",
+			OriginURL: "http://prometheus2:9090",
+			Labels: map[string]string{
+				"app_type":    "web-service",
+				"beta":        "true",
+				"criticality": "low",
+				"datacenter":  "dev",
+				"environment": "development",
+				"importance":  "low",
+				"owner":       "dev-team",
+				"region":      "local",
+				"service":     "secondary-monitoring",
+				"team":        "development",
+				"tier":        "testing",
+				// NO version label
+			},
+		},
+		{
+			Name:      "app7",
+			Location:  "Hadera",
+			Status:    "unavailable",
+			Source:    "prom2",
+			OriginURL: "http://prometheus2:9090",
+			Labels: map[string]string{
+				"app_type":    "test-service",
+				"beta":        "true",
+				"criticality": "low",
+				"datacenter":  "dev",
+				"environment": "development",
+				"importance":  "low",
+				"inverted":    "true",
+				"owner":       "qa-team",
+				"region":      "local",
+				"service":     "secondary-monitoring",
+				"team":        "development",
+				"tier":        "testing",
+				// NO version label
+			},
+		},
+	}
+
+	// Update the cache with test apps
+	UpdateAppStatus("prom1", []AppStatus{testApps[0]}, config.Source{}, config.ServerSettings{})
+	UpdateAppStatus("prom2", []AppStatus{testApps[1], testApps[2]}, config.Source{}, config.ServerSettings{})
+
+	t.Run("filter by location=Hadera and labels.version=v1.0 should only return app1", func(t *testing.T) {
+		filters := map[string]string{
+			"location":       "Hadera",
+			"labels.version": "v1.0",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Should only return app1 which has both location=Hadera AND version=v1.0
+		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with location=Hadera AND version=v1.0")
+		assert.Equal(t, "app1", filteredApps[0].Name, "Should return only app1")
+
+		// Verify the returned app has the correct labels
+		assert.Equal(t, "Hadera", filteredApps[0].Location, "Returned app should have location=Hadera")
+		assert.Equal(t, "v1.0", filteredApps[0].Labels["version"], "Returned app should have version=v1.0")
+
+		// Verify apps without version label are NOT returned
+		for _, app := range filteredApps {
+			_, hasVersion := app.Labels["version"]
+			assert.True(t, hasVersion, "App %s should have version label when filtering by version", app.Name)
+		}
+	})
+
+	t.Run("filter by only location=Hadera should return all 3 apps", func(t *testing.T) {
+		filters := map[string]string{
+			"location": "Hadera",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Should return all 3 apps in Hadera
+		assert.Equal(t, 3, len(filteredApps), "Should return all 3 apps in Hadera")
+	})
+
+	t.Run("filter by only labels.version=v1.0 should return only app1", func(t *testing.T) {
+		filters := map[string]string{
+			"labels.version": "v1.0",
+		}
+
+		allApps := GetAppStatusCache()
+		filteredApps, _ := filterApps(allApps, filters)
+
+		// Should only return app1
+		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with version=v1.0")
+		assert.Equal(t, "app1", filteredApps[0].Name, "Should return only app1")
+	})
+}

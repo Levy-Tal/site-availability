@@ -737,29 +737,72 @@ circle {
   background-color: #2d2d2d;
 }
 
+/* Label input container with arrow */
 .sidebar__label-input-container {
   position: relative;
+  margin-bottom: 12px;
+  /* Add spacing between key and value inputs */
 }
 
 .sidebar__label-input {
   width: 100%;
-  padding: 8px 12px;
-  background-color: #4a5568;
-  border: 2px solid #e2e8f0;
+  padding: 8px 32px 8px 12px;
+  /* Add right padding for arrow */
+  border: 1px solid #4a5568;
   border-radius: 6px;
+  background: #4a5568;
   color: #f5f5f5;
   font-size: 14px;
-  transition: all 0.2s ease;
 }
 
 .sidebar__label-input:focus {
   outline: none;
-  border-color: #f5f5f5;
-  box-shadow: 0 0 0 3px rgba(245, 245, 245, 0.1);
+  border-color: #60a5fa;
+}
+
+.sidebar__label-input--disabled {
+  background: #2d3748;
+  color: #a0aec0;
+  cursor: not-allowed;
+  border-color: #2d3748;
 }
 
 .sidebar__label-input::placeholder {
   color: #a0aec0;
+}
+
+.sidebar__label-input--disabled::placeholder {
+  color: #718096;
+}
+
+/* Dropdown arrow styling */
+.sidebar__input-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #a0aec0;
+  font-size: 12px;
+  user-select: none;
+  padding: 4px;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar__input-arrow:hover {
+  background-color: rgba(160, 174, 192, 0.1);
+  color: #f5f5f5;
+}
+
+.sidebar__input-arrow--disabled {
+  cursor: not-allowed;
+  color: #4a5568;
+}
+
+.sidebar__input-arrow--disabled:hover {
+  background-color: transparent;
+  color: #4a5568;
 }
 
 .sidebar__suggestions {
