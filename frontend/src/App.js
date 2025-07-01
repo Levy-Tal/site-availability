@@ -14,13 +14,13 @@ function App() {
   const [scrapeInterval, setScrapeInterval] = useState(null);
   const [docsInfo, setDocsInfo] = useState({ docs_title: "", docs_url: "" });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilters, setStatusFilters] = useState([]);
   const [labelFilters, setLabelFilters] = useState([]);
 
   // Fetch locations with their calculated status from the server
   const refreshLocations = async () => {
     try {
-      const locationsData = await fetchLocations(statusFilter, labelFilters);
+      const locationsData = await fetchLocations(statusFilters, labelFilters);
       setLocations(locationsData);
     } catch (error) {
       console.error("Error refreshing locations:", error);
@@ -54,12 +54,12 @@ function App() {
       // Clean up interval on component unmount or when scrapeInterval changes
       return () => clearInterval(intervalId);
     }
-  }, [scrapeInterval, statusFilter, labelFilters]);
+  }, [scrapeInterval, statusFilters, labelFilters]);
 
   // Refresh locations when filters change
   useEffect(() => {
     refreshLocations();
-  }, [statusFilter, labelFilters]);
+  }, [statusFilters, labelFilters]);
 
   const handleSiteClick = (site) => {
     if (selectedSite === site) {
@@ -81,8 +81,16 @@ function App() {
     }
   };
 
-  const handleStatusFilterChange = (newStatusFilter) => {
-    setStatusFilter(newStatusFilter);
+  const handleStatusFilterChange = (status) => {
+    setStatusFilters((prevFilters) => {
+      if (prevFilters.includes(status)) {
+        // Remove the status if it's already selected
+        return prevFilters.filter((filter) => filter !== status);
+      } else {
+        // Add the status if it's not selected
+        return [...prevFilters, status];
+      }
+    });
   };
 
   const handleLabelFilterChange = (newLabelFilters) => {
@@ -107,7 +115,7 @@ function App() {
         onDocsClick={handleDocsClick}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={handleSidebarToggle}
-        selectedStatusFilter={statusFilter}
+        selectedStatusFilters={statusFilters}
         selectedLabels={labelFilters}
       />
       <MapComponent locations={locations} onSiteClick={handleSiteClick} />
@@ -116,7 +124,7 @@ function App() {
           site={selectedSite}
           onClose={handlePanelClose}
           scrapeInterval={scrapeInterval}
-          statusFilter={statusFilter}
+          statusFilters={statusFilters}
           labelFilters={labelFilters}
         />
       )}

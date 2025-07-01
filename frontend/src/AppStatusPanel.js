@@ -6,7 +6,7 @@ export const AppStatusPanel = ({
   site,
   onClose,
   scrapeInterval,
-  statusFilter,
+  statusFilters,
   labelFilters,
 }) => {
   const panelRef = useRef(null);
@@ -20,7 +20,7 @@ export const AppStatusPanel = ({
   // Fetch apps for this location
   const refreshApps = async () => {
     try {
-      const appsData = await fetchApps(site.name, statusFilter, labelFilters);
+      const appsData = await fetchApps(site.name, statusFilters, labelFilters);
       setApps(appsData);
     } catch (error) {
       console.error("Error fetching apps for location:", error);
@@ -30,7 +30,7 @@ export const AppStatusPanel = ({
   // Initial fetch when panel opens
   useEffect(() => {
     refreshApps();
-  }, [site.name, statusFilter, labelFilters]);
+  }, [site.name, statusFilters, labelFilters]);
 
   // Set up periodic refresh while panel is open
   useEffect(() => {
@@ -41,7 +41,7 @@ export const AppStatusPanel = ({
 
       return () => clearInterval(intervalId);
     }
-  }, [scrapeInterval, site.name, statusFilter, labelFilters]);
+  }, [scrapeInterval, site.name, statusFilters, labelFilters]);
 
   // Close sort dropdown on outside click
   useEffect(() => {

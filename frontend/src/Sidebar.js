@@ -15,7 +15,7 @@ const Sidebar = ({
   onDocsClick,
   isCollapsed,
   onToggleCollapse,
-  selectedStatusFilter,
+  selectedStatusFilters,
   selectedLabels,
 }) => {
   const sidebarRef = useRef(null);
@@ -307,47 +307,36 @@ const Sidebar = ({
               <div className="sidebar__filter-options">
                 <label className="sidebar__filter-option">
                   <input
-                    type="radio"
-                    name="status"
-                    value=""
-                    checked={selectedStatusFilter === ""}
-                    onChange={(e) => onStatusFilterChange(e.target.value)}
-                  />
-                  <span className="sidebar__radio"></span>
-                  All
-                </label>
-                <label className="sidebar__filter-option">
-                  <input
-                    type="radio"
-                    name="status"
+                    type="checkbox"
                     value="up"
-                    checked={selectedStatusFilter === "up"}
-                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                    checked={selectedStatusFilters.includes("up")}
+                    onChange={() => onStatusFilterChange("up")}
                   />
-                  <span className="sidebar__radio"></span>
-                  UP
+                  <span className="sidebar__checkbox"></span>
+                  <span className="sidebar__status-circle sidebar__status-circle--up"></span>
+                  Up
                 </label>
                 <label className="sidebar__filter-option">
                   <input
-                    type="radio"
-                    name="status"
+                    type="checkbox"
                     value="down"
-                    checked={selectedStatusFilter === "down"}
-                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                    checked={selectedStatusFilters.includes("down")}
+                    onChange={() => onStatusFilterChange("down")}
                   />
-                  <span className="sidebar__radio"></span>
-                  DOWN
+                  <span className="sidebar__checkbox"></span>
+                  <span className="sidebar__status-circle sidebar__status-circle--down"></span>
+                  Down
                 </label>
                 <label className="sidebar__filter-option">
                   <input
-                    type="radio"
-                    name="status"
+                    type="checkbox"
                     value="unavailable"
-                    checked={selectedStatusFilter === "unavailable"}
-                    onChange={(e) => onStatusFilterChange(e.target.value)}
+                    checked={selectedStatusFilters.includes("unavailable")}
+                    onChange={() => onStatusFilterChange("unavailable")}
                   />
-                  <span className="sidebar__radio"></span>
-                  UNAVAILABLE
+                  <span className="sidebar__checkbox"></span>
+                  <span className="sidebar__status-circle sidebar__status-circle--unavailable"></span>
+                  Unavailable
                 </label>
               </div>
             </div>

@@ -508,7 +508,7 @@ circle {
   background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
   border-right: 2px solid #e2e8f0;
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.3);
-  transition: width 0.3s ease;
+  transition: none;
   z-index: 500;
   overflow: hidden;
   font-family: sans-serif;
@@ -706,35 +706,59 @@ circle {
   color: #f5f5f5;
 }
 
-.sidebar__filter-option input[type="radio"] {
+.sidebar__filter-option input[type="checkbox"] {
   display: none;
 }
 
-.sidebar__radio {
+.sidebar__checkbox {
   width: 16px;
   height: 16px;
   border: 2px solid #e2e8f0;
-  border-radius: 50%;
+  border-radius: 3px;
   margin-right: 8px;
   position: relative;
   transition: all 0.2s ease;
   background-color: #2d2d2d;
 }
 
-.sidebar__filter-option input[type="radio"]:checked + .sidebar__radio {
+.sidebar__filter-option input[type="checkbox"]:checked + .sidebar__checkbox {
   border-color: #f5f5f5;
   background-color: #f5f5f5;
 }
 
-.sidebar__filter-option input[type="radio"]:checked + .sidebar__radio::after {
-  content: "";
+.sidebar__filter-option
+  input[type="checkbox"]:checked
+  + .sidebar__checkbox::after {
+  content: "✓";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 8px;
-  height: 8px;
+  top: -2px;
+  left: 1px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #2d2d2d;
+}
+
+/* Status circles for filters */
+.sidebar__status-circle {
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background-color: #2d2d2d;
+  margin-right: 8px;
+  margin-left: 4px;
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.sidebar__status-circle--up {
+  background-color: #34d399;
+}
+
+.sidebar__status-circle--down {
+  background-color: #f87171;
+}
+
+.sidebar__status-circle--unavailable {
+  background-color: #fbbf24;
 }
 
 /* Label input container with arrow */
@@ -868,7 +892,7 @@ circle {
 .app-container--with-sidebar {
   width: calc(100vw - 280px);
   margin-left: 280px;
-  transition: all 0.3s ease;
+  transition: none;
 }
 
 .app-container--with-sidebar.app-container--sidebar-collapsed {

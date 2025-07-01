@@ -345,7 +345,8 @@ func parseLabelFilters(queryParams url.Values) map[string]string {
 // parseFilters extracts both system field and label filters from query parameters
 // Returns a single map where system fields use their direct names (location, status, etc.)
 // and user labels use "labels." prefix (labels.env, labels.team, etc.)
-// Supports: ?location=siteA&origin_url=http://a.com&labels.env=production
+// Special handling for status: multiple status values are joined with "|" for OR logic
+// Supports: ?location=siteA&origin_url=http://a.com&labels.env=production&status=up&status=down
 func parseFilters(queryParams url.Values) map[string]string {
 	filters := make(map[string]string)
 	unrecognizedParams := make([]string, 0)
@@ -368,8 +369,23 @@ func parseFilters(queryParams url.Values) map[string]string {
 			// Label filter: labels.env=production -> store as "labels.env"
 			filters[key] = values[0]
 		} else if allowedSystemFields[key] {
-			// System field filter: location=siteA -> store as "location"
-			filters[key] = values[0]
+			// Special handling for status field to support OR logic
+			if key == "status" && len(values) > 1 {
+				// Multiple status values: join with "|" for OR logic
+				// Remove empty values
+				validStatuses := make([]string, 0, len(values))
+				for _, status := range values {
+					if status != "" {
+						validStatuses = append(validStatuses, status)
+					}
+				}
+				if len(validStatuses) > 0 {
+					filters[key] = strings.Join(validStatuses, "|")
+				}
+			} else {
+				// System field filter: location=siteA -> store as "location"
+				filters[key] = values[0]
+			}
 		} else {
 			// Check for common mistakes and log them
 			if strings.HasPrefix(key, "label[") && strings.HasSuffix(key, "]") {
@@ -398,6 +414,7 @@ func parseFilters(queryParams url.Values) map[string]string {
 
 // filterApps applies unified filtering using the LabelManager for O(1) performance
 // Works for both system fields (name, location, etc.) and user labels (labels.env, etc.)
+// Special handling: status field supports OR logic when multiple values are provided (separated by "|")
 func filterApps(apps []AppStatus, filters map[string]string) ([]AppStatus, int) {
 	start := time.Now()
 
@@ -405,7 +422,92 @@ func filterApps(apps []AppStatus, filters map[string]string) ([]AppStatus, int) 
 		return apps, 0 // No filters
 	}
 
-	// Use LabelManager for O(1) filtering of all field types
+	// Handle status OR logic specially
+	var statusFilteredApps []AppStatus
+	statusFilter, hasStatusFilter := filters["status"]
+
+	if hasStatusFilter && strings.Contains(statusFilter, "|") {
+		// Multiple status values - use OR logic
+		statusValues := strings.Split(statusFilter, "|")
+		statusSet := make(map[string]bool)
+		for _, status := range statusValues {
+			statusSet[status] = true
+		}
+
+		// Filter apps by OR logic for status
+		for _, app := range apps {
+			if statusSet[app.Status] {
+				statusFilteredApps = append(statusFilteredApps, app)
+			}
+		}
+
+		// Remove status from filters for remaining AND logic processing
+		remainingFilters := make(map[string]string)
+		for k, v := range filters {
+			if k != "status" {
+				remainingFilters[k] = v
+			}
+		}
+
+		// If no other filters, return status-filtered apps
+		if len(remainingFilters) == 0 {
+			filteredCount := len(apps) - len(statusFilteredApps)
+			duration := time.Since(start)
+
+			logging.Logger.WithFields(map[string]interface{}{
+				"total_apps":     len(apps),
+				"filtered_apps":  len(statusFilteredApps),
+				"filtered_out":   filteredCount,
+				"duration_μs":    duration.Microseconds(),
+				"status_filters": statusValues,
+			}).Debug("Applied status OR filter")
+
+			return statusFilteredApps, filteredCount
+		}
+
+		// Apply remaining filters with AND logic to status-filtered apps
+		if len(remainingFilters) > 0 {
+			// Use LabelManager for remaining filters
+			matchingAppIDs := labelManager.FindAppsByLabels(remainingFilters)
+
+			// Convert status-filtered apps to ID map
+			idToApp := make(map[string]AppStatus)
+			for _, app := range statusFilteredApps {
+				uniqueID := app.Source + ":" + app.Name
+				idToApp[uniqueID] = app
+			}
+
+			// Intersect status-filtered apps with label-filtered apps
+			finalApps := make([]AppStatus, 0)
+			for _, appID := range matchingAppIDs {
+				if app, exists := idToApp[appID]; exists {
+					finalApps = append(finalApps, app)
+				}
+			}
+
+			// Sort filtered apps by name for deterministic ordering
+			sort.Slice(finalApps, func(i, j int) bool {
+				return finalApps[i].Name < finalApps[j].Name
+			})
+
+			filteredCount := len(apps) - len(finalApps)
+			duration := time.Since(start)
+
+			logging.Logger.WithFields(map[string]interface{}{
+				"total_apps":        len(apps),
+				"status_filtered":   len(statusFilteredApps),
+				"final_filtered":    len(finalApps),
+				"filtered_out":      filteredCount,
+				"duration_μs":       duration.Microseconds(),
+				"status_filters":    statusValues,
+				"remaining_filters": remainingFilters,
+			}).Debug("Applied status OR filter with additional AND filters")
+
+			return finalApps, filteredCount
+		}
+	}
+
+	// Standard filtering using LabelManager (AND logic for all filters)
 	matchingAppIDs := labelManager.FindAppsByLabels(filters)
 
 	// Convert unique IDs back to full AppStatus objects
