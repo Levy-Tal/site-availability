@@ -5,7 +5,6 @@ baseurl: ""
 
 markdown: kramdown
 highlighter: rouge
-theme: minima
 
 plugins:
   - jekyll-feed
@@ -30,3 +29,13 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
+
+# Custom configuration for our dark theme
+sass:
+  style: compressed
+
+# Collections for better organization
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
