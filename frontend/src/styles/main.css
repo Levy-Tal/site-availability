@@ -553,11 +553,12 @@ circle {
 .sidebar__header {
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 14px;
   margin-bottom: 24px;
   height: 48px;
   position: relative;
   z-index: 20;
+  justify-content: space-between;
 }
 
 .sidebar__collapse-button {
@@ -588,14 +589,26 @@ circle {
 }
 
 .sidebar__logo {
-  margin-left: 12px;
+  margin-left: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar__logo-image {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  margin-right: 8px;
 }
 
 .sidebar__logo-text {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
 }
 
 .sidebar__nav {

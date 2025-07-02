@@ -240,14 +240,20 @@ const Sidebar = ({
       <div className="sidebar__container">
         {/* Header with logo and collapse button */}
         <div className="sidebar__header">
+          {!isCollapsed && (
+            <>
+              <img src="/logo.png" alt="Logo" className="sidebar__logo-image" />
+              <div className="sidebar__logo">
+                <div className="sidebar__logo-text">
+                  <div>Site</div>
+                  <div>Availability</div>
+                </div>
+              </div>
+            </>
+          )}
           <div className="sidebar__collapse-button" onClick={onToggleCollapse}>
             {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
           </div>
-          {!isCollapsed && (
-            <div className="sidebar__logo">
-              <span className="sidebar__logo-text">Site Availability</span>
-            </div>
-          )}
         </div>
 
         {/* Navigation items */}
