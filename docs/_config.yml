@@ -1,0 +1,32 @@
+title: Site Availability Monitor
+description: A comprehensive site availability monitoring solution with real-time dashboard and alerting
+url: ""
+baseurl: ""
+
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+header_pages:
+  - getting-started.md
+  - installation.md
+  - configuration.md
+  - api.md
+  - frontend.md
+  - deployment.md
+  - development.md
+  - troubleshooting.md
+  - contributing.md
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
