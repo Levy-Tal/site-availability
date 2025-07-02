@@ -5,11 +5,11 @@ baseurl: ""
 
 markdown: kramdown
 highlighter: rouge
-theme: minima
 
 plugins:
   - jekyll-feed
   - jekyll-sitemap
+  - jekyll-seo-tag
 
 header_pages:
   - getting-started.md
@@ -30,3 +30,13 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
+  - README.md
+
+# Custom configuration for our dark theme
+sass:
+  style: compressed
+
+# GitHub Pages specific settings
+repository: tal/site-availability
+github:
+  private: false

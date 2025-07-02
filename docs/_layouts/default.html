@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: " en" }}">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{ " /favicon.ico" | relative_url }}" />
+    <link rel="stylesheet" href="{{ " /assets/css/style.css" | relative_url }}" />
+    <title>{% if page.title %}{{ page.title | escape }} | {% endif %}{{ site.title | escape }}</title>
+    <meta name="description"
+        content="{{ page.excerpt | default: site.description | strip_html | normalize_whitespace | truncate: 160 | escape }}" />
+    {% seo %}
+</head>
+
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar__container">
+                <header class="sidebar__header">
+                    <div class="sidebar__logo">
+                        <img src="{{ " /images/logo-full.png" | relative_url }}" alt="{{ site.title }}"
+                            class="sidebar__logo-image" />
+                        <span class="sidebar__logo-text">{{ site.title }}</span>
+                    </div>
+                    <button class="sidebar__collapse-button" onclick="toggleSidebar()">
+                        <span class="sidebar__collapse-icon">‹</span>
+                    </button>
+                </header>
+
+                <nav class="sidebar__nav">
+                    <a href="{{ " /" | relative_url }}" class="sidebar__nav-item {% if page.url == " /"
+                        %}sidebar__nav-item--active{% endif %}">
+                        <span class="sidebar__nav-icon">🏠</span>
+                        <span class="sidebar__nav-text">Home</span>
+                    </a>
+                    {% for page_item in site.header_pages %}
+                    {% assign page_path = page_item | relative_url %}
+                    {% assign page_title = site.pages | where: "path", page_item | map: "title" | first %}
+                    {% if page_title == blank %}
+                    {% assign page_title = page_item | replace: ".md", "" | replace: "-", " " | capitalize %}
+                    {% endif %}
+                    <a href="{{ page_path }}"
+                        class="sidebar__nav-item {% if page.url == page_path %}sidebar__nav-item--active{% endif %}">
+                        <span class="sidebar__nav-icon">
+                            {% if page_item contains "getting-started" %}🚀
+                            {% elsif page_item contains "installation" %}⚙️
+                            {% elsif page_item contains "configuration" %}🔧
+                            {% elsif page_item contains "api" %}📡
+                            {% elsif page_item contains "frontend" %}🖥️
+                            {% elsif page_item contains "deployment" %}🚀
+                            {% elsif page_item contains "development" %}💻
+                            {% elsif page_item contains "troubleshooting" %}🔍
+                            {% elsif page_item contains "contributing" %}🤝
+                            {% else %}📄{% endif %}
+                        </span>
+                        <span class="sidebar__nav-text">{{ page_title }}</span>
+                    </a>
+                    {% endfor %}
+                </nav>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="content-container">
+                {{ content }}
+            </div>
+        </main>
+    </div>
+
+    <script>           function toggleSidebar()                 const container = document.querySelector('.app-containe                   const sidebar = document.querySelector('.side
+        const icon = document.querySelector('.sidebar__collapse)                 sidebar.classList.toggle('sidebar--collapse                   container.classList.toggle('app-container--sidebar-collap
+        icon.textContent = sidebar.classList.contains('sidebar--collapsed') ? '›        '‹'            }
+
+      // Smooth scrolling for         or links
+      document.querySelectorAll('a[href^="#"]').forEa            chor) => {
+            anchor.addEventListener('clic                tion (e) {
+                         ntDefault();
+            document.querySelector(this.getAttribute('hr                    llIntoView({
+                      havi            moot                     });
+      });
+    </script>
+</body>
+
+</html>
