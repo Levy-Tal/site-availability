@@ -1,0 +1,65 @@
+Frontend-
+____________________________________
+
+This product includes third-party software licensed under terms that require attribution or notice retention.
+
+---
+
+Package: axe-core@4.10.3
+License: MPL-2.0
+This package is licensed under the Mozilla Public License 2.0. No modifications have been made.
+https://github.com/dequelabs/axe-core
+
+---
+
+Package: caniuse-lite@1.0.30001726
+License: CC-BY-4.0
+This package is licensed under the Creative Commons Attribution 4.0 International License.
+Attribution: The data is provided by the Can I use project (https://caniuse.com).
+License: https://creativecommons.org/licenses/by/4.0/
+
+---
+
+Package: node-forge@1.3.1
+License: BSD-3-Clause
+This package is dual-licensed under BSD-3-Clause OR GPL-2.0. This project uses it under the BSD-3-Clause license.
+https://github.com/digitalbazaar/forge
+
+---
+
+Package: harmony-reflect@1.6.2
+License: Apache-2.0 OR MPL-1.1
+This package is dual-licensed. This project uses it under the Apache-2.0 license.
+https://github.com/YuzuJS/harmony-reflect
+
+---
+
+All other included third-party packages are licensed under permissive licenses (MIT, BSD, Apache, ISC, or CC0-1.0) and do not require attribution.
+
+backend -
+_______________________________
+
+This product includes third-party software licensed under the following terms:
+
+---
+
+All third-party Go packages are licensed under permissive licenses including:
+
+- Apache-2.0
+- MIT
+- BSD-3-Clause
+
+No attribution is required beyond preservation of license terms as stated in the Apache License 2.0.
+
+The following notable libraries are included:
+
+- github.com/prometheus/client_golang
+- github.com/klauspost/compress
+- github.com/sirupsen/logrus
+- golang.org/x/sys/unix
+- google.golang.org/protobuf
+- gopkg.in/yaml.v2
+
+Each is used under its respective permissive license. No modifications have been made.
+
+This project itself is licensed under the Apache License, Version 2.0.
