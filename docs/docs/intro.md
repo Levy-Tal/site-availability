@@ -2,46 +2,82 @@
 sidebar_position: 1
 ---
 
-# Tutorial Intro
+# Site Availability Monitoring
 
-Let's discover **Docusaurus in less than 5 minutes**.
+Welcome to **Site Availability Monitoring** - an open-source application designed to monitor the availability of applications and services across multiple locations with real-time visualization and comprehensive metrics collection.
+
+## Overview
+
+Site Availability Monitoring provides a complete solution for tracking application uptime and performance across geographically distributed locations. The system combines real-time monitoring with beautiful visualizations and robust alerting capabilities.
+
+### Key Features
+
+- 🌍 **Real-time site status monitoring** across multiple geographic locations
+- 🗺️ **Interactive world map visualization** showing application status at a glance
+- 📊 **Historical data tracking** with comprehensive metrics collection
+- 🔔 **Alert notifications** for immediate incident response
+- 📈 **Prometheus integration** for advanced metrics and monitoring
+- 🎨 **Modern React frontend** with responsive design
+- 🚀 **Go-based backend** for high performance and reliability
+- ☸️ **Kubernetes-ready** with Helm chart deployment
+- 🐳 **Docker support** for easy containerization
+- 📊 **Grafana dashboards** for advanced analytics
+
+## Architecture
+
+The application consists of three main components:
+
+### Frontend
+
+- **React-based web interface** that displays application statuses on an interactive world map
+- **Real-time updates** showing current status of monitored applications
+- **Historical data visualization** for trend analysis
+- **Responsive design** that works on desktop and mobile devices
+
+### Backend
+
+- **Go-based server** that fetches application statuses from Prometheus
+- **REST APIs** for serving status data and configuration
+- **Efficient scraping** of Prometheus metrics
+- **HMAC authentication** for secure API access
+- **Comprehensive logging** for monitoring and debugging
+
+### Monitoring Stack
+
+- **Prometheus integration** for metrics collection
+- **Grafana dashboards** for advanced visualization
+- **Alert management** for incident response
+- **Custom metrics** for application-specific monitoring
 
 ## Getting Started
 
-Get started by **creating a new site**.
+Ready to start monitoring your applications? Choose your preferred setup method:
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+1. **[Quick Start](./getting-started/quick-start)** - Get up and running in minutes
+2. **[Docker Setup](./getting-started/docker)** - Containerized deployment
+3. **[Installation Guide](./getting-started/installation)** - Detailed setup instructions
 
-### What you'll need
+## What You'll Need
 
-- [Node.js](https://nodejs.org/en/download/) version 18.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+- **Node.js** (v18.0 or above) for frontend development
+- **Go** (v1.19 or above) for backend development
+- **Docker** for containerization
+- **Helm** for Kubernetes deployment
+- **Prometheus** for metrics collection
 
-## Generate a new site
+## Next Steps
 
-Generate a new Docusaurus site using the **classic template**.
+- 📖 Follow the [Installation Guide](./getting-started/installation) to set up your environment
+- ⚙️ Learn about [Configuration](./configuration/overview) options
+- 🚀 Explore [Deployment](./deployment/docker-compose) strategies
+- 🛠️ Check out the [Development Guide](./development/setup) if you want to contribute
 
-The classic template will automatically be added to your project after you run the command:
+## Community & Support
 
-```bash
-npm init docusaurus@latest my-website classic
-```
+- 🐛 **Report issues**: [GitHub Issues](https://github.com/Levy-Tal/site-availability/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/Levy-Tal/site-availability/discussions)
+- 📄 **License**: Available under the Apache 2.0 License
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
+---
 
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
-
-```bash
-cd my-website
-npm run start
-```
-
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
-
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
-
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+_Ready to monitor your applications like never before? Let's get started!_
