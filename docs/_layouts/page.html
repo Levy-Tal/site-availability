@@ -18,21 +18,36 @@ layout: default
     for i in (0..pages.size) %} {% assign page_path = pages[i] | relative_url %}
     {% if page.url == page_path %} {% assign current_index = i %} {% break %} {%
     endif %} {% endfor %} {% if current_index and current_index > 0 %} {% assign
+<<<<<<< HEAD
     prev_index = current_index | minus: 1 %} {% assign prev_page =
     pages[prev_index] %} {% assign prev_title = site.pages | where: "path",
     prev_page | map: "title" | first %} {% if prev_title == blank %} {% assign
     prev_title = prev_page | replace: ".md", "" | replace: "-", " " | capitalize
     %} {% endif %}
+=======
+    prev_page = pages[current_index | minus: 1] %} {% assign prev_title =
+    site.pages | where: "path", prev_page | map: "title" | first %} {% if
+    prev_title == blank %} {% assign prev_title = prev_page | replace: ".md", ""
+    | replace: "-", " " | capitalize %} {% endif %}
+>>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92
     <a href="{{ prev_page | relative_url }}" class="nav-link nav-link--prev">
       <span class="nav-arrow">‹</span>
       <span class="nav-text">{{ prev_title }}</span>
     </a>
+<<<<<<< HEAD
     {% endif %} {% assign max_index = pages.size | minus: 1 %} {% if
     current_index and current_index < max_index %} {% assign
     next_index=current_index | plus: 1 %} {% assign next_page=pages[next_index]
     %} {% assign next_title=site.pages | where: "path" , next_page | map:
     "title" | first %} {% if next_title==blank %} {% assign next_title=next_page
     | replace: ".md" , "" | replace: "-" , " " | capitalize %} {% endif %}
+=======
+    {% endif %} {% if current_index and current_index < pages.size | minus: 1 %}
+    {% assign next_page=pages[current_index | plus: 1] %} {% assign
+    next_title=site.pages | where: "path" , next_page | map: "title" | first %}
+    {% if next_title==blank %} {% assign next_title=next_page | replace: ".md" ,
+    "" | replace: "-" , " " | capitalize %} {% endif %}
+>>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92
     <a href="{{ next_page | relative_url }}" class="nav-link nav-link--next">
       <span class="nav-text">{{ next_title }}</span>
       <span class="nav-arrow">›</span>

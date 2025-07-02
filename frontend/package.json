@@ -1,6 +1,7 @@
 {
-  "name": "frontend",
+  "name": "site-availability",
   "version": "2.1.0",
+  "license": "Apache-2.0",
   "description": "React app for monitoring app status on world map",
   "main": "src/index.js",
   "dependencies": {
