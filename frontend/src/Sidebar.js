@@ -61,62 +61,6 @@ const Sidebar = ({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [showKeySuggestions, showValueSuggestions]);
 
-  // Resize functionality
-  useEffect(() => {
-    const sidebar = sidebarRef.current;
-    const handle = sidebar?.querySelector(".sidebar__resize-handle");
-
-    if (!handle) return;
-
-    let isResizing = false;
-
-    const onMouseMove = (e) => {
-      if (isResizing) {
-        e.preventDefault();
-        const newWidth = e.clientX;
-        if (newWidth >= 200 && newWidth <= 600) {
-          sidebar.style.width = `${newWidth}px`;
-          // Update the app container margin
-          const appContainer = document.querySelector(
-            ".app-container--with-sidebar",
-          );
-          if (appContainer && !isCollapsed) {
-            appContainer.style.marginLeft = `${newWidth}px`;
-          }
-        }
-      }
-    };
-
-    const onMouseUp = (e) => {
-      if (isResizing) {
-        e.preventDefault();
-        isResizing = false;
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        document.body.style.cursor = "default";
-      }
-    };
-
-    const onMouseDown = (e) => {
-      // Only start resizing if we clicked directly on the resize handle
-      if (e.target === handle) {
-        e.preventDefault();
-        e.stopPropagation();
-        isResizing = true;
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-        document.body.style.cursor = "col-resize";
-      }
-    };
-
-    handle.addEventListener("mousedown", onMouseDown);
-    return () => {
-      handle.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [isCollapsed]);
-
   // Handle key input changes
   const handleKeyInputChange = async (e) => {
     const value = e.target.value;
@@ -294,8 +238,6 @@ const Sidebar = ({
       ref={sidebarRef}
     >
       <div className="sidebar__container">
-        <div className="sidebar__resize-handle" />
-
         {/* Header with logo and collapse button */}
         <div className="sidebar__header">
           <div className="sidebar__collapse-button" onClick={onToggleCollapse}>
