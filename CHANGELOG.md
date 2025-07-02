@@ -1,3 +1,17 @@
+# [2.1.0](https://github.com/Levy-Tal/site-availability/compare/v2.0.1...v2.1.0) (2025-07-02)
+
+
+### Bug Fixes
+
+* **lables:** not showing app status ([df3cec4](https://github.com/Levy-Tal/site-availability/commit/df3cec491cb2281ef7788c29a231a5e4284b8431))
+* **lables:** remove metrics from files ([c371851](https://github.com/Levy-Tal/site-availability/commit/c371851adfcfee322e5bcd4cec05aa2b0a3aa69c))
+
+
+### Features
+
+* **api:** search locations and lables ([9b2967e](https://github.com/Levy-Tal/site-availability/commit/9b2967ea0bcc458030d238942ff3a23ba270bc79))
+* **labels:** add labels to apps ([3126de9](https://github.com/Levy-Tal/site-availability/commit/3126de9a89096aa8ec3ec4f1ec53a4f0aed25bbb))
+
 ## [2.0.1](https://github.com/Levy-Tal/site-availability/compare/v2.0.0...v2.0.1) (2025-06-28)
 
 
