@@ -1,13 +1,47 @@
 import React, { useRef, useEffect, useState } from "react";
 import { FaSortAmountDownAlt, FaSearch } from "react-icons/fa";
+import { fetchApps } from "./api/appStatusAPI";
 
-export const AppStatusPanel = ({ site, apps, onClose }) => {
+export const AppStatusPanel = ({
+  site,
+  onClose,
+  scrapeInterval,
+  statusFilters,
+  labelFilters,
+}) => {
   const panelRef = useRef(null);
 
+  const [apps, setApps] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("name-asc");
   const [showSortOptions, setShowSortOptions] = useState(false);
+
+  // Fetch apps for this location
+  const refreshApps = async () => {
+    try {
+      const appsData = await fetchApps(site.name, statusFilters, labelFilters);
+      setApps(appsData);
+    } catch (error) {
+      console.error("Error fetching apps for location:", error);
+    }
+  };
+
+  // Initial fetch when panel opens
+  useEffect(() => {
+    refreshApps();
+  }, [site.name, statusFilters, labelFilters]);
+
+  // Set up periodic refresh while panel is open
+  useEffect(() => {
+    if (scrapeInterval) {
+      const intervalId = setInterval(() => {
+        refreshApps();
+      }, scrapeInterval);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [scrapeInterval, site.name, statusFilters, labelFilters]);
 
   // Close sort dropdown on outside click
   useEffect(() => {

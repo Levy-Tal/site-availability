@@ -28,17 +28,12 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:v{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-            {{- if .Values.siteSync.enabled }}
-            - name: sync
-              containerPort: {{ .Values.siteSync.port }}
-              protocol: TCP
-            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -64,9 +59,9 @@ spec:
             - name: CREDENTIALS_FILE
               value: /app/credentials.yaml
             {{- end }}
-            {{- if .Values.siteSync.enabled }}
-            - name: SITE_CREDENTIALS_FILE
-              value: /app/site-credentials.yaml
+            {{- if .Values.configFile.enabled }}
+            - name: CONFIG_FILE
+              value: /app/config.yaml
             {{- end }}
           envFrom:
             {{- range .Values.extraSecretNameForEnvFrom }}
@@ -74,18 +69,15 @@ spec:
                 name: {{ . }}
             {{- end }}
           volumeMounts:
+            {{- if .Values.configFile.enabled }}
             - name: config-volume
               mountPath: /app/config.yaml
               subPath: config.yaml
+            {{- end }}
             {{- if .Values.credentials.credentialsSecretName }}
             - name: credentials-volume
               mountPath: /app/credentials.yaml
               subPath: credentials.yaml
-            {{- end }}
-            {{- if .Values.siteSync.enabled }}
-            - name: site-credentials-volume
-              mountPath: /app/site-credentials.yaml
-              subPath: site-credentials.yaml
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
@@ -103,18 +95,15 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
+        {{- if .Values.configFile.enabled }}
         - name: config-volume
           configMap:
             name: {{ include "site-availability.fullname" . }}-config
+        {{- end }}
         {{- if .Values.credentials.credentialsSecretName }}
         - name: credentials-volume
           secret:
             secretName: {{ .Values.credentials.credentialsSecretName }}
-        {{- end }}
-        {{- if .Values.siteSync.enabled }}
-        - name: site-credentials-volume
-          secret:
-            secretName: {{ .Values.siteSync.serverToken.secretName }}
         {{- end }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}

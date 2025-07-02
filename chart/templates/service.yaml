@@ -4,7 +4,7 @@ metadata:
   name: {{ include "site-availability.fullname" . }}
   labels:
     app: {{ include "site-availability.fullname" . }}
-    {{- include "site-availability.labels" . | nindent 6 }}
+    {{- include "site-availability.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:

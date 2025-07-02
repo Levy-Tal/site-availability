@@ -41,7 +41,7 @@ type MockScraper struct {
 	calls     int
 }
 
-func (m *MockScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
+func (m *MockScraper) Scrape(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
 	m.mutex.Lock()
 	m.calls++
 	m.mutex.Unlock()

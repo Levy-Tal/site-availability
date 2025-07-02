@@ -22,7 +22,7 @@ func NewSiteScraper() *SiteScraper {
 
 // Scrape fetches the status of all apps and locations from a remote site using the /sync endpoint.
 // Since site scraping involves a single request, the maxParallel parameter is not used.
-func (s *SiteScraper) Scrape(source config.Source, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
+func (s *SiteScraper) Scrape(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
 	url := fmt.Sprintf("%s/sync", source.URL)
 	client := &http.Client{Timeout: timeout}
 
@@ -100,10 +100,15 @@ func (s *SiteScraper) Scrape(source config.Source, timeout time.Duration, maxPar
 		"location_count": len(response.Locations),
 	}).Info("Successfully received app statuses and locations from remote site")
 
-	// Add the source name to each status and location to ensure correct identification
+	// Process apps: ensure correct source identification and set origin URL
 	for i := range response.Apps {
+		// Set the source name to this scraper's source
 		response.Apps[i].Source = source.Name
+		// Set the origin URL to track where this app came from
+		response.Apps[i].OriginURL = source.URL
 	}
+
+	// Set correct source for locations
 	for i := range response.Locations {
 		response.Locations[i].Source = source.Name
 	}

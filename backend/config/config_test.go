@@ -602,3 +602,516 @@ func TestValidateConfig(t *testing.T) {
 		assert.Contains(t, err.Error(), "duplicate app name")
 	})
 }
+
+// Test suite for label functionality
+func TestLabelsSupport(t *testing.T) {
+	t.Run("successful config load with labels", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create main config file with labels at all levels
+		configContent := `
+server_settings:
+  port: "8080"
+  sync_enable: true
+  labels:
+    server: "serverA"
+    environment: "production"
+
+scraping:
+  interval: "60s"
+  timeout: "15s"
+  max_parallel: 10
+
+documentation:
+  title: "Test Documentation"
+  url: "https://test.example.com/docs"
+
+locations:
+  - name: "test location"
+    latitude: 31.782904
+    longitude: 35.214774
+
+sources:
+  - name: "prom1"
+    type: "prometheus"
+    url: "http://prometheus:9090/"
+    labels:
+      instance: "prom1"
+      arc: "x86"
+    apps:
+      - name: "test app"
+        location: "test location"
+        metric: 'up{instance="test"}'
+        labels:
+          cluster: "prod"
+          network: "pvc0213"
+  - name: "site-a"
+    type: "site"
+    url: "https://test-site:3030"
+    labels:
+      region: "us-west"
+`
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		// Create credentials file with additional labels
+		credentialsContent := `
+server_settings:
+  token: "test-server-token"
+  labels:
+    secrets: "encrypted"
+
+sources:
+  - name: "prom1"
+    token: "test-prometheus-token"
+    labels:
+      auth: "bearer"
+`
+		credentialsPath := filepath.Join(tmpDir, "credentials.yaml")
+		err = os.WriteFile(credentialsPath, []byte(credentialsContent), 0644)
+		require.NoError(t, err)
+
+		// Set environment variables
+		os.Setenv("CONFIG_FILE", configPath)
+		os.Setenv("CREDENTIALS_FILE", credentialsPath)
+		defer func() {
+			os.Unsetenv("CONFIG_FILE")
+			os.Unsetenv("CREDENTIALS_FILE")
+		}()
+
+		// Load and test configuration
+		cfg, err := LoadConfig()
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
+
+		// Test server labels (merged from main config and credentials)
+		require.NotNil(t, cfg.ServerSettings.Labels)
+		assert.Equal(t, "serverA", cfg.ServerSettings.Labels["server"])
+		assert.Equal(t, "production", cfg.ServerSettings.Labels["environment"])
+		assert.Equal(t, "encrypted", cfg.ServerSettings.Labels["secrets"]) // From credentials
+
+		// Test source labels
+		prom := cfg.Sources[0]
+		require.NotNil(t, prom.Labels)
+		assert.Equal(t, "prom1", prom.Labels["instance"])
+		assert.Equal(t, "x86", prom.Labels["arc"])
+		assert.Equal(t, "bearer", prom.Labels["auth"]) // From credentials
+
+		// Test app labels
+		require.Len(t, prom.Apps, 1)
+		app := prom.Apps[0]
+		require.NotNil(t, app.Labels)
+		assert.Equal(t, "prod", app.Labels["cluster"])
+		assert.Equal(t, "pvc0213", app.Labels["network"])
+
+		// Test site source labels
+		site := cfg.Sources[1]
+		require.NotNil(t, site.Labels)
+		assert.Equal(t, "us-west", site.Labels["region"])
+	})
+
+	t.Run("backward compatibility - config without labels", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create config file without any labels (existing format)
+		configContent := `
+server_settings:
+  port: "8080"
+  sync_enable: true
+
+scraping:
+  interval: "60s"
+  timeout: "15s"
+  max_parallel: 10
+
+documentation:
+  title: "Test Documentation"
+  url: "https://test.example.com/docs"
+
+locations:
+  - name: "test location"
+    latitude: 31.782904
+    longitude: 35.214774
+
+sources:
+  - name: "prom1"
+    type: "prometheus"
+    url: "http://prometheus:9090/"
+    apps:
+      - name: "test app"
+        location: "test location"
+        metric: 'up{instance="test"}'
+`
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		os.Setenv("CONFIG_FILE", configPath)
+		defer os.Unsetenv("CONFIG_FILE")
+
+		// Should load successfully with nil/empty labels
+		cfg, err := LoadConfig()
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
+
+		// Labels should be nil (not causing issues)
+		assert.Nil(t, cfg.ServerSettings.Labels)
+		assert.Nil(t, cfg.Sources[0].Labels)
+		assert.Nil(t, cfg.Sources[0].Apps[0].Labels)
+	})
+}
+
+func TestValidateLabels(t *testing.T) {
+	t.Run("valid labels", func(t *testing.T) {
+		validLabels := map[string]string{
+			"environment": "production",
+			"cluster":     "prod",
+			"team":        "platformA",
+		}
+
+		err := validateLabels(validLabels, "test context")
+		assert.NoError(t, err)
+	})
+
+	t.Run("empty labels map", func(t *testing.T) {
+		err := validateLabels(nil, "test context")
+		assert.NoError(t, err)
+
+		err = validateLabels(map[string]string{}, "test context")
+		assert.NoError(t, err)
+	})
+
+	t.Run("empty label key", func(t *testing.T) {
+		invalidLabels := map[string]string{
+			"":     "value",
+			"test": "valid",
+		}
+
+		err := validateLabels(invalidLabels, "test context")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "label key cannot be empty")
+	})
+
+	t.Run("whitespace only label key", func(t *testing.T) {
+		invalidLabels := map[string]string{
+			"   ": "value",
+		}
+
+		err := validateLabels(invalidLabels, "test context")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "label key cannot be empty")
+	})
+
+	t.Run("label key too long", func(t *testing.T) {
+		longKey := make([]byte, 101) // 101 characters, over the 100 limit
+		for i := range longKey {
+			longKey[i] = 'a'
+		}
+
+		invalidLabels := map[string]string{
+			string(longKey): "value",
+		}
+
+		err := validateLabels(invalidLabels, "test context")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds maximum length of 100 characters")
+	})
+
+	t.Run("label value too long", func(t *testing.T) {
+		longValue := make([]byte, 501) // 501 characters, over the 500 limit
+		for i := range longValue {
+			longValue[i] = 'a'
+		}
+
+		invalidLabels := map[string]string{
+			"test": string(longValue),
+		}
+
+		err := validateLabels(invalidLabels, "test context")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds maximum length of 500 characters")
+	})
+
+	// Test reserved characters in keys
+	reservedChars := []string{"&", "=", "?", "#", "/", ":"}
+	for _, char := range reservedChars {
+		t.Run(fmt.Sprintf("reserved character %q in key", char), func(t *testing.T) {
+			invalidLabels := map[string]string{
+				"test" + char + "key": "value",
+			}
+
+			err := validateLabels(invalidLabels, "test context")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), fmt.Sprintf("contains reserved character %q", char))
+		})
+	}
+
+	// Test reserved characters in values
+	for _, char := range reservedChars {
+		t.Run(fmt.Sprintf("reserved character %q in value", char), func(t *testing.T) {
+			invalidLabels := map[string]string{
+				"testkey": "value" + char + "test",
+			}
+
+			err := validateLabels(invalidLabels, "test context")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), fmt.Sprintf("contains reserved character %q", char))
+		})
+	}
+}
+
+func TestMergeCredentialsWithLabels(t *testing.T) {
+	t.Run("merge server labels", func(t *testing.T) {
+		mainConfig := &Config{
+			ServerSettings: ServerSettings{
+				Port: "8080",
+				Labels: map[string]string{
+					"environment": "production",
+					"server":      "main",
+				},
+			},
+		}
+
+		credentials := &Config{
+			ServerSettings: ServerSettings{
+				Token: "test-server-token",
+				Labels: map[string]string{
+					"secrets": "encrypted",
+					"server":  "override", // Should override main config
+				},
+			},
+		}
+
+		mergeCredentials(mainConfig, credentials)
+
+		// Verify server token was merged
+		assert.Equal(t, "test-server-token", mainConfig.ServerSettings.Token)
+
+		// Verify labels were merged correctly
+		require.NotNil(t, mainConfig.ServerSettings.Labels)
+		assert.Equal(t, "production", mainConfig.ServerSettings.Labels["environment"]) // From main
+		assert.Equal(t, "override", mainConfig.ServerSettings.Labels["server"])        // Overridden by credentials
+		assert.Equal(t, "encrypted", mainConfig.ServerSettings.Labels["secrets"])      // From credentials
+	})
+
+	t.Run("merge source labels", func(t *testing.T) {
+		mainConfig := &Config{
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+					Labels: map[string]string{
+						"instance": "prom1",
+						"type":     "main",
+					},
+				},
+			},
+		}
+
+		credentials := &Config{
+			Sources: []Source{
+				{
+					Name:  "prom1",
+					Auth:  "bearer",
+					Token: "test-prometheus-token",
+					Labels: map[string]string{
+						"auth": "bearer",
+						"type": "override", // Should override main config
+					},
+				},
+			},
+		}
+
+		mergeCredentials(mainConfig, credentials)
+
+		// Verify source credentials were merged
+		assert.Equal(t, "bearer", mainConfig.Sources[0].Auth)
+		assert.Equal(t, "test-prometheus-token", mainConfig.Sources[0].Token)
+
+		// Verify labels were merged correctly
+		require.NotNil(t, mainConfig.Sources[0].Labels)
+		assert.Equal(t, "prom1", mainConfig.Sources[0].Labels["instance"]) // From main
+		assert.Equal(t, "override", mainConfig.Sources[0].Labels["type"])  // Overridden by credentials
+		assert.Equal(t, "bearer", mainConfig.Sources[0].Labels["auth"])    // From credentials
+	})
+
+	t.Run("initialize nil labels maps", func(t *testing.T) {
+		mainConfig := &Config{
+			ServerSettings: ServerSettings{
+				Port: "8080",
+				// No labels initially
+			},
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+					// No labels initially
+				},
+			},
+		}
+
+		credentials := &Config{
+			ServerSettings: ServerSettings{
+				Labels: map[string]string{
+					"from": "credentials",
+				},
+			},
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Labels: map[string]string{
+						"auth": "bearer",
+					},
+				},
+			},
+		}
+
+		mergeCredentials(mainConfig, credentials)
+
+		// Labels should be initialized and populated
+		require.NotNil(t, mainConfig.ServerSettings.Labels)
+		assert.Equal(t, "credentials", mainConfig.ServerSettings.Labels["from"])
+
+		require.NotNil(t, mainConfig.Sources[0].Labels)
+		assert.Equal(t, "bearer", mainConfig.Sources[0].Labels["auth"])
+	})
+}
+
+func TestValidateConfigWithLabels(t *testing.T) {
+	t.Run("valid config with labels", func(t *testing.T) {
+		validConfig := &Config{
+			ServerSettings: ServerSettings{
+				Labels: map[string]string{
+					"environment": "production",
+					"server":      "main",
+				},
+			},
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
+			},
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+					Labels: map[string]string{
+						"instance": "prom1",
+						"type":     "prometheus",
+					},
+					Apps: []App{
+						{
+							Name:     "test app",
+							Location: "test location",
+							Metric:   "up",
+							Labels: map[string]string{
+								"cluster": "prod",
+								"team":    "platform",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		err := validateConfig(validConfig)
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid server labels", func(t *testing.T) {
+		invalidConfig := &Config{
+			ServerSettings: ServerSettings{
+				Labels: map[string]string{
+					"test&key": "value", // Contains reserved character
+				},
+			},
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
+			},
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+				},
+			},
+		}
+
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "server settings")
+		assert.Contains(t, err.Error(), "reserved character")
+	})
+
+	t.Run("invalid source labels", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
+			},
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+					Labels: map[string]string{
+						"valid": "label",
+						"":      "empty key", // Invalid empty key
+					},
+				},
+			},
+		}
+
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "source prom1")
+		assert.Contains(t, err.Error(), "empty")
+	})
+
+	t.Run("invalid app labels", func(t *testing.T) {
+		invalidConfig := &Config{
+			Locations: []Location{
+				{
+					Name:      "test location",
+					Latitude:  31.782904,
+					Longitude: 35.214774,
+				},
+			},
+			Sources: []Source{
+				{
+					Name: "prom1",
+					Type: "prometheus",
+					URL:  "http://prometheus:9090/",
+					Apps: []App{
+						{
+							Name:     "test app",
+							Location: "test location",
+							Metric:   "up",
+							Labels: map[string]string{
+								"cluster": "prod?test", // Contains reserved character
+							},
+						},
+					},
+				},
+			},
+		}
+
+		err := validateConfig(invalidConfig)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "app test app in source prom1")
+		assert.Contains(t, err.Error(), "reserved character")
+	})
+}

@@ -1,6 +1,11 @@
 server_settings:
   port: 8080
   sync_enable: false
+  labels:
+    environment: "development"
+    region: "local"
+    datacenter: "dev"
+    team: "development"
 
 scraping:
   interval: "10s"
@@ -32,29 +37,74 @@ sources:
   - name: prom1
     type: prometheus
     url: http://prometheus:9090
+    labels:
+      service: "dev-monitoring"
+      tier: "backend"
+      criticality: "low"
     apps:
       - name: app1
         location: Hadera
         metric: up{instance="app:8080", job="app"}
+        labels:
+          app_type: "web-service"
+          importance: "low"
+          owner: "dev-team"
+          version: "v1.0"
       - name: app3
         location: Jerusalem
         metric: up{instance="localhost:9090", job="prometheus"}
+        labels:
+          app_type: "monitoring"
+          importance: "medium"
+          owner: "sre-team"
+          version: "v2.1"
       - name: app4
         location: Beer Sheva
         metric: up{instance="app:8080", job="app"}
+        labels:
+          app_type: "web-service"
+          importance: "low"
+          owner: "frontend-team"
+          experimental: "true"
       - name: app5
         location: Netanya
         metric: 1 - up{instance="localhost:9090", job="prometheus"}
+        labels:
+          app_type: "test-service"
+          importance: "low"
+          owner: "qa-team"
+          inverted: "true"
+          experimental: "true"
       - name: app6
         location: Beer Sheva
         metric: up{instance="app:8080", job="app"}
+        labels:
+          app_type: "web-service"
+          importance: "medium"
+          owner: "backend-team"
+          version: "v1.2"
   - name: prom2
     type: prometheus
     url: http://prometheus2:9090
+    labels:
+      service: "secondary-monitoring"
+      tier: "testing"
+      criticality: "low"
     apps:
       - name: app2
         location: Hadera
         metric: up{instance="app:8080", job="app"}
+        labels:
+          app_type: "web-service"
+          importance: "low"
+          owner: "dev-team"
+          beta: "true"
       - name: app7
         location: Hadera
         metric: 1 - up{instance="localhost:9090", job="prometheus"}
+        labels:
+          app_type: "test-service"
+          importance: "low"
+          owner: "qa-team"
+          inverted: "true"
+          beta: "true"

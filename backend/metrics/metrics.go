@@ -77,32 +77,32 @@ var (
 	// Site sync metrics
 	siteSyncAttempts = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "site_sync_attempts_total",
+			Name: "site_availability_sync_attempts_total",
 			Help: "Total number of sync attempts",
 		},
 	)
 	siteSyncFailures = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "site_sync_failures_total",
+			Name: "site_availability_sync_failures_total",
 			Help: "Total number of sync failures",
 		},
 	)
 	siteSyncLatency = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "site_sync_latency_seconds",
+			Name:    "site_availability_sync_latency_seconds",
 			Help:    "Sync operation latency in seconds",
 			Buckets: prometheus.DefBuckets,
 		},
 	)
 	siteSyncLastSuccess = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "site_sync_last_success_timestamp",
+			Name: "site_availability_sync_last_success_timestamp",
 			Help: "Timestamp of last successful sync",
 		},
 	)
 	siteSyncStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "site_sync_status",
+			Name: "site_availability_sync_status",
 			Help: "Status of each synced site",
 		},
 		[]string{"site", "status"},
@@ -189,7 +189,7 @@ func SetupMetricsHandler() http.Handler {
 	return promhttp.Handler()
 }
 
-// Init registers all Prometheus metrics and starts any background collectors
+// Init registers all Prometheus metrics
 func Init() {
 	prometheus.MustRegister(siteAvailabilityStatus)
 	prometheus.MustRegister(siteAvailabilityApps)
@@ -200,6 +200,8 @@ func Init() {
 	prometheus.MustRegister(siteAvailabilityTotalAppsUp)
 	prometheus.MustRegister(siteAvailabilityTotalAppsDown)
 	prometheus.MustRegister(siteAvailabilityTotalAppsUnavailable)
+
+	// Register site sync metrics
 	prometheus.MustRegister(siteSyncAttempts)
 	prometheus.MustRegister(siteSyncFailures)
 	prometheus.MustRegister(siteSyncLatency)

@@ -85,7 +85,7 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, statuses, 1)
 
@@ -139,7 +139,7 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		require.Len(t, statuses, 1)
 		assert.Equal(t, "down", statuses[0].Status)
@@ -165,7 +165,7 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err) // Scrape method always returns success
 		require.Len(t, statuses, 1)
 		assert.Equal(t, "unavailable", statuses[0].Status)
@@ -226,7 +226,7 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			},
 		}
 
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 2, nil)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 2, nil)
 		require.NoError(t, err)
 		require.Len(t, statuses, 2)
 
@@ -281,7 +281,7 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		// Use insecure TLS config for testing
 		tlsConfig := &tls.Config{InsecureSkipVerify: true}
 
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, tlsConfig)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, tlsConfig)
 		require.NoError(t, err)
 		require.Len(t, statuses, 1)
 		assert.Equal(t, "up", statuses[0].Status)
@@ -295,9 +295,92 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 			Apps: []config.App{}, // Empty apps
 		}
 
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 1, nil)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
 		require.NoError(t, err)
 		assert.Empty(t, statuses)
+	})
+
+	t.Run("scrape with label merging", func(t *testing.T) {
+		// Create mock Prometheus server
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			response := PrometheusResponse{
+				Status: "success",
+				Data: struct {
+					ResultType string `json:"resultType"`
+					Result     []struct {
+						Metric map[string]string `json:"metric"`
+						Value  []interface{}     `json:"value"`
+					} `json:"result"`
+				}{
+					ResultType: "vector",
+					Result: []struct {
+						Metric map[string]string `json:"metric"`
+						Value  []interface{}     `json:"value"`
+					}{
+						{
+							Metric: map[string]string{"instance": "test"},
+							Value:  []interface{}{1234567890.0, "1"},
+						},
+					},
+				},
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		scraper := NewPrometheusScraper()
+
+		// Set up server settings with labels
+		serverSettings := config.ServerSettings{
+			Labels: map[string]string{
+				"server_env":    "test",
+				"server_region": "us-west",
+				"common_label":  "server_value", // Will be overridden by source
+			},
+		}
+
+		source := config.Source{
+			Name: "test-prometheus",
+			URL:  server.URL,
+			Labels: map[string]string{
+				"source_type":  "prometheus",
+				"source_team":  "platform",
+				"common_label": "source_value", // Will be overridden by app
+			},
+			Apps: []config.App{
+				{
+					Name:     "labeled-app",
+					Location: "test-location",
+					Metric:   `up{instance="test"}`,
+					Labels: map[string]string{
+						"app_version":  "v1.2.3",
+						"app_tier":     "frontend",
+						"common_label": "app_value", // Highest priority
+					},
+				},
+			},
+		}
+
+		statuses, _, err := scraper.Scrape(source, serverSettings, 5*time.Second, 1, nil)
+		require.NoError(t, err)
+		require.Len(t, statuses, 1)
+
+		app := statuses[0]
+		assert.Equal(t, "labeled-app", app.Name)
+		assert.Equal(t, "up", app.Status)
+
+		// Verify label merging with correct priority (App > Source > Server)
+		expectedLabels := map[string]string{
+			// Only app labels should be present (merging happens in UpdateAppStatus)
+			"app_version":  "v1.2.3",
+			"app_tier":     "frontend",
+			"common_label": "app_value",
+		}
+
+		assert.Equal(t, expectedLabels, app.Labels)
+		assert.Len(t, app.Labels, 3) // Only app labels
 	})
 }
 
@@ -811,7 +894,7 @@ func TestPrometheusScraper_EdgeCases(t *testing.T) {
 		}
 
 		start := time.Now()
-		statuses, _, err := scraper.Scrape(source, 5*time.Second, 2, nil) // max 2 concurrent
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 2, nil) // max 2 concurrent
 		duration := time.Since(start)
 
 		require.NoError(t, err)
@@ -845,7 +928,7 @@ func TestPrometheusScraper_EdgeCases(t *testing.T) {
 		}
 
 		// Use very short timeout
-		statuses, _, err := scraper.Scrape(source, 10*time.Millisecond, 1, nil)
+		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 10*time.Millisecond, 1, nil)
 		require.NoError(t, err) // Scrape method always returns success
 		require.Len(t, statuses, 1)
 		assert.Equal(t, "unavailable", statuses[0].Status) // Should be unavailable due to timeout

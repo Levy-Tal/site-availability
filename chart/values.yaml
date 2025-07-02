@@ -18,7 +18,11 @@ fullnameOverride: ""
 # Environment variables for the exporter container
 env:
   CONFIG_FILE: /app/config.yaml
-#  CUSTOM_CA_PATH: /app/ca.crt
+
+# Credentials configuration
+credentials:
+  # Name of the secret containing credentials
+  credentialsSecretName: ""
 
 # Secret references to be passed as environment variables
 extraSecretNameForEnvFrom: []
@@ -28,68 +32,44 @@ configFile:
   enabled: true
   content:
     server_settings:
-      port: 8080
-      sync_enable: true
-      sync_port: 3030
-    scrape_interval: 10s
-    scrape_timeout: 1s
-    max_parallel_scrapes: 10
-    docs_title: "DR documentation"
-    docs_url: "https://google.com"
+      port: "8080"
+      sync_enable: false
+      custom_ca_path: ""
+
+    scraping:
+      interval: "10s"
+      timeout: "5s"
+      max_parallel: 10
+
+    documentation:
+      title: "DR documentation"
+      url: "https://google.com"
+
     locations:
-      - name: Hadera
+      - name: "Hadera"
         latitude: 32.446235
         longitude: 34.903852
-      - name: עברית
+      - name: "Jerusalem"
         latitude: 31.782904
         longitude: 35.214774
-      - name: טל לוי
+      - name: "Beer Sheva"
         latitude: 31.245381
         longitude: 34.788745
-    apps:
-      - name: app1
-        location: Hadera
-        metric: up{job="site-availability"}
-        prometheus: http://prometheus-operated:9090/
-      - name: app3
-        location: עברית
-        metric: up{container="alertmanager"}
-        prometheus: http://prometheus-operated:9090/
-      - name: app4
-        location: טל לוי
-        metric: 1-up{container="alertmanager"}
-        prometheus: http://promethaseus-operated:9090/
-      - name: app2
-        location: Hadera
-        metric: up{job="site-availability"}
-        prometheus: http://prometheus-operated:9090/
-      - name: app5
-        location: עברית
-        metric: up{container="alertmanager"}
-        prometheus: http://prometheus-operated:9090/
-      - name: app6
-        location: טל לוי
-        metric: 1-up{container="alertmanager"}
-        prometheus: http://prometsdfheus-operated:9090/
-      - name: app8
-        location: טל לוי
-        metric: 1-up{container="alertmanager"}
-        prometheus: http://prometheus-operated:9090/
-      - name: app7
-        location: טל לוי
-        metric: 1-up{container="alertmanager"}
-        prometheus: http://prometheus-operated:9090/
-    sites:
-      - name: "Site A"
-        url: "http://site-a:3030"
-        check_interval: "1m"
-        timeout: "5s"
-        enabled: true
-      - name: "Site B"
-        url: "http://site-b:3030"
-        check_interval: "1m"
-        timeout: "5s"
-        enabled: true
+
+    sources:
+      - name: "prometheus-main"
+        type: "prometheus"
+        url: "http://prometheus-operated:9090"
+        apps:
+          - name: "app1"
+            location: "Hadera"
+            metric: 'up{job="site-availability"}'
+          - name: "app2"
+            location: "Jerusalem"
+            metric: 'up{container="alertmanager"}'
+          - name: "app3"
+            location: "Beer Sheva"
+            metric: 'up{container="alertmanager"}'
 
 # Pod annotations for extra metadata
 podAnnotations: {}
@@ -178,30 +158,3 @@ externalSecrets: []
 #        remoteKey: production/db-password
 #      - secretKey: api-key
 #        remoteKey: production/api-key
-
-# Credentials configuration
-credentials:
-  # Name of the secret containing credentials
-  credentialsSecretName: ""
-
-# Site sync configuration
-siteSync:
-  enabled: true
-  port: 3030
-  serverToken:
-    secretName: site-sync-server-token
-    secretKey: token
-  siteTokens:
-    secretName: site-sync-site-tokens
-    secretKey: tokens
-  service:
-    type: ClusterIP
-    port: 3030
-    targetPort: 3030
-  resources:
-    requests:
-      memory: "64Mi"
-      cpu: "100m"
-    limits:
-      memory: "128Mi"
-      cpu: "200m"

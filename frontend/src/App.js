@@ -1,38 +1,39 @@
 import React, { useState, useEffect } from "react";
 import { MapComponent } from "./map";
 import { AppStatusPanel } from "./AppStatusPanel";
-import { fetchAppStatuses } from "./api/appStatusAPI";
+import Sidebar from "./Sidebar";
+import { fetchLocations, fetchApps } from "./api/appStatusAPI";
 import { fetchScrapeInterval } from "./api/scrapeIntervalAPI";
 import { fetchDocs } from "./api/docsAPI";
-import { FaBook } from "react-icons/fa"; // Import the docs icon
 import "./styles/main.css";
 
 function App() {
   const [locations, setLocations] = useState([]);
-  const [apps, setApps] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [scrapeInterval, setScrapeInterval] = useState(null);
   const [docsInfo, setDocsInfo] = useState({ docs_title: "", docs_url: "" });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [statusFilters, setStatusFilters] = useState([]);
+  const [labelFilters, setLabelFilters] = useState([]);
 
-  // Fetch app statuses from the server
-  const refreshAppStatuses = async () => {
+  // Fetch locations with their calculated status from the server
+  const refreshLocations = async () => {
     try {
-      const data = await fetchAppStatuses();
-      setLocations(data.locations || []); // Fallback to an empty array if locations are null
-      setApps(data.apps || []); // Fallback to an empty array if apps are null
+      const locationsData = await fetchLocations(statusFilters, labelFilters);
+      setLocations(locationsData);
     } catch (error) {
-      console.error("Error refreshing app statuses:", error);
+      console.error("Error refreshing locations:", error);
     }
   };
 
   useEffect(() => {
-    // Fetch scrape interval, app statuses, and docs info on initial load
+    // Fetch scrape interval, locations, and docs info on initial load
     const initialize = async () => {
       try {
         const intervalData = await fetchScrapeInterval();
         setScrapeInterval(intervalData.scrape_interval_ms); // Set scrape interval in ms
-        await refreshAppStatuses(); // Fetch initial app statuses
+        await refreshLocations(); // Fetch initial locations with status
 
         const docsData = await fetchDocs();
         setDocsInfo(docsData); // Set docs info
@@ -45,15 +46,20 @@ function App() {
 
   useEffect(() => {
     if (scrapeInterval) {
-      // Set up periodic refresh of app statuses
+      // Set up periodic refresh of locations
       const intervalId = setInterval(() => {
-        refreshAppStatuses();
+        refreshLocations();
       }, scrapeInterval);
 
       // Clean up interval on component unmount or when scrapeInterval changes
       return () => clearInterval(intervalId);
     }
-  }, [scrapeInterval]);
+  }, [scrapeInterval, statusFilters, labelFilters]);
+
+  // Refresh locations when filters change
+  useEffect(() => {
+    refreshLocations();
+  }, [statusFilters, labelFilters]);
 
   const handleSiteClick = (site) => {
     if (selectedSite === site) {
@@ -64,27 +70,62 @@ function App() {
     }
   };
 
+  const handlePanelClose = () => {
+    setIsPanelOpen(false);
+    setSelectedSite(null);
+  };
+
+  const handleDocsClick = () => {
+    if (docsInfo.docs_url) {
+      window.open(docsInfo.docs_url, "_blank");
+    }
+  };
+
+  const handleStatusFilterChange = (status) => {
+    setStatusFilters((prevFilters) => {
+      if (prevFilters.includes(status)) {
+        // Remove the status if it's already selected
+        return prevFilters.filter((filter) => filter !== status);
+      } else {
+        // Add the status if it's not selected
+        return [...prevFilters, status];
+      }
+    });
+  };
+
+  const handleLabelFilterChange = (newLabelFilters) => {
+    setLabelFilters(newLabelFilters);
+  };
+
+  const handleSidebarToggle = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   return (
-    <div className="app-container">
-      {docsInfo.docs_url && (
-        <div
-          className="docs-button"
-          onClick={() => window.open(docsInfo.docs_url, "_blank")}
-          title={docsInfo.docs_title}
-        >
-          <FaBook size={24} />
-        </div>
-      )}
-      <MapComponent
-        locations={locations}
-        onSiteClick={handleSiteClick}
-        apps={apps}
+    <div
+      className={`app-container ${
+        isSidebarCollapsed
+          ? "app-container--with-sidebar app-container--sidebar-collapsed"
+          : "app-container--with-sidebar"
+      }`}
+    >
+      <Sidebar
+        onStatusFilterChange={handleStatusFilterChange}
+        onLabelFilterChange={handleLabelFilterChange}
+        onDocsClick={handleDocsClick}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={handleSidebarToggle}
+        selectedStatusFilters={statusFilters}
+        selectedLabels={labelFilters}
       />
+      <MapComponent locations={locations} onSiteClick={handleSiteClick} />
       {isPanelOpen && selectedSite && (
         <AppStatusPanel
           site={selectedSite}
-          apps={apps.filter((app) => app.location === selectedSite.name)} // Filter apps for the selected site
-          onClose={() => setIsPanelOpen(false)}
+          onClose={handlePanelClose}
+          scrapeInterval={scrapeInterval}
+          statusFilters={statusFilters}
+          labelFilters={labelFilters}
         />
       )}
     </div>

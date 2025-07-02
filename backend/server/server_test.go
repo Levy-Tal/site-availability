@@ -13,10 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper function to create mock source and server settings for tests
+func getMockSourceAndSettings(sourceName string) (config.Source, config.ServerSettings) {
+	source := config.Source{
+		Name:   sourceName,
+		Type:   "test",
+		URL:    "http://test.example.com",
+		Labels: map[string]string{"source_env": "test", "source_type": "mock"},
+	}
+
+	serverSettings := config.ServerSettings{
+		Labels: map[string]string{"server_env": "test", "server_region": "us-west"},
+	}
+
+	return source, serverSettings
+}
+
+// Helper function to call UpdateAppStatus with mock parameters
+func updateAppStatusTest(sourceName string, statuses []handlers.AppStatus) {
+	source, serverSettings := getMockSourceAndSettings(sourceName)
+	handlers.UpdateAppStatus(sourceName, statuses, source, serverSettings)
+}
+
 // setupServerTest clears the handlers cache for test isolation
 func setupServerTest() {
 	// Clear handlers cache to ensure test isolation
-	handlers.UpdateAppStatus("test-source", []handlers.AppStatus{})
+	updateAppStatusTest("test-source", []handlers.AppStatus{})
 }
 
 func TestNewServer(t *testing.T) {
@@ -91,7 +113,9 @@ func TestSetupRoutes(t *testing.T) {
 			method     string
 			statusCode int
 		}{
-			{"/api/status", "GET", http.StatusOK},
+			{"/api/locations", "GET", http.StatusOK},
+			{"/api/apps", "GET", http.StatusOK},
+			{"/api/labels", "GET", http.StatusOK},
 			{"/api/scrape-interval", "GET", http.StatusOK},
 			{"/api/docs", "GET", http.StatusOK},
 			{"/healthz", "GET", http.StatusOK},
@@ -229,12 +253,13 @@ func TestHealthProbes(t *testing.T) {
 		server := NewServer(&config.Config{})
 
 		// Add test data to cache
-		handlers.UpdateAppStatus("test-source", []handlers.AppStatus{
+		updateAppStatusTest("test-source", []handlers.AppStatus{
 			{
-				Name:     "test-app",
-				Location: "test-location",
-				Status:   "up",
-				Source:   "test-source",
+				Name:      "test-app",
+				Location:  "test-location",
+				Status:    "up",
+				Source:    "test-source",
+				OriginURL: "http://test-origin.com",
 			},
 		})
 
@@ -245,14 +270,14 @@ func TestHealthProbes(t *testing.T) {
 		assert.Equal(t, "OK", w.Body.String())
 
 		// Clean up
-		handlers.UpdateAppStatus("test-source", []handlers.AppStatus{})
+		updateAppStatusTest("test-source", []handlers.AppStatus{})
 	})
 }
 
 func TestRouteHandlers(t *testing.T) {
 	setupServerTest()
 
-	t.Run("api status endpoint", func(t *testing.T) {
+	t.Run("api locations endpoint", func(t *testing.T) {
 		cfg := &config.Config{
 			Locations: []config.Location{
 				{
@@ -266,7 +291,7 @@ func TestRouteHandlers(t *testing.T) {
 		server := NewServer(cfg)
 		server.setupRoutes()
 
-		req := httptest.NewRequest("GET", "/api/status", nil)
+		req := httptest.NewRequest("GET", "/api/locations", nil)
 		w := httptest.NewRecorder()
 		server.mux.ServeHTTP(w, req)
 
@@ -403,7 +428,9 @@ func TestServerBehavior(t *testing.T) {
 
 		// Test that specific API paths work correctly
 		validPaths := map[string]int{
-			"/api/status":          http.StatusOK,
+			"/api/locations":       http.StatusOK,
+			"/api/apps":            http.StatusOK,
+			"/api/labels":          http.StatusOK,
 			"/api/scrape-interval": http.StatusOK,
 			"/api/docs":            http.StatusOK,
 			"/healthz":             http.StatusOK,
@@ -465,11 +492,11 @@ func TestServerBehavior(t *testing.T) {
 			assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 		})
 
-		t.Run("PUT /api/status", func(t *testing.T) {
-			req := httptest.NewRequest("PUT", "/api/status", nil)
+		t.Run("PUT /api/locations", func(t *testing.T) {
+			req := httptest.NewRequest("PUT", "/api/locations", nil)
 			w := httptest.NewRecorder()
 			server.mux.ServeHTTP(w, req)
-			// The status handler doesn't check method, so it returns 200
+			// The locations handler doesn't check method, so it returns 200
 			assert.Equal(t, http.StatusOK, w.Code)
 		})
 	})
