@@ -3,6 +3,8 @@
 [![CI](https://github.com/Levy-Tal/site-availability/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Levy-Tal/site-availability/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/Levy-Tal/site-availability/graph/badge.svg?token=K3PLCUDMX9)](https://codecov.io/gh/Levy-Tal/site-availability)
 
+![Logo](docs/images/logo-full.png)
+
 **Site Availability Monitoring** is an open-source application designed to monitor the availability of applications and services across multiple locations. It provides a visual representation of application statuses on a world map and integrates with Prometheus for metrics collection.
 
 ## Features
@@ -12,6 +14,20 @@
 - Historical data tracking
 - Alert notifications
 - New feature: Automated status reports generation
+
+## 📚 Documentation
+
+For comprehensive documentation, please visit our [**Documentation**](https://levy-tal.github.io/site-availability/).
+
+The documentation includes:
+
+- Getting Started Guide
+- Installation Instructions
+- Configuration Options
+- API Reference
+- Deployment Strategies
+- Development Guide
+- Troubleshooting
 
 ## Development
 
