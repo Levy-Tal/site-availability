@@ -30,24 +30,18 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
-<<<<<<< HEAD
   - README.md
-=======
->>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92
 
-# Custom configuration for our dark theme
+# GitHub Pages settings
 sass:
   style: compressed
 
-<<<<<<< HEAD
-# GitHub Pages specific settings
 repository: tal/site-availability
 github:
   private: false
-=======
+
 # Collections for better organization
 collections:
   docs:
     output: true
     permalink: /:collection/:name/
->>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92

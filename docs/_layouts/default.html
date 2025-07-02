@@ -2,7 +2,6 @@
 <html lang="{{ page.lang | default: site.lang | default: " en" }}">
 
 <head>
-<<<<<<< HEAD
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,16 +11,6 @@
     <meta name="description"
         content="{{ page.excerpt | default: site.description | strip_html | normalize_whitespace | truncate: 160 | escape }}" />
     {% seo %}
-=======
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ " /favicon.ico" | relative_url }}">
-    <link rel="stylesheet" href="{{ " /assets/css/main.css" | relative_url }}">
-    <title>{% if page.title %}{{ page.title | escape }} | {% endif %}{{ site.title | escape }}</title>
-    <meta name="description"
-        content="{{ page.excerpt | default: site.description | strip_html | normalize_whitespace | truncate: 160 | escape }}">
->>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92
 </head>
 
 <body>
@@ -31,11 +20,7 @@
                 <header class="sidebar__header">
                     <div class="sidebar__logo">
                         <img src="{{ " /images/logo-full.png" | relative_url }}" alt="{{ site.title }}"
-<<<<<<< HEAD
                             class="sidebar__logo-image" />
-=======
-                            class="sidebar__logo-image">
->>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92
                         <span class="sidebar__logo-text">{{ site.title }}</span>
                     </div>
                     <button class="sidebar__collapse-button" onclick="toggleSidebar()">
@@ -83,38 +68,25 @@
         </main>
     </div>
 
-<<<<<<< HEAD
-    <script>           function toggleSidebar()                 const container = document.querySelector('.app-containe                   const sidebar = document.querySelector('.side
-        const icon = document.querySelector('.sidebar__collapse)                 sidebar.classList.toggle('sidebar--collapse                   container.classList.toggle('app-container--sidebar-collap
-        icon.textContent = sidebar.classList.contains('sidebar--collapsed') ? '›        '‹'            }
-
-      // Smooth scrolling for         or links
-      document.querySelectorAll('a[href^="#"]').forEa            chor) => {
-            anchor.addEventListener('clic                tion (e) {
-                         ntDefault();
-            document.querySelector(this.getAttribute('hr                    llIntoView({
-                      havi            moot                     });
-      });
-=======
     <script>
-            function toggleSidebar(                      const container = document.querySelector('.app-con            ');
-            const sidebar = document.querySelect            idebar');
-            const icon = document.querySelector('.sideo            -icon');
+        function toggleSidebar() {
+            const container = document.querySelector('.app-container');
+            const sidebar = document.querySelector('.sidebar');
+            const icon = document.querySelector('.sidebar__collapse-icon');
 
-            sidebar.classList.toggle('            r--collapsed');
-            container.classList.toggle('app-cont            -sidebar-collapsed');
-            icon.textContent = sidebar.classList.contains('        bar        llapsed') ? '›' : '‹';
+            sidebar.classList.toggle('sidebar--collapsed');
+            container.classList.toggle('app-container--sidebar-collapsed');
+            icon.textContent = sidebar.classList.contains('sidebar--collapsed') ? '›' : '‹';
         }
 
-            // Smooth scrolling for anchor links
-        document.querySe            All('a[href^="#"]').forEach(anchor => {
-                        or.addEventListener(                 function (e) {
+        document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+            anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                                   querySelector(this.                bute            ')).        llInVie                 behavior: 'smooth'
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth',
                 });
             });
         });
->>>>>>> 822a294e694b48ddcb2ddbf2a8b7e72de4f93b92
     </script>
 </body>
 
