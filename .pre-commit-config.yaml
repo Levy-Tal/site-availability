@@ -7,6 +7,7 @@ repos:
       - id: check-yaml
         exclude: ^chart/templates/.*\.yaml$
       - id: check-added-large-files
+        exclude: package-lock\.json$
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-case-conflict

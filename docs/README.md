@@ -1,56 +1,41 @@
-# Site Availability Monitor Documentation
+# Website
 
-This directory contains the documentation for the Site Availability Monitor project, designed for GitHub Pages.
+This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-## Documentation Structure
+## Installation
 
-- **[Home](index.md)** - Main documentation homepage
-- **[Getting Started](getting-started.md)** - Quick start guide and prerequisites
-- **[Installation](installation.md)** - Detailed installation instructions
-- **[Configuration](configuration.md)** - Configuration options and settings
-- **[API Documentation](api.md)** - REST API reference
-- **[Frontend Guide](frontend.md)** - Dashboard and UI documentation
-- **[Deployment](deployment.md)** - Production deployment strategies
-- **[Development](development.md)** - Developer guide and contribution setup
-- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
-- **[Contributing](contributing.md)** - Contribution guidelines and standards
-
-## GitHub Pages Setup
-
-This documentation is configured for GitHub Pages using Jekyll with the following features:
-
-- **Theme**: Minima
-- **Markdown**: Kramdown
-- **Syntax Highlighting**: Rouge
-- **Plugins**: Feed, Sitemap
+```bash
+yarn
+```
 
 ## Local Development
 
-To run the documentation locally:
-
 ```bash
-# Install dependencies
-bundle install
-
-# Serve the documentation
-bundle exec jekyll serve
-
-# View at http://localhost:4000
+yarn start
 ```
 
-## Contributing to Documentation
+This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
 
-1. Fork the repository
-2. Create a feature branch
-3. Edit the markdown files
-4. Test locally
-5. Submit a pull request
+## Build
 
-## File Organization
+```bash
+yarn build
+```
 
-- `_config.yml` - Jekyll configuration
-- `index.md` - Homepage
-- `*.md` - Individual documentation pages
-- `assets/` - Images and other assets (if needed)
+This command generates static content into the `build` directory and can be served using any static contents hosting service.
 
-For more information about the project, see the main repository README.
+## Deployment
+
+Using SSH:
+
+```bash
+USE_SSH=true yarn deploy
+```
+
+Not using SSH:
+
+```bash
+GIT_USER=<Your GitHub username> yarn deploy
+```
+
+If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.

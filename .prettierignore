@@ -34,9 +34,3 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-
-# Jekyll files with Liquid syntax
-docs/_layouts/
-docs/_includes/
-docs/_sass/
-docs/assets/css/main.css 
