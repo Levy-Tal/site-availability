@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Frontend Overview
 
-The Site Availability Monitoring frontend is a modern React application that provides an interactive world map visualization for monitoring application status across geographic locations.
+The Site Availability frontend is a modern React application that provides an interactive world map visualization for monitoring application status across geographic locations.
 
 ## Technology Stack
 

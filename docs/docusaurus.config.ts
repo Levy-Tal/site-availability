@@ -1,11 +1,9 @@
 import { themes as prismThemes } from "prism-react-renderer";
-import type { Config } from "@docusaurus/types";
-import type * as Preset from "@docusaurus/preset-classic";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
-const config: Config = {
-  title: "Site Availability Monitoring",
+const config = {
+  title: "Site Availability",
   tagline:
     "Monitor the availability of applications and services across multiple locations",
   favicon: "img/favicon.ico",
@@ -66,7 +64,7 @@ const config: Config = {
         theme: {
           customCss: "./src/css/custom.css",
         },
-      } satisfies Preset.Options,
+      },
     ],
   ],
 
@@ -74,10 +72,10 @@ const config: Config = {
     // Replace with your project's social card
     image: "img/docusaurus-social-card.jpg",
     navbar: {
-      title: "Site Availability Monitoring",
+      title: "Site Availability",
       logo: {
-        alt: "Site Availability Monitoring Logo",
-        src: "img/logo.svg",
+        alt: "Site Availability Logo",
+        src: "img/logo.png",
       },
       items: [
         {
@@ -133,13 +131,13 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Site Availability Monitoring. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Site Availability. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-  } satisfies Preset.ThemeConfig,
+  } as const,
 };
 
 export default config;

@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # API Overview
 
-The Site Availability Monitoring API provides RESTful endpoints for accessing application status, configuration, and metrics data.
+The Site Availability API provides RESTful endpoints for accessing application status, configuration, and metrics data.
 
 ## Base URL
 

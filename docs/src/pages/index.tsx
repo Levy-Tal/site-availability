@@ -13,6 +13,13 @@ function HomepageHeader() {
   return (
     <header className={clsx("hero hero--primary", styles.heroBanner)}>
       <div className="container">
+        <div className={styles.logoContainer}>
+          <img
+            src="/site-availability/img/logo.png"
+            alt="Site Availability Logo"
+            className={styles.heroLogo}
+          />
+        </div>
         <Heading as="h1" className="hero__title">
           {siteConfig.title}
         </Heading>
@@ -22,7 +29,7 @@ function HomepageHeader() {
             className="button button--secondary button--lg"
             to="/docs/intro"
           >
-            Docusaurus Tutorial - 5min ⏱️
+            Get Started - 5min ⏱️
           </Link>
         </div>
       </div>

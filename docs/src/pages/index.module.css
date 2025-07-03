@@ -21,3 +21,36 @@
   align-items: center;
   justify-content: center;
 }
+
+.logoContainer {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heroLogo {
+  height: 120px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+  transition:
+    transform 0.3s ease,
+    filter 0.3s ease;
+}
+
+.heroLogo:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
+}
+
+@media screen and (max-width: 996px) {
+  .heroLogo {
+    height: 80px;
+  }
+
+  .logoContainer {
+    margin-bottom: 1.5rem;
+  }
+}

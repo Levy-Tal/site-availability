@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Metrics Integration
 
-Monitor Site Availability Monitoring with Prometheus metrics and integrate with observability platforms.
+Monitor Site Availability with Prometheus metrics and integrate with observability platforms.
 
 ## Prometheus Metrics Endpoint
 

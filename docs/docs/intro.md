@@ -2,9 +2,9 @@
 sidebar_position: 1
 ---
 
-# Site Availability Monitoring
+# Site Availability
 
-Welcome to **Site Availability Monitoring** - an open-source application designed to monitor the availability of applications and services across multiple locations with real-time visualization and comprehensive metrics collection.
+Welcome to **Site Availability** - an open-source application designed to monitor the availability of applications and services across multiple locations with real-time visualization and comprehensive metrics collection.
 
 ## Overview
 

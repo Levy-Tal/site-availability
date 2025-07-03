@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Configuration Overview
 
-Site Availability Monitoring is highly configurable to suit different environments and monitoring needs. This section covers all configuration options and best practices.
+Site Availability is highly configurable to suit different environments and monitoring needs. This section covers all configuration options and best practices.
 
 ## Configuration Architecture
 

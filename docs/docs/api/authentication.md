@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Authentication
 
-Secure your Site Availability Monitoring API with HMAC-SHA256 authentication.
+Secure your Site Availability API with HMAC-SHA256 authentication.
 
 ## Overview
 
