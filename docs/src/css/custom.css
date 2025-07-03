@@ -412,19 +412,29 @@ tbody tr:hover {
 
 /* Homepage Enhancements */
 .hero {
-  background: linear-gradient(
-    135deg,
-    var(--sa-white) 0%,
-    var(--sa-light-bg) 100%
-  );
-  border-bottom: 1px solid var(--sa-border);
+  background: linear-gradient(135deg, var(--sa-dark-bg) 0%, #404040 100%);
+  color: var(--sa-light-text);
+  padding: var(--sa-spacing-xl) 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .hero__title {
-  background: linear-gradient(135deg, var(--sa-dark-bg) 0%, #1a1a1a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--sa-light-text);
+  font-weight: 700;
+  font-size: 3rem;
+  margin-bottom: var(--sa-spacing-lg);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Hero tagline styling for proper contrast */
+.hero__subtitle {
+  color: var(--sa-light-text) !important;
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin-bottom: var(--sa-spacing-xl);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  opacity: 0.95;
 }
 
 /* Status Indicators (for custom usage) */
@@ -566,14 +576,15 @@ tbody tr:hover {
 
 [data-theme="dark"] .hero {
   background: linear-gradient(135deg, var(--sa-dark-bg) 0%, #1a1a1a 100%);
-  border-bottom-color: #404040;
 }
 
 [data-theme="dark"] .hero__title {
-  background: linear-gradient(135deg, var(--sa-light-text) 0%, #ffffff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--sa-light-text);
+}
+
+[data-theme="dark"] .hero__subtitle {
+  color: var(--sa-light-text) !important;
+  opacity: 0.9;
 }
 
 [data-theme="dark"] .pagination__item--active .pagination__link {
