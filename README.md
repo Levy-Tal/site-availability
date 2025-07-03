@@ -1,5 +1,5 @@
 <div align="center">
-  
+
 # Site Availability Monitoring
 
 <img src="docs/images/logo-full.png" alt="Site Availability Monitor Logo" width="400">
@@ -155,7 +155,15 @@ Customize the deployment by editing `chart/values.yaml`.
 ### Environment Variables
 
 - `CONFIG_FILE`: Path to the configuration file (default: `config.yaml`)
-- `CUSTOM_CA_PATH`: Path to custom CA certificates
+
+### Custom CA Certificates
+
+Custom CA certificates can be configured in the `config.yaml` file:
+
+```yaml
+server_settings:
+  custom_ca_path: /app/ca.crt
+```
 
 ---
 

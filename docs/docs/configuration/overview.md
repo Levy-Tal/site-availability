@@ -73,8 +73,9 @@ SA_SCRAPE_INTERVAL=60s
 SA_AUTHENTICATION_HMAC_ENABLED=true
 SA_AUTHENTICATION_HMAC_SECRET=your-secret
 
-# Custom CA certificates
-SA_CERTIFICATES_CUSTOM_CA_PATH=/app/certs
+# Custom CA certificates (configured in config.yaml)
+# server_settings:
+#   custom_ca_path: /app/certs
 ```
 
 ## Configuration Validation
@@ -153,7 +154,7 @@ authentication:
     secret: ${SA_HMAC_SECRET}
 
 # Custom certificates
-certificates:
+server_settings:
   custom_ca_path: /app/certs
 
 locations:

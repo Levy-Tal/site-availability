@@ -31,6 +31,8 @@ func NewServer(cfg *config.Config) *Server {
 
 // Start initializes and starts the server
 func (s *Server) Start() error {
+	// Initialize custom CA certificates if configured
+	scraping.InitCertificateFromPath(s.config.ServerSettings.CustomCAPath)
 	scraping.InitScrapers(s.config)
 	metrics.Init()
 	scraping.Start(s.config)

@@ -66,8 +66,9 @@ CONFIG_FILE=/app/config.yaml
 LOG_LEVEL=info
 PORT=8080
 
-# Custom CA certificates
-CUSTOM_CA_PATH=/app/certs
+# Custom CA certificates (configured in config.yaml)
+# server_settings:
+#   custom_ca_path: /app/certs
 
 # Prometheus settings
 PROMETHEUS_URL=http://prometheus:9090

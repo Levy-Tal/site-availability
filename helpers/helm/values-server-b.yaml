@@ -1,0 +1,135 @@
+# Values for server-b deployment
+# This configuration mirrors config-b.yaml for local Kubernetes testing
+
+replicaCount: 1
+
+image:
+  repository: levytal/site-availability
+  pullPolicy: IfNotPresent
+
+# Configuration file content for server-b
+configFile:
+  enabled: true
+  content:
+    server_settings:
+      port: 8080
+      sync_enable: true
+      labels:
+        environment: "staging"
+        region: "israel"
+        datacenter: "backup"
+        team: "platform"
+
+    scraping:
+      interval: "60s"
+      timeout: "1s"
+      max_parallel: 10
+
+    documentation:
+      title: "Server B Documentation"
+      url: "https://server-b.example.com/docs"
+
+    locations:
+      - name: Beer Sheva
+        latitude: 31.245381
+        longitude: 34.788745
+      - name: Netanya
+        latitude: 33.04198
+        longitude: 35.51537
+
+    sources:
+      - name: prom1
+        type: prometheus
+        url: http://prometheus-server-b:9090
+        labels:
+          service: "staging-monitoring"
+          tier: "backend"
+          criticality: "medium"
+        apps:
+          - name: app3
+            location: Beer Sheva
+            metric: up{instance="app:8080", job="app"}
+            labels:
+              app_type: "web-service"
+              importance: "medium"
+              owner: "backend-team"
+              stage: "testing"
+          - name: b-app4
+            location: Netanya
+            metric: up{instance="localhost:9090", job="prometheus"}
+            labels:
+              app_type: "monitoring"
+              importance: "high"
+              owner: "sre-team"
+              stage: "staging"
+      - name: Server A
+        type: site
+        url: http://site-availability-server-a:8080
+        labels:
+          service: "remote-monitoring"
+          tier: "integration"
+          criticality: "low"
+
+# Service settings
+service:
+  type: ClusterIP
+  port: 8080
+
+# Ingress for local access
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: server-b.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource requests and limits
+resources:
+  limits:
+    memory: 256Mi
+    ephemeral-storage: 100Mi
+    cpu: 500m
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 50Mi
+
+# ServiceMonitor for Prometheus scraping
+serviceMonitor:
+  enabled: true
+  scrapeInterval: 10s
+  additionalLabels:
+    release: prometheus-server-b
+
+# Prometheus rules
+prometheusRules:
+  enabled: true
+
+# Grafana dashboards
+grafanaDashboards:
+  enabled: true
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# Security context
+podSecurityContext:
+  fsGroup: 10001
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  allowPrivilegeEscalation: false

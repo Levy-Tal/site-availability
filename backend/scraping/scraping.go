@@ -51,12 +51,11 @@ func createUnavailableStatuses(source config.Source) []handlers.AppStatus {
 	return statuses
 }
 
-// InitCertificate loads CA certificates from the file paths listed in the given environment variable name.
-// The environment variable value may contain multiple file paths separated by ":".
-func InitCertificate(envVarName string) {
-	caPath := os.Getenv(envVarName)
+// InitCertificateFromPath loads CA certificates from the given file path(s).
+// Multiple paths can be separated by ":".
+func InitCertificateFromPath(caPath string) {
 	if caPath == "" {
-		logging.Logger.WithField("env", envVarName).Info("Env var not set. Using default TLS config.")
+		logging.Logger.Info("No CA certificate path provided. Using default TLS config.")
 		globalTLSConfig = nil
 		return
 	}
@@ -87,7 +86,7 @@ func InitCertificate(envVarName string) {
 		InsecureSkipVerify: false, // Only set true if you know what you're doing
 	}
 
-	logging.Logger.WithField("env", envVarName).Info("Custom CA certificates loaded successfully")
+	logging.Logger.WithField("ca_path", caPath).Info("Custom CA certificates loaded successfully")
 }
 
 // GetHTTPClient creates an HTTP client with the configured timeout and TLS config
@@ -110,7 +109,13 @@ func InitScrapers(cfg *config.Config) {
 			Scrapers[src.Name] = prometheus.NewPrometheusScraper()
 		case "site":
 			Scrapers[src.Name] = site.NewSiteScraper()
-			// Add more types as needed
+		default:
+			// Fail immediately on first unsupported type
+			logging.Logger.WithFields(map[string]interface{}{
+				"source_name":     src.Name,
+				"source_type":     src.Type,
+				"supported_types": []string{"prometheus", "site"},
+			}).Fatal("Unsupported source type encountered. Please fix the source type in your configuration file.")
 		}
 	}
 }

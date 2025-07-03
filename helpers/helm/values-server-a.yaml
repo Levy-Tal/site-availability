@@ -1,0 +1,173 @@
+# Values for server-a deployment
+# This configuration mirrors config-a.yaml for local Kubernetes testing
+
+replicaCount: 1
+
+image:
+  repository: levytal/site-availability
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Name overrides to create unique resources
+nameOverride: "server-a"
+fullnameOverride: "site-availability-server-a"
+
+# Environment variables for the exporter container
+env:
+  CONFIG_FILE: /app/config.yaml
+
+# Configuration file content for server-a
+configFile:
+  enabled: true
+  content:
+    server_settings:
+      port: 8080
+      sync_enable: true
+      labels:
+        environment: "production"
+        region: "israel"
+        datacenter: "main"
+        team: "platform"
+
+    scraping:
+      interval: "10s"
+      timeout: "1s"
+      max_parallel: 10
+
+    documentation:
+      title: "Server A Documentation"
+      url: "https://server-a.example.com/docs"
+
+    locations:
+      - name: Hadera
+        latitude: 32.446235
+        longitude: 34.903852
+      - name: Jerusalem
+        latitude: 31.782904
+        longitude: 35.214774
+      - name: Beer Sheva
+        latitude: 31.245381
+        longitude: 34.788745
+      - name: Netanya
+        latitude: 33.04198
+        longitude: 35.51537
+      - name: negev
+        latitude: 29.96649
+        longitude: 34.89450
+
+    sources:
+      - name: prom1
+        type: prometheus
+        url: http://prometheus-server-a:9090
+        labels:
+          service: "core-monitoring"
+          tier: "backend"
+          criticality: "high"
+        apps:
+          - name: a-app1
+            location: Hadera
+            metric: up{instance="app:8080", job="app"}
+            labels:
+              app_type: "web-service"
+              importance: "critical"
+              owner: "backend-team"
+          - name: a-app2
+            location: Jerusalem
+            metric: up{instance="localhost:9090", job="prometheus"}
+            labels:
+              app_type: "monitoring"
+              importance: "critical"
+              owner: "sre-team"
+          - name: app3
+            location: Beer Sheva
+            metric: up{instance="localhost:9090", job="prometheus"}
+            labels:
+              app_type: "monitoring"
+              importance: "high"
+              owner: "sre-team"
+          - name: a-app4
+            location: Beer Sheva
+            metric: up{instance="app:8080", job="app"}
+            labels:
+              app_type: "web-service"
+              importance: "medium"
+              owner: "backend-team"
+          - name: a-app5
+            location: Netanya
+            metric: 1 - up{instance="localhost:9090", job="prometheus"}
+            labels:
+              app_type: "test-service"
+              importance: "low"
+              owner: "qa-team"
+              inverted: "true"
+          - name: a-app6
+            location: Beer Sheva
+            metric: up{instance="app:8080", job="app"}
+            labels:
+              app_type: "web-service"
+              importance: "medium"
+              owner: "frontend-team"
+
+# Service settings
+service:
+  type: ClusterIP
+  port: 8080
+
+# Ingress for local access
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: server-a.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource requests and limits
+resources:
+  limits:
+    memory: 256Mi
+    ephemeral-storage: 100Mi
+    cpu: 500m
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 50Mi
+
+# ServiceMonitor for Prometheus scraping
+serviceMonitor:
+  enabled: true
+  scrapeInterval: 10s
+  additionalLabels:
+    release: prometheus-server-a
+
+# Prometheus rules
+prometheusRules:
+  enabled: true
+
+# Grafana dashboards
+grafanaDashboards:
+  enabled: true
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# Security context
+podSecurityContext:
+  fsGroup: 10001
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  allowPrivilegeEscalation: false
