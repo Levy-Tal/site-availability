@@ -15,7 +15,7 @@ function HomepageHeader() {
       <div className="container">
         <div className={styles.logoContainer}>
           <img
-            src="/site-availability/img/logo.png"
+            src="/site-availability/img/logo-full.png"
             alt="Site Availability Logo"
             className={styles.heroLogo}
           />
