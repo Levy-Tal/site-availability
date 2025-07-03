@@ -3,6 +3,8 @@
   align-items: center;
   padding: 2rem 0;
   width: 100%;
+  background: var(--sa-light-bg);
+  margin-top: 2rem;
 }
 
 .featureSvg {
@@ -16,13 +18,9 @@
   object-fit: contain;
   margin-bottom: 1rem;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 .featureImage:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
