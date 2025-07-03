@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="atom.xsl"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://levy-tal.github.io/site-availability/blog</id>
-    <title>Site Availability Monitoring Blog</title>
+    <title>Site Availability Blog</title>
     <updated>2021-08-26T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://levy-tal.github.io/site-availability/blog"/>
-    <subtitle>Site Availability Monitoring Blog</subtitle>
+    <subtitle>Site Availability Blog</subtitle>
     <icon>https://levy-tal.github.io/site-availability/img/favicon.ico</icon>
     <entry>
         <title type="html"><![CDATA[Welcome]]></title>
