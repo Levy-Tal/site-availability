@@ -1,3 +1,13 @@
+## [2.1.1](https://github.com/Levy-Tal/site-availability/compare/v2.1.0...v2.1.1) (2025-07-03)
+
+
+### Bug Fixes
+
+* **ca_cert:** fix ca_cert ([9655175](https://github.com/Levy-Tal/site-availability/commit/965517529c127681a41c25cc560eecfa4ddc24be))
+* **ca_cert:** fix ca_cert ([4e21ab2](https://github.com/Levy-Tal/site-availability/commit/4e21ab2f1c6da8d5ff2e449095398cb2d850e2e7))
+* **ca:** fix ca_cert not loading ([dce3ee4](https://github.com/Levy-Tal/site-availability/commit/dce3ee4f94a8ea53313d2e805ace5f80f4c1b19d))
+* **ca:** fix ca_cert not loading ([67ccc85](https://github.com/Levy-Tal/site-availability/commit/67ccc85a205ce2ad986961d5b59f76e4a070f7cd))
+
 # [2.1.0](https://github.com/Levy-Tal/site-availability/compare/v2.0.1...v2.1.0) (2025-07-02)
 
 
