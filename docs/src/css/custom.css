@@ -399,9 +399,12 @@ tbody tr:hover {
 
 /* Footer */
 .footer {
-  background: var(--sa-dark-bg);
-  color: var(--sa-light-text);
-  border-top: 1px solid var(--sa-border);
+  background: linear-gradient(
+    135deg,
+    var(--sa-white) 0%,
+    var(--sa-light-bg) 100%
+  );
+  color: var(--sa-text-dark);
 }
 
 .footer__link-item {
@@ -409,7 +412,7 @@ tbody tr:hover {
 }
 
 .footer__link-item:hover {
-  color: var(--sa-white);
+  color: var(--sa-dark-bg);
   transform: translateY(-1px);
 }
 
@@ -662,6 +665,116 @@ tbody tr:hover {
   background: var(--sa-dark-bg);
   border-radius: var(--sa-radius-sm);
   border: 1px solid var(--sa-white);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--sa-light-text);
+  border: 1px solid var(--sa-dark-bg);
+}
+
+/* Rocket Button Animation */
+.rocket-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.rocket-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Rocket emoji animation */
+.rocket-button:hover::after {
+  content: "🚀";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: rocketShake 0.5s ease-in-out infinite;
+}
+
+/* Hide the original rocket emoji on hover */
+.rocket-button:hover {
+  color: transparent;
+}
+
+/* Smoke effect */
+.rocket-button::before {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  right: 20px;
+  width: 0;
+  height: 0;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(128, 128, 128, 0.6) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.rocket-button:hover::before {
+  opacity: 1;
+  width: 20px;
+  height: 20px;
+  animation: smokeEffect 1s ease-in-out infinite;
+}
+
+/* Rocket shaking animation */
+@keyframes rocketShake {
+  0%,
+  100% {
+    transform: translateY(-50%) rotate(0deg);
+  }
+
+  25% {
+    transform: translateY(-50%) rotate(-2deg);
+  }
+
+  75% {
+    transform: translateY(-50%) rotate(2deg);
+  }
+}
+
+/* Smoke animation */
+@keyframes smokeEffect {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/* Dark mode rocket button */
+[data-theme="dark"] .rocket-button:hover {
+  background: var(--sa-white);
+  color: var(--sa-dark-bg);
+}
+
+[data-theme="dark"] .rocket-button:hover::after {
+  content: "🚀";
 }
 
 ::-webkit-scrollbar-thumb:hover {
