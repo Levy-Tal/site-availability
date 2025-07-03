@@ -3,8 +3,6 @@
   align-items: center;
   padding: 2rem 0;
   width: 100%;
-  background: var(--sa-light-bg);
-  margin-top: 2rem;
 }
 
 .featureSvg {

@@ -676,8 +676,3 @@ tbody tr:hover {
   background: var(--sa-light-text);
   border: 1px solid var(--sa-dark-bg);
 }
-
-/* Dark theme features section */
-[data-theme="dark"] .features {
-  background: var(--sa-dark-bg);
-}
