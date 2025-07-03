@@ -56,7 +56,7 @@
   --ifm-color-primary-lighter: #4d4d4d;
   --ifm-color-primary-lightest: #666666;
 
-  /* Background and text colors */
+  /* Background and text colors - Light mode */
   --ifm-background-color: var(--sa-white);
   --ifm-font-color-base: var(--sa-text-dark);
   --ifm-font-family-base: var(--sa-font-family);
@@ -123,6 +123,7 @@
   --ifm-color-primary-lighter: #ffffff;
   --ifm-color-primary-lightest: #ffffff;
 
+  /* Background and text colors - Dark mode */
   --ifm-background-color: var(--sa-dark-bg);
   --ifm-font-color-base: var(--sa-light-text);
   --ifm-navbar-background-color: var(--sa-dark-bg);
@@ -230,6 +231,7 @@ h2 {
     var(--sa-light-bg) 100%
   );
   min-height: calc(100vh - 60px);
+  color: var(--sa-text-dark);
 }
 
 .container {
@@ -240,18 +242,19 @@ h2 {
 .markdown > div,
 .markdown section {
   background: var(--sa-white);
+  border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius-lg);
   padding: var(--sa-spacing-lg);
   margin-bottom: var(--sa-spacing-lg);
   box-shadow: 0 2px 8px var(--sa-shadow);
-  border: 1px solid var(--sa-border);
   transition: var(--sa-transition);
+  color: var(--sa-text-dark);
 }
 
 .markdown > div:hover,
 .markdown section:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px var(--sa-shadow-hover);
+  box-shadow: 0 4px 12px var(--sa-shadow-hover);
 }
 
 /* Code Blocks */
@@ -484,10 +487,35 @@ tbody tr:hover {
 [data-theme="dark"] .markdown section {
   background: #1a1a1a;
   border-color: #404040;
+  color: var(--sa-light-text);
 }
 
 [data-theme="dark"] .main-wrapper {
   background: var(--sa-dark-bg);
+  color: var(--sa-light-text);
+}
+
+/* Dark theme text color overrides */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: var(--sa-light-text);
+}
+
+[data-theme="dark"] p {
+  color: var(--sa-light-text);
+}
+
+[data-theme="dark"] li {
+  color: var(--sa-light-text);
+}
+
+[data-theme="dark"] td,
+[data-theme="dark"] th {
+  color: var(--sa-light-text);
 }
 
 /* Dark theme interactive elements fixes */
