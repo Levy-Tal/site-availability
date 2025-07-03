@@ -8,6 +8,21 @@
 [![codecov](https://codecov.io/gh/Levy-Tal/site-availability/graph/badge.svg?token=K3PLCUDMX9)](https://codecov.io/gh/Levy-Tal/site-availability)
 
 </div>
+
+<div align="center">
+
+⚠️ **DEVELOPMENT NOTICE** ⚠️
+
+**This repository is still under active development and is NOT recommended for production use.**
+
+Please be aware that this project is in early stages of development. Features may be incomplete, APIs may change, and there may be bugs or stability issues. Use at your own risk.
+
+For production environments, we recommend waiting for a stable release or contributing to help us reach production readiness.
+
+---
+
+</div>
+
 **Site Availability Monitoring** is an open-source application designed to monitor the availability of applications and services across multiple locations. It provides a visual representation of application statuses on a world map and integrates with Prometheus for metrics collection.
 
 ## Features
