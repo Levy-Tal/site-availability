@@ -503,14 +503,13 @@ func TestServerBehavior(t *testing.T) {
 	})
 }
 
-func TestServerCertificateInitialization(t *testing.T) {
-	t.Run("server initializes certificates from config", func(t *testing.T) {
-		// Create a temporary directory and certificate file
-		tempDir := t.TempDir()
-		certFile := filepath.Join(tempDir, "ca.pem")
+func TestServerInitializesCertificatesFromConfig(t *testing.T) {
+	// Create a temporary directory and certificate file
+	tempDir := t.TempDir()
+	certFile := filepath.Join(tempDir, "ca.pem")
 
-		// Create a valid PEM certificate (self-signed for testing)
-		certPEM := `-----BEGIN CERTIFICATE-----
+	// Create a valid PEM certificate (self-signed for testing)
+	certPEM := `-----BEGIN CERTIFICATE-----
 MIIBxTCCAWugAwIBAgIJAKjYQV+z9YlwMA0GCSqGSIb3DQEBCwUAMCkxJzAlBgNV
 BAMTHkVsYXN0aWNzZWFyY2ggVGVzdCBOb2RlOiBub2RlMTAeFw0yMDAzMDQxNTAy
 NDhaFw0yMjAzMDQxNTAyNDhaMCkxJzAlBgNVBAMTHkVsYXN0aWNzZWFyY2ggVGVz
@@ -522,114 +521,105 @@ SIb3DQEBCwUAA0EABhh2sxOe3lj8PzFd6NiMhTfNHZj7w7v3m3v3m3v3m3v3m3v3
 m3v3m3v3m3v3m3v3m3v3m3v3m3v3m3v3m3v3m3v3m3v3mw==
 -----END CERTIFICATE-----`
 
-		err := os.WriteFile(certFile, []byte(certPEM), 0644)
-		require.NoError(t, err)
+	err := os.WriteFile(certFile, []byte(certPEM), 0644)
+	require.NoError(t, err)
 
-		// Create config with custom CA path
-		cfg := &config.Config{
-			ServerSettings: config.ServerSettings{
-				Port:         "8080",
-				CustomCAPath: certFile,
+	// Create config with custom CA path
+	cfg := &config.Config{
+		ServerSettings: config.ServerSettings{
+			Port:         "8080",
+			CustomCAPath: certFile,
+		},
+		Scraping: config.ScrapingSettings{
+			Interval:    "10s",
+			Timeout:     "5s",
+			MaxParallel: 10,
+		},
+		Locations: []config.Location{
+			{
+				Name:      "Test Location",
+				Latitude:  31.782904,
+				Longitude: 35.214774,
 			},
-			Scraping: config.ScrapingSettings{
-				Interval:    "10s",
-				Timeout:     "5s",
-				MaxParallel: 10,
-			},
-			Locations: []config.Location{
-				{
-					Name:      "Test Location",
-					Latitude:  31.782904,
-					Longitude: 35.214774,
-				},
-			},
-			Sources: []config.Source{
-				{
-					Name: "test-prometheus",
-					Type: "prometheus",
-					URL:  "https://prometheus:9090",
-					Apps: []config.App{
-						{
-							Name:     "test-app",
-							Location: "Test Location",
-							Metric:   `up{instance="test"}`,
-						},
+		},
+		Sources: []config.Source{
+			{
+				Name: "test-prometheus",
+				Type: "prometheus",
+				URL:  "https://prometheus:9090",
+				Apps: []config.App{
+					{
+						Name:     "test-app",
+						Location: "Test Location",
+						Metric:   `up{instance="test"}`,
 					},
 				},
 			},
-		}
+		},
+	}
 
-		// Create server
-		srv := NewServer(cfg)
+	// Create server
+	srv := NewServer(cfg)
 
-		// Start server (this should initialize certificates)
-		// We'll start it in a goroutine and stop it immediately to test initialization
-		go func() {
-			_ = srv.Start()
-		}()
+	// Start server (this should initialize certificates)
+	// We'll start it in a goroutine and stop it immediately to test initialization
+	go func() {
+		_ = srv.Start()
+	}()
 
-		// Give it a moment to initialize
-		// In a real test, you might want to add a way to signal when initialization is complete
-		// For now, we'll just verify that the TLS config was created
+	// Test that InitCertificateFromPath works with our cert file
+	scraping.InitCertificateFromPath(certFile)
 
-		// The server.Start() method calls scraping.InitCertificateFromPath() which sets globalTLSConfig
-		// We can't easily test this without exposing internal state, but we can verify the function works
+	// Verify the function completes without error
+	client := scraping.GetHTTPClient(5)
+	assert.NotNil(t, client)
+}
 
-		// Test that InitCertificateFromPath works with our cert file
-		scraping.InitCertificateFromPath(certFile)
-
-		// Verify the function completes without error
-		// The actual TLS config is set globally and used internally
-		client := scraping.GetHTTPClient(5)
-		assert.NotNil(t, client)
-	})
-
-	t.Run("server starts without custom CA path", func(t *testing.T) {
-		cfg := &config.Config{
-			ServerSettings: config.ServerSettings{
-				Port: "8080",
-				// No CustomCAPath set
+func TestServerStartsWithoutCustomCAPath(t *testing.T) {
+	cfg := &config.Config{
+		ServerSettings: config.ServerSettings{
+			Port: "8080",
+			// No CustomCAPath set
+		},
+		Scraping: config.ScrapingSettings{
+			Interval:    "10s",
+			Timeout:     "5s",
+			MaxParallel: 10,
+		},
+		Locations: []config.Location{
+			{
+				Name:      "Test Location",
+				Latitude:  31.782904,
+				Longitude: 35.214774,
 			},
-			Scraping: config.ScrapingSettings{
-				Interval:    "10s",
-				Timeout:     "5s",
-				MaxParallel: 10,
-			},
-			Locations: []config.Location{
-				{
-					Name:      "Test Location",
-					Latitude:  31.782904,
-					Longitude: 35.214774,
-				},
-			},
-			Sources: []config.Source{
-				{
-					Name: "test-prometheus",
-					Type: "prometheus",
-					URL:  "http://prometheus:9090",
-					Apps: []config.App{
-						{
-							Name:     "test-app",
-							Location: "Test Location",
-							Metric:   `up{instance="test"}`,
-						},
+		},
+		Sources: []config.Source{
+			{
+				Name: "test-prometheus",
+				Type: "prometheus",
+				URL:  "http://prometheus:9090",
+				Apps: []config.App{
+					{
+						Name:     "test-app",
+						Location: "Test Location",
+						Metric:   `up{instance="test"}`,
 					},
 				},
 			},
-		}
+		},
+	}
 
-		srv := NewServer(cfg)
+	srv := NewServer(cfg)
 
-		// Should not panic or fail when no custom CA path is set
-		go func() {
-			_ = srv.Start()
-		}()
+	// Should not panic or fail when no custom CA path is set
+	go func() {
+		_ = srv.Start()
+	}()
 
-		// Test that InitCertificateFromPath works with empty path
-		scraping.InitCertificateFromPath("")
+	// Test that InitCertificateFromPath works with empty path
+	scraping.InitCertificateFromPath("")
 
-		// Should use default TLS config (no custom transport)
-		client := scraping.GetHTTPClient(5)
-		assert.NotNil(t, client)
-	})
+	// Should use default TLS config (no custom transport)
+	client := scraping.GetHTTPClient(5)
+	assert.NotNil(t, client)
 }
