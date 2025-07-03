@@ -2,7 +2,7 @@
 
 # Site Availability Monitoring
 
-<img src="docs/images/logo-full.png" alt="Site Availability Monitor Logo" width="400">
+<img src="docs/static/img/logo-full.png" alt="Site Availability Monitor Logo" width="400">
 
 [![CI](https://github.com/Levy-Tal/site-availability/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Levy-Tal/site-availability/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/Levy-Tal/site-availability/graph/badge.svg?token=K3PLCUDMX9)](https://codecov.io/gh/Levy-Tal/site-availability)
