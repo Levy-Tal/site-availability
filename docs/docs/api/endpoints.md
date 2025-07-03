@@ -70,7 +70,7 @@ Get all monitored applications and their current status.
 
 ---
 
-### GET /api/apps/{name}
+### GET /api/apps/\{name\}
 
 Get details for a specific application.
 
@@ -147,7 +147,7 @@ Get all configured monitoring locations.
 
 ---
 
-### GET /api/locations/{name}
+### GET /api/locations/\{name\}
 
 Get details for a specific location.
 

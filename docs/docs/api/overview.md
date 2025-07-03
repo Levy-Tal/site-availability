@@ -369,4 +369,4 @@ Import the Postman collection for easy API testing:
 - Learn about specific [API Endpoints](./endpoints)
 - Set up [Authentication](./authentication)
 - Explore [Metrics Integration](./metrics)
-- Check out [Client Libraries](./clients)
+- Get started with [Development Setup](../development/setup)
