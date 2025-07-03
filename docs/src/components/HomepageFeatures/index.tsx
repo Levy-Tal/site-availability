@@ -5,12 +5,14 @@ import styles from "./styles.module.css";
 
 type FeatureItem = {
   title: string;
+  imageSrc: string;
   description: ReactNode;
 };
 
 const FeatureList: FeatureItem[] = [
   {
     title: "Real-time Monitoring",
+    imageSrc: "/site-availability/img/pic1.png",
     description: (
       <>
         Monitor your applications and services in real-time with comprehensive
@@ -20,6 +22,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Multi-Source Support",
+    imageSrc: "/site-availability/img/pic2.png",
     description: (
       <>
         Support for multiple monitoring sources including Prometheus, custom
@@ -30,6 +33,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Geographic Distribution",
+    imageSrc: "/site-availability/img/pic3.png",
     description: (
       <>
         Monitor your services from multiple geographic locations to ensure
@@ -39,11 +43,11 @@ const FeatureList: FeatureItem[] = [
   },
 ];
 
-function Feature({ title, description }: FeatureItem) {
+function Feature({ title, imageSrc, description }: FeatureItem) {
   return (
     <div className={clsx("col col--4")}>
       <div className="text--center">
-        <div className={styles.featureIcon}>📊</div>
+        <img src={imageSrc} alt={title} className={styles.featureImage} />
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>

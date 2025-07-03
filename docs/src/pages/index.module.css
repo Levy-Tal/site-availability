@@ -30,7 +30,7 @@
 }
 
 .heroLogo {
-  height: 120px;
+  height: 200px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -47,7 +47,7 @@
 
 @media screen and (max-width: 996px) {
   .heroLogo {
-    height: 80px;
+    height: 120px;
   }
 
   .logoContainer {

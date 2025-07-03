@@ -10,12 +10,19 @@
   width: 200px;
 }
 
-.featureIcon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.featureImage {
   height: 200px;
   width: 200px;
+  object-fit: contain;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.featureImage:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
