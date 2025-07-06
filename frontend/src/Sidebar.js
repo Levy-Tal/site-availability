@@ -17,6 +17,7 @@ const Sidebar = ({
   onToggleCollapse,
   selectedStatusFilters,
   selectedLabels,
+  docsTitle,
 }) => {
   const sidebarRef = useRef(null);
   const keyDropdownRef = useRef(null);
@@ -268,7 +269,7 @@ const Sidebar = ({
           </div>
           <div className="sidebar__nav-item" onClick={onDocsClick}>
             <FaBook className="sidebar__nav-icon" />
-            {!isCollapsed && <span>Documentation</span>}
+            {!isCollapsed && <span>{docsTitle}</span>}
           </div>
         </div>
 

@@ -76,9 +76,10 @@ function App() {
   };
 
   const handleDocsClick = () => {
-    if (docsInfo.docs_url) {
-      window.open(docsInfo.docs_url, "_blank");
-    }
+    // Use the URL from API response, or fallback to default if empty
+    const docsUrl =
+      docsInfo.docs_url || "https://levy-tal.github.io/site-availability/";
+    window.open(docsUrl, "_blank");
   };
 
   const handleStatusFilterChange = (status) => {
@@ -117,6 +118,7 @@ function App() {
         onToggleCollapse={handleSidebarToggle}
         selectedStatusFilters={statusFilters}
         selectedLabels={labelFilters}
+        docsTitle={docsInfo.docs_title || "Documentation"}
       />
       <MapComponent locations={locations} onSiteClick={handleSiteClick} />
       {isPanelOpen && selectedSite && (
