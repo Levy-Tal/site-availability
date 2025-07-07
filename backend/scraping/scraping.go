@@ -16,6 +16,8 @@ import (
 
 // Source defines the interface for all data sources (Prometheus, Site, etc.)
 type Source interface {
+	// ValidateConfig validates the source-specific configuration
+	ValidateConfig(source config.Source) error
 	// Scrape performs a single scrape operation for a source with the given timeout and max parallel settings.
 	// It returns the app statuses, locations, and an error if scraping fails.
 	// The serverSettings parameter is passed for label merging purposes.
@@ -27,28 +29,15 @@ var (
 	globalTLSConfig *tls.Config
 )
 
-// createUnavailableStatuses creates app statuses marked as unavailable for all apps in a source
-// This is used when a scraper fails completely (e.g., can't connect to prometheus server)
+// createUnavailableStatuses creates empty app statuses when a scraper fails completely
+// Since we can't access source-specific config when scraper fails, we return empty slice
+// Individual scrapers should handle their own failure cases appropriately
 func createUnavailableStatuses(source config.Source) []handlers.AppStatus {
-	statuses := make([]handlers.AppStatus, len(source.Apps))
-
-	for i, app := range source.Apps {
-		statuses[i] = handlers.AppStatus{
-			Name:      app.Name,
-			Location:  app.Location,
-			Status:    "unavailable",
-			Source:    source.Name,
-			OriginURL: source.URL,
-			Labels:    app.Labels, // Will be merged in UpdateAppStatus
-		}
-	}
-
 	logging.Logger.WithFields(map[string]interface{}{
-		"source":    source.Name,
-		"app_count": len(statuses),
-	}).Warn("Created unavailable statuses for all apps due to scraper failure")
+		"source": source.Name,
+	}).Warn("Scraper failed completely - returning empty app statuses")
 
-	return statuses
+	return []handlers.AppStatus{}
 }
 
 // InitCertificateFromPath loads CA certificates from the given file path(s).
@@ -104,11 +93,12 @@ func GetHTTPClient(timeout time.Duration) *http.Client {
 
 func InitScrapers(cfg *config.Config) {
 	for _, src := range cfg.Sources {
+		var scraper Source
 		switch src.Type {
 		case "prometheus":
-			Scrapers[src.Name] = prometheus.NewPrometheusScraper()
+			scraper = prometheus.NewPrometheusScraper()
 		case "site":
-			Scrapers[src.Name] = site.NewSiteScraper()
+			scraper = site.NewSiteScraper()
 		default:
 			// Fail immediately on first unsupported type
 			logging.Logger.WithFields(map[string]interface{}{
@@ -117,6 +107,13 @@ func InitScrapers(cfg *config.Config) {
 				"supported_types": []string{"prometheus", "site"},
 			}).Fatal("Unsupported source type encountered. Please fix the source type in your configuration file.")
 		}
+
+		// Validate the source configuration
+		if err := scraper.ValidateConfig(src); err != nil {
+			logging.Logger.WithError(err).WithField("source", src.Name).Fatal("Invalid source configuration")
+		}
+
+		Scrapers[src.Name] = scraper
 	}
 }
 

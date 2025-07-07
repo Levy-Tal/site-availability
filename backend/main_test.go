@@ -86,17 +86,19 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
-    auth: "bearer"
-    token: "test-prometheus-token"
-    apps:
-      - name: "test app"
-        location: "test location"
-        metric: 'up{instance="test"}'
+    config:
+      url: "http://prometheus:9090/"
+      auth: "bearer"
+      token: "test-prometheus-token"
+      apps:
+        - name: "test app"
+          location: "test location"
+          metric: 'up{instance="test"}'
   - name: "site-a"
     type: "site"
-    url: "https://test-site:3030"
-    token: "test-site-token"
+    config:
+      url: "https://test-site:3030"
+      token: "test-site-token"
 `, serverCAPath)
 		configPath := filepath.Join(tmpDir, "config.yaml")
 		err = os.WriteFile(configPath, []byte(configContent), 0644)
@@ -153,21 +155,28 @@ server_settings:
 		require.NotNil(t, prom)
 		assert.Equal(t, "prom1", prom.Name)
 		assert.Equal(t, "prometheus", prom.Type)
-		assert.Equal(t, "http://prometheus:9090/", prom.URL)
-		assert.Equal(t, "bearer", prom.Auth)
-		assert.Equal(t, "test-prometheus-token", prom.Token)
-		require.Len(t, prom.Apps, 1)
-		assert.Equal(t, "test app", prom.Apps[0].Name)
-		assert.Equal(t, "test location", prom.Apps[0].Location)
-		assert.Equal(t, `up{instance="test"}`, prom.Apps[0].Metric)
+		require.NotNil(t, prom.Config)
+		assert.Equal(t, "http://prometheus:9090/", prom.Config["url"])
+		assert.Equal(t, "bearer", prom.Config["auth"])
+		assert.Equal(t, "test-prometheus-token", prom.Config["token"])
+
+		// Verify prometheus apps
+		apps, ok := prom.Config["apps"].([]interface{})
+		require.True(t, ok)
+		require.Len(t, apps, 1)
+		app := apps[0].(map[interface{}]interface{})
+		assert.Equal(t, "test app", app["name"])
+		assert.Equal(t, "test location", app["location"])
+		assert.Equal(t, `up{instance="test"}`, app["metric"])
 
 		// Verify site source
 		site := getSourceByType(cfg.Sources, "site")
 		require.NotNil(t, site)
 		assert.Equal(t, "site-a", site.Name)
 		assert.Equal(t, "site", site.Type)
-		assert.Equal(t, "https://test-site:3030", site.URL)
-		assert.Equal(t, "test-site-token", site.Token)
+		require.NotNil(t, site.Config)
+		assert.Equal(t, "https://test-site:3030", site.Config["url"])
+		assert.Equal(t, "test-site-token", site.Config["token"])
 	})
 
 	t.Run("load configuration with optional credentials", func(t *testing.T) {
@@ -187,7 +196,8 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
+    config:
+      url: "http://prometheus:9090/"
 `
 		configPath := filepath.Join(tmpDir, "minimal-config.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -214,8 +224,10 @@ sources:
 		assert.Empty(t, cfg.ServerSettings.Token)
 		prom := getSourceByType(cfg.Sources, "prometheus")
 		require.NotNil(t, prom)
-		assert.Empty(t, prom.Auth)
-		assert.Empty(t, prom.Token)
+		// Config should have url but no auth/token since they're not in the minimal config
+		assert.Equal(t, "http://prometheus:9090/", prom.Config["url"])
+		assert.Nil(t, prom.Config["auth"])
+		assert.Nil(t, prom.Config["token"])
 	})
 
 	t.Run("load configuration with environment variables", func(t *testing.T) {
@@ -236,7 +248,8 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
+    config:
+      url: "http://prometheus:9090/"
 `
 		defaultConfigPath := filepath.Join(tmpDir, "config.yaml")
 		err := os.WriteFile(defaultConfigPath, []byte(configContent), 0644)
@@ -346,7 +359,7 @@ locations:
 sources:
   - name: "invalid-source"
     type: "prometheus"
-    # Missing required URL
+    # Missing required config section
 `
 		configPath := filepath.Join(tmpDir, "invalid-source.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -357,15 +370,15 @@ sources:
 
 		_, err = config.LoadConfig()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "URL is required")
+		assert.Contains(t, err.Error(), "config is required")
 	})
 }
 
 func TestHelperFunctions(t *testing.T) {
 	t.Run("getSourceByType", func(t *testing.T) {
 		sources := []config.Source{
-			{Name: "prom1", Type: "prometheus", URL: "http://prom:9090"},
-			{Name: "site1", Type: "site", URL: "http://site:3030"},
+			{Name: "prom1", Type: "prometheus", Config: map[string]interface{}{"url": "http://prom:9090"}},
+			{Name: "site1", Type: "site", Config: map[string]interface{}{"url": "http://site:3030"}},
 		}
 
 		// Test finding existing source
@@ -380,8 +393,8 @@ func TestHelperFunctions(t *testing.T) {
 
 	t.Run("getSourceByName", func(t *testing.T) {
 		sources := []config.Source{
-			{Name: "prom1", Type: "prometheus", URL: "http://prom:9090"},
-			{Name: "site1", Type: "site", URL: "http://site:3030"},
+			{Name: "prom1", Type: "prometheus", Config: map[string]interface{}{"url": "http://prom:9090"}},
+			{Name: "site1", Type: "site", Config: map[string]interface{}{"url": "http://site:3030"}},
 		}
 
 		// Test finding existing source

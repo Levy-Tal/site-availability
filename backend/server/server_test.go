@@ -16,9 +16,11 @@ import (
 // Helper function to create mock source and server settings for tests
 func getMockSourceAndSettings(sourceName string) (config.Source, config.ServerSettings) {
 	source := config.Source{
-		Name:   sourceName,
-		Type:   "test",
-		URL:    "http://test.example.com",
+		Name: sourceName,
+		Type: "test",
+		Config: map[string]interface{}{
+			"url": "http://test.example.com",
+		},
 		Labels: map[string]string{"source_env": "test", "source_type": "mock"},
 	}
 

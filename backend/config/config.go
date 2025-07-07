@@ -44,15 +44,28 @@ type Location struct {
 }
 
 type Source struct {
-	Name   string            `yaml:"name"`
-	Type   string            `yaml:"type"`
-	URL    string            `yaml:"url"`
-	Token  string            `yaml:"token"`
-	Auth   string            `yaml:"auth"`
-	Labels map[string]string `yaml:"labels,omitempty"` // Source-level labels
-	Apps   []App             `yaml:"apps"`
+	Name   string                 `yaml:"name"`
+	Type   string                 `yaml:"type"`
+	Labels map[string]string      `yaml:"labels,omitempty"` // Source-level labels
+	Config map[string]interface{} `yaml:"config"`           // Holds arbitrary nested source-specific config
 }
 
+// DecodeConfig is a helper function to decode source-specific config
+func DecodeConfig[T any](cfg map[string]interface{}, sourceName string) (T, error) {
+	var out T
+	bytes, err := yaml.Marshal(cfg)
+	if err != nil {
+		return out, fmt.Errorf("failed to marshal config for source %s: %w", sourceName, err)
+	}
+
+	if err := yaml.Unmarshal(bytes, &out); err != nil {
+		return out, fmt.Errorf("failed to unmarshal config for source %s: %w", sourceName, err)
+	}
+
+	return out, nil
+}
+
+// Legacy structures for backward compatibility during migration
 type App struct {
 	Name     string            `yaml:"name"`
 	Location string            `yaml:"location"`
@@ -129,12 +142,19 @@ func mergeCredentials(config, credentials *Config) {
 		}
 	}
 
-	// Merge source credentials
+	// Merge source credentials into config map and labels
 	for i, source := range config.Sources {
 		for _, credSource := range credentials.Sources {
 			if source.Name == credSource.Name {
-				config.Sources[i].Auth = credSource.Auth
-				config.Sources[i].Token = credSource.Token
+				// Merge the credential source's config into the main source's config
+				if config.Sources[i].Config == nil {
+					config.Sources[i].Config = make(map[string]interface{})
+				}
+				if credSource.Config != nil {
+					for key, value := range credSource.Config {
+						config.Sources[i].Config[key] = value
+					}
+				}
 
 				// Merge source labels if present
 				if credSource.Labels != nil {
@@ -220,8 +240,12 @@ func validateConfig(config *Config) error {
 		}
 		sourceNames[source.Name] = true
 
-		if source.URL == "" {
-			return fmt.Errorf("source configuration error: URL is required for source %s", source.Name)
+		if source.Type == "" {
+			return fmt.Errorf("source configuration error: type is required for source %s", source.Name)
+		}
+
+		if source.Config == nil {
+			return fmt.Errorf("source configuration error: config is required for source %s", source.Name)
 		}
 
 		// Validate source labels
@@ -229,21 +253,7 @@ func validateConfig(config *Config) error {
 			return err
 		}
 
-		appNames := make(map[string]bool)
-		for _, app := range source.Apps {
-			if app.Name == "" {
-				return fmt.Errorf("app configuration error: app name is required for source %s", source.Name)
-			}
-			if _, exists := appNames[app.Name]; exists {
-				return fmt.Errorf("app configuration error: duplicate app name %q in source %s", app.Name, source.Name)
-			}
-			appNames[app.Name] = true
-
-			// Validate app labels
-			if err := validateLabels(app.Labels, fmt.Sprintf("app %s in source %s", app.Name, source.Name)); err != nil {
-				return err
-			}
-		}
+		// Source-specific validation will be handled by each scraper's ValidateConfig method
 	}
 
 	return nil

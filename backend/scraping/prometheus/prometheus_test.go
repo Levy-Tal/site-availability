@@ -74,13 +74,14 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			Type: "prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{
-					Name:     "test-app",
-					Location: "test-location",
-					Metric:   `up{instance="test"}`,
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "test-app",
+						"location": "test-location",
+						"metric":   `up{instance="test"}`,
+					},
 				},
 			},
 		}
@@ -129,12 +130,14 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{
-					Name:     "test-app",
-					Location: "test-location",
-					Metric:   `up{instance="test"}`,
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "test-app",
+						"location": "test-location",
+						"metric":   `up{instance="test"}`,
+					},
 				},
 			},
 		}
@@ -155,12 +158,14 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{
-					Name:     "test-app",
-					Location: "test-location",
-					Metric:   `up{instance="test"}`,
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "test-app",
+						"location": "test-location",
+						"metric":   `up{instance="test"}`,
+					},
 				},
 			},
 		}
@@ -211,17 +216,19 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{
-					Name:     "app1",
-					Location: "location1",
-					Metric:   `up{instance="test1"}`,
-				},
-				{
-					Name:     "app2",
-					Location: "location2",
-					Metric:   `up{instance="test2"}`,
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "app1",
+						"location": "location1",
+						"metric":   `up{instance="test1"}`,
+					},
+					{
+						"name":     "app2",
+						"location": "location2",
+						"metric":   `up{instance="test2"}`,
+					},
 				},
 			},
 		}
@@ -268,12 +275,14 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{
-					Name:     "test-app",
-					Location: "test-location",
-					Metric:   `up{instance="test"}`,
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "test-app",
+						"location": "test-location",
+						"metric":   `up{instance="test"}`,
+					},
 				},
 			},
 		}
@@ -291,8 +300,10 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  "http://localhost:9090",
-			Apps: []config.App{}, // Empty apps
+			Config: map[string]interface{}{
+				"url":  "http://localhost:9090",
+				"apps": []map[string]interface{}{}, // Empty apps
+			},
 		}
 
 		statuses, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -343,21 +354,18 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Labels: map[string]string{
-				"source_type":  "prometheus",
-				"source_team":  "platform",
-				"common_label": "source_value", // Will be overridden by app
-			},
-			Apps: []config.App{
-				{
-					Name:     "labeled-app",
-					Location: "test-location",
-					Metric:   `up{instance="test"}`,
-					Labels: map[string]string{
-						"app_version":  "v1.2.3",
-						"app_tier":     "frontend",
-						"common_label": "app_value", // Highest priority
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "labeled-app",
+						"location": "test-location",
+						"metric":   `up{instance="test"}`,
+						"labels": map[string]string{
+							"app_version":  "v1.2.3",
+							"app_tier":     "frontend",
+							"common_label": "app_value", // Highest priority
+						},
 					},
 				},
 			},
@@ -883,13 +891,15 @@ func TestPrometheusScraper_EdgeCases(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{Name: "app1", Location: "loc1", Metric: "up1"},
-				{Name: "app2", Location: "loc2", Metric: "up2"},
-				{Name: "app3", Location: "loc3", Metric: "up3"},
-				{Name: "app4", Location: "loc4", Metric: "up4"},
-				{Name: "app5", Location: "loc5", Metric: "up5"},
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{"name": "app1", "location": "loc1", "metric": "up1"},
+					{"name": "app2", "location": "loc2", "metric": "up2"},
+					{"name": "app3", "location": "loc3", "metric": "up3"},
+					{"name": "app4", "location": "loc4", "metric": "up4"},
+					{"name": "app5", "location": "loc5", "metric": "up5"},
+				},
 			},
 		}
 
@@ -917,12 +927,14 @@ func TestPrometheusScraper_EdgeCases(t *testing.T) {
 		scraper := NewPrometheusScraper()
 		source := config.Source{
 			Name: "test-prometheus",
-			URL:  server.URL,
-			Apps: []config.App{
-				{
-					Name:     "test-app",
-					Location: "test-location",
-					Metric:   `up{instance="test"}`,
+			Config: map[string]interface{}{
+				"url": server.URL,
+				"apps": []map[string]interface{}{
+					{
+						"name":     "test-app",
+						"location": "test-location",
+						"metric":   `up{instance="test"}`,
+					},
 				},
 			},
 		}

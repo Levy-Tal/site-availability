@@ -31,30 +31,32 @@ locations:
 sources:
   - name: prom1
     type: prometheus
-    url: http://nginx:9090
-    apps:
-      - name: app1
-        location: Hadera
-        metric: up{instance="app:8080", job="app"}
-      - name: app3
-        location: Jerusalem
-        metric: up{instance="localhost:9090", job="prometheus"}
-      - name: app4
-        location: Beer Sheva
-        metric: up{instance="app:8080", job="app"}
-      - name: app5
-        location: Netanya
-        metric: 1 - up{instance="localhost:9090", job="prometheus"}
-      - name: app6
-        location: Beer Sheva
-        metric: up{instance="app:8080", job="app"}
+    config:
+      url: http://nginx:9090
+      apps:
+        - name: app1
+          location: Hadera
+          metric: up{instance="app:8080", job="app"}
+        - name: app3
+          location: Jerusalem
+          metric: up{instance="localhost:9090", job="prometheus"}
+        - name: app4
+          location: Beer Sheva
+          metric: up{instance="app:8080", job="app"}
+        - name: app5
+          location: Netanya
+          metric: 1 - up{instance="localhost:9090", job="prometheus"}
+        - name: app6
+          location: Beer Sheva
+          metric: up{instance="app:8080", job="app"}
   - name: prom2
     type: prometheus
-    url: http://nginx:9090
-    apps:
-      - name: app2
-        location: Hadera
-        metric: up{instance="app:8080", job="app"}
-      - name: app7
-        location: Hadera
-        metric: 1 - up{instance="localhost:9090", job="prometheus"}
+    config:
+      url: http://nginx:9090
+      apps:
+        - name: app2
+          location: Hadera
+          metric: up{instance="app:8080", job="app"}
+        - name: app7
+          location: Hadera
+          metric: 1 - up{instance="localhost:9090", job="prometheus"}

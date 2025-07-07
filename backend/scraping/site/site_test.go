@@ -78,8 +78,10 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "test-site",
 			Type: "site",
-			URL:  server.URL,
-			// No token - no authentication
+			Config: map[string]interface{}{
+				"url": server.URL,
+				// No token - no authentication
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -133,10 +135,12 @@ func TestSiteScraper_Scrape(t *testing.T) {
 
 		scraper := NewSiteScraper()
 		source := config.Source{
-			Name:  "authenticated-site",
-			Type:  "site",
-			URL:   server.URL,
-			Token: token,
+			Name: "authenticated-site",
+			Type: "site",
+			Config: map[string]interface{}{
+				"url":   server.URL,
+				"token": token,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -170,7 +174,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "tls-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		// Use insecure TLS config for testing
@@ -197,7 +203,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "empty-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -210,7 +218,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "invalid-site",
 			Type: "site",
-			URL:  "http://invalid url with spaces", // Invalid URL
+			Config: map[string]interface{}{
+				"url": "http://invalid url with spaces", // Invalid URL
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -225,7 +235,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "unreachable-site",
 			Type: "site",
-			URL:  "http://localhost:99999", // Non-existent server
+			Config: map[string]interface{}{
+				"url": "http://localhost:99999", // Non-existent server
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -256,7 +268,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 				source := config.Source{
 					Name: "error-site",
 					Type: "site",
-					URL:  server.URL,
+					Config: map[string]interface{}{
+						"url": server.URL,
+					},
 				}
 
 				results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -278,11 +292,13 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "invalid-json-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
-		require.NoError(t, err) // JSON errors are handled gracefully
+		require.NoError(t, err) // JSON parsing errors are handled gracefully
 		assert.Empty(t, results)
 	})
 
@@ -299,7 +315,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "malformed-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -319,7 +337,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "slow-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		// Use very short timeout
@@ -345,7 +365,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "test-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		// Try with different maxParallel values - should always make only 1 request
@@ -369,7 +391,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "path-test-site",
 			Type: "site",
-			URL:  server.URL, // Should append /sync to this
+			Config: map[string]interface{}{
+				"url": server.URL, // Should append /sync to this
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -397,7 +421,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "timestamp-test-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -435,7 +461,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "override-test-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -487,10 +515,12 @@ func TestSiteScraper_Scrape(t *testing.T) {
 
 		scraper := NewSiteScraper()
 		source := config.Source{
-			Name:  "special-token-site",
-			Type:  "site",
-			URL:   server.URL,
-			Token: token,
+			Name: "special-token-site",
+			Type: "site",
+			Config: map[string]interface{}{
+				"url":   server.URL,
+				"token": token,
+			},
 		}
 
 		results, _, err := scraper.Scrape(source, config.ServerSettings{}, 5*time.Second, 1, nil)
@@ -538,7 +568,9 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		source := config.Source{
 			Name: "labeled-site",
 			Type: "site",
-			URL:  server.URL,
+			Config: map[string]interface{}{
+				"url": server.URL,
+			},
 			Labels: map[string]string{
 				"source_type":    "site",
 				"source_cluster": "west",

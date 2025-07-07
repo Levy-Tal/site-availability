@@ -143,11 +143,19 @@ func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.S
 		appStatusCache[sourceName] = make(map[string]AppStatus)
 
 		// Clear deduplication entries for this source to allow fresh apps
-		// Remove all entries that belong to this source's origin URL
-		sourceOriginURL := source.URL
+		// Remove all entries that belong to this source (by origin URL)
 		for dedupKey := range seenApps {
-			if strings.HasSuffix(dedupKey, "|"+sourceOriginURL) {
-				delete(seenApps, dedupKey)
+			// Extract origin URL from dedupKey (format: appName|location|originURL)
+			parts := strings.Split(dedupKey, "|")
+			if len(parts) == 3 {
+				originURL := parts[2]
+				// Check if this origin URL matches any of the apps from this source
+				for _, app := range newStatuses {
+					if app.OriginURL == originURL {
+						delete(seenApps, dedupKey)
+						break
+					}
+				}
 			}
 		}
 	}

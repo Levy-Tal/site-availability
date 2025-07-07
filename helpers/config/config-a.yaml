@@ -36,68 +36,70 @@ locations:
 sources:
   - name: prom1
     type: prometheus
-    url: http://prometheus-a:9090
     labels:
       service: "core-monitoring"
       tier: "backend"
       criticality: "high"
-    apps:
-      - name: a-app1
-        location: Hadera
-        metric: up{instance="app:8080", job="app"}
-        labels:
-          app_type: "web-service"
-          importance: "critical"
-          owner: "backend-team"
-      - name: a-app2
-        location: Jerusalem
-        metric: up{instance="localhost:9090", job="prometheus"}
-        labels:
-          app_type: "monitoring"
-          importance: "critical"
-          owner: "sre-team"
-      - name: app3
-        location: Beer Sheva
-        metric: up{instance="localhost:9090", job="prometheus"}
-        labels:
-          app_type: "monitoring"
-          importance: "high"
-          owner: "sre-team"
-      - name: a-app4
-        location: Beer Sheva
-        metric: up{instance="app:8080", job="app"}
-        labels:
-          app_type: "web-service"
-          importance: "medium"
-          owner: "backend-team"
-      - name: a-app5
-        location: Netanya
-        metric: 1 - up{instance="localhost:9090", job="prometheus"}
-        labels:
-          app_type: "test-service"
-          importance: "low"
-          owner: "qa-team"
-          inverted: "true"
-      - name: a-app6
-        location: Beer Sheva
-        metric: up{instance="app:8080", job="app"}
-        labels:
-          app_type: "web-service"
-          importance: "medium"
-          owner: "frontend-team"
+    config:
+      url: http://prometheus-a:9090
+      apps:
+        - name: a-app1
+          location: Hadera
+          metric: up{instance="app:8080", job="app"}
+          labels:
+            app_type: "web-service"
+            importance: "critical"
+            owner: "backend-team"
+        - name: a-app2
+          location: Jerusalem
+          metric: up{instance="localhost:9090", job="prometheus"}
+          labels:
+            app_type: "monitoring"
+            importance: "critical"
+            owner: "sre-team"
+        - name: app3
+          location: Beer Sheva
+          metric: up{instance="localhost:9090", job="prometheus"}
+          labels:
+            app_type: "monitoring"
+            importance: "high"
+            owner: "sre-team"
+        - name: a-app4
+          location: Beer Sheva
+          metric: up{instance="app:8080", job="app"}
+          labels:
+            app_type: "web-service"
+            importance: "medium"
+            owner: "backend-team"
+        - name: a-app5
+          location: Netanya
+          metric: 1 - up{instance="localhost:9090", job="prometheus"}
+          labels:
+            app_type: "test-service"
+            importance: "low"
+            owner: "qa-team"
+            inverted: "true"
+        - name: a-app6
+          location: Beer Sheva
+          metric: up{instance="app:8080", job="app"}
+          labels:
+            app_type: "web-service"
+            importance: "medium"
+            owner: "frontend-team"
   - name: prom2
     type: prometheus
-    url: http://nginx:9090
     labels:
       service: "proxy-monitoring"
       tier: "infrastructure"
       criticality: "medium"
-    apps:
-      - name: a-app7
-        location: Hadera
-        metric: 1 - up{instance="localhost:9090", job="prometheus"}
-        labels:
-          app_type: "proxy"
-          importance: "high"
-          owner: "infrastructure-team"
-          inverted: "true"
+    config:
+      url: http://nginx:9090
+      apps:
+        - name: a-app7
+          location: Hadera
+          metric: 1 - up{instance="localhost:9090", job="prometheus"}
+          labels:
+            app_type: "proxy"
+            importance: "high"
+            owner: "infrastructure-team"
+            inverted: "true"

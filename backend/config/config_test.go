@@ -54,17 +54,19 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
-    auth: "bearer"
-    token: "test-prometheus-token"
-    apps:
-      - name: "test app"
-        location: "test location"
-        metric: 'up{instance="test"}'
+    config:
+      url: "http://prometheus:9090/"
+      auth: "bearer"
+      token: "test-prometheus-token"
+      apps:
+        - name: "test app"
+          location: "test location"
+          metric: 'up{instance="test"}'
   - name: "site-a"
     type: "site"
-    url: "https://test-site:3030"
-    token: "test-site-token"
+    config:
+      url: "https://test-site:3030"
+      token: "test-site-token"
 `, serverCAPath)
 
 		configPath := filepath.Join(tmpDir, "config.yaml")
@@ -121,20 +123,27 @@ server_settings:
 		prom := cfg.Sources[0]
 		assert.Equal(t, "prom1", prom.Name)
 		assert.Equal(t, "prometheus", prom.Type)
-		assert.Equal(t, "http://prometheus:9090/", prom.URL)
-		assert.Equal(t, "bearer", prom.Auth)
-		assert.Equal(t, "test-prometheus-token", prom.Token)
-		require.Len(t, prom.Apps, 1)
-		assert.Equal(t, "test app", prom.Apps[0].Name)
-		assert.Equal(t, "test location", prom.Apps[0].Location)
-		assert.Equal(t, `up{instance="test"}`, prom.Apps[0].Metric)
+		require.NotNil(t, prom.Config)
+		assert.Equal(t, "http://prometheus:9090/", prom.Config["url"])
+		assert.Equal(t, "bearer", prom.Config["auth"])
+		assert.Equal(t, "test-prometheus-token", prom.Config["token"])
+
+		// Test prometheus apps
+		apps, ok := prom.Config["apps"].([]interface{})
+		require.True(t, ok)
+		require.Len(t, apps, 1)
+		app := apps[0].(map[interface{}]interface{})
+		assert.Equal(t, "test app", app["name"])
+		assert.Equal(t, "test location", app["location"])
+		assert.Equal(t, `up{instance="test"}`, app["metric"])
 
 		// Test site source
 		site := cfg.Sources[1]
 		assert.Equal(t, "site-a", site.Name)
 		assert.Equal(t, "site", site.Type)
-		assert.Equal(t, "https://test-site:3030", site.URL)
-		assert.Equal(t, "test-site-token", site.Token)
+		require.NotNil(t, site.Config)
+		assert.Equal(t, "https://test-site:3030", site.Config["url"])
+		assert.Equal(t, "test-site-token", site.Config["token"])
 	})
 
 	t.Run("missing config file", func(t *testing.T) {
@@ -226,10 +235,12 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
+    config:
+      url: "http://prometheus:9090/"
   - name: "site-a"
     type: "site"
-    url: "https://test-site:3030"
+    config:
+      url: "https://test-site:3030"
 `
 		configPath := filepath.Join(tmpDir, "minimal-config.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -253,13 +264,15 @@ sources:
 
 		// Verify optional fields are empty when not provided
 		assert.Empty(t, cfg.ServerSettings.Token)
-		assert.Empty(t, cfg.Sources[0].Auth)
-		assert.Empty(t, cfg.Sources[0].Token)
-		assert.Empty(t, cfg.Sources[0].Apps)
+		assert.Equal(t, "http://prometheus:9090/", cfg.Sources[0].Config["url"])
+		assert.Nil(t, cfg.Sources[0].Config["auth"])
+		assert.Nil(t, cfg.Sources[0].Config["token"])
+		assert.Nil(t, cfg.Sources[0].Config["apps"])
 
 		siteSource := getSiteSource(cfg.Sources)
 		if siteSource != nil {
-			assert.Empty(t, siteSource.Token)
+			assert.Equal(t, "https://test-site:3030", siteSource.Config["url"])
+			assert.Nil(t, siteSource.Config["token"])
 		}
 	})
 
@@ -278,7 +291,8 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
+    config:
+      url: "http://prometheus:9090/"
 `
 		configPath := filepath.Join(tmpDir, "test-config.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -359,12 +373,16 @@ func TestMergeCredentials(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 				{
 					Name: "site-a",
 					Type: "site",
-					URL:  "https://test-site:3030",
+					Config: map[string]interface{}{
+						"url": "https://test-site:3030",
+					},
 				},
 			},
 		}
@@ -375,13 +393,17 @@ func TestMergeCredentials(t *testing.T) {
 			},
 			Sources: []Source{
 				{
-					Name:  "prom1",
-					Auth:  "bearer",
-					Token: "test-prometheus-token",
+					Name: "prom1",
+					Config: map[string]interface{}{
+						"auth":  "bearer",
+						"token": "test-prometheus-token",
+					},
 				},
 				{
-					Name:  "site-a",
-					Token: "test-site-token",
+					Name: "site-a",
+					Config: map[string]interface{}{
+						"token": "test-site-token",
+					},
 				},
 			},
 		}
@@ -392,13 +414,13 @@ func TestMergeCredentials(t *testing.T) {
 		assert.Equal(t, "test-server-token", mainConfig.ServerSettings.Token)
 
 		// Verify Prometheus source credentials were merged
-		assert.Equal(t, "bearer", mainConfig.Sources[0].Auth)
-		assert.Equal(t, "test-prometheus-token", mainConfig.Sources[0].Token)
+		assert.Equal(t, "bearer", mainConfig.Sources[0].Config["auth"])
+		assert.Equal(t, "test-prometheus-token", mainConfig.Sources[0].Config["token"])
 
 		// Verify site source token was merged
 		siteSource := getSiteSource(mainConfig.Sources)
 		require.NotNil(t, siteSource)
-		assert.Equal(t, "test-site-token", siteSource.Token)
+		assert.Equal(t, "test-site-token", siteSource.Config["token"])
 	})
 }
 
@@ -417,12 +439,16 @@ func TestValidateConfig(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 				{
 					Name: "site-a",
 					Type: "site",
-					URL:  "https://test-site:3030",
+					Config: map[string]interface{}{
+						"url": "https://test-site:3030",
+					},
 				},
 			},
 		}
@@ -437,7 +463,9 @@ func TestValidateConfig(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 			},
 		}
@@ -460,7 +488,9 @@ func TestValidateConfig(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 			},
 		}
@@ -483,7 +513,9 @@ func TestValidateConfig(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 			},
 		}
@@ -506,7 +538,9 @@ func TestValidateConfig(t *testing.T) {
 				{
 					// Missing name
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 			},
 		}
@@ -516,7 +550,7 @@ func TestValidateConfig(t *testing.T) {
 		assert.Contains(t, err.Error(), "source name is required")
 	})
 
-	t.Run("source missing URL", func(t *testing.T) {
+	t.Run("source missing config", func(t *testing.T) {
 		invalidConfig := &Config{
 			Locations: []Location{
 				{
@@ -529,14 +563,14 @@ func TestValidateConfig(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					// Missing URL
+					// Missing config section
 				},
 			},
 		}
 
 		err := validateConfig(invalidConfig)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "URL is required")
+		assert.Contains(t, err.Error(), "config is required")
 	})
 
 	t.Run("duplicate source names", func(t *testing.T) {
@@ -552,46 +586,15 @@ func TestValidateConfig(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 				{
 					Name: "prom1", // Duplicate name
 					Type: "prometheus",
-					URL:  "http://prometheus2:9090/",
-				},
-			},
-		}
-
-		err := validateConfig(invalidConfig)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "duplicate source name")
-	})
-
-	t.Run("duplicate app names in source", func(t *testing.T) {
-		invalidConfig := &Config{
-			Locations: []Location{
-				{
-					Name:      "test location",
-					Latitude:  31.782904,
-					Longitude: 35.214774,
-				},
-			},
-			Sources: []Source{
-				{
-					Name: "prom1",
-					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
-					Apps: []App{
-						{
-							Name:     "app1",
-							Location: "test location",
-							Metric:   "up",
-						},
-						{
-							Name:     "app1", // Duplicate app name
-							Location: "test location",
-							Metric:   "up2",
-						},
+					Config: map[string]interface{}{
+						"url": "http://prometheus2:9090/",
 					},
 				},
 			},
@@ -599,7 +602,7 @@ func TestValidateConfig(t *testing.T) {
 
 		err := validateConfig(invalidConfig)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "duplicate app name")
+		assert.Contains(t, err.Error(), "duplicate source name")
 	})
 }
 
@@ -634,22 +637,24 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
     labels:
       instance: "prom1"
       arc: "x86"
-    apps:
-      - name: "test app"
-        location: "test location"
-        metric: 'up{instance="test"}'
-        labels:
-          cluster: "prod"
-          network: "pvc0213"
+    config:
+      url: "http://prometheus:9090/"
+      apps:
+        - name: "test app"
+          location: "test location"
+          metric: 'up{instance="test"}'
+          labels:
+            cluster: "prod"
+            network: "pvc0213"
   - name: "site-a"
     type: "site"
-    url: "https://test-site:3030"
     labels:
       region: "us-west"
+    config:
+      url: "https://test-site:3030"
 `
 		configPath := filepath.Join(tmpDir, "config.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -664,7 +669,8 @@ server_settings:
 
 sources:
   - name: "prom1"
-    token: "test-prometheus-token"
+    config:
+      token: "test-prometheus-token"
     labels:
       auth: "bearer"
 `
@@ -698,12 +704,18 @@ sources:
 		assert.Equal(t, "x86", prom.Labels["arc"])
 		assert.Equal(t, "bearer", prom.Labels["auth"]) // From credentials
 
-		// Test app labels
-		require.Len(t, prom.Apps, 1)
-		app := prom.Apps[0]
-		require.NotNil(t, app.Labels)
-		assert.Equal(t, "prod", app.Labels["cluster"])
-		assert.Equal(t, "pvc0213", app.Labels["network"])
+		// Test app labels (accessed from config map)
+		apps, ok := prom.Config["apps"].([]interface{})
+		require.True(t, ok)
+		require.Len(t, apps, 1)
+
+		appMap, ok := apps[0].(map[interface{}]interface{})
+		require.True(t, ok)
+
+		appLabels, ok := appMap["labels"].(map[interface{}]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "prod", appLabels["cluster"])
+		assert.Equal(t, "pvc0213", appLabels["network"])
 
 		// Test site source labels
 		site := cfg.Sources[1]
@@ -737,11 +749,12 @@ locations:
 sources:
   - name: "prom1"
     type: "prometheus"
-    url: "http://prometheus:9090/"
-    apps:
-      - name: "test app"
-        location: "test location"
-        metric: 'up{instance="test"}'
+    config:
+      url: "http://prometheus:9090/"
+      apps:
+        - name: "test app"
+          location: "test location"
+          metric: 'up{instance="test"}'
 `
 		configPath := filepath.Join(tmpDir, "config.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -758,7 +771,17 @@ sources:
 		// Labels should be nil (not causing issues)
 		assert.Nil(t, cfg.ServerSettings.Labels)
 		assert.Nil(t, cfg.Sources[0].Labels)
-		assert.Nil(t, cfg.Sources[0].Apps[0].Labels)
+
+		// App labels should also be nil (accessed from config map)
+		apps, ok := cfg.Sources[0].Config["apps"].([]interface{})
+		require.True(t, ok)
+		require.Len(t, apps, 1)
+
+		appMap, ok := apps[0].(map[interface{}]interface{})
+		require.True(t, ok)
+
+		// Labels should be nil in app
+		assert.Nil(t, appMap["labels"])
 	})
 }
 
@@ -901,7 +924,9 @@ func TestMergeCredentialsWithLabels(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 					Labels: map[string]string{
 						"instance": "prom1",
 						"type":     "main",
@@ -913,9 +938,11 @@ func TestMergeCredentialsWithLabels(t *testing.T) {
 		credentials := &Config{
 			Sources: []Source{
 				{
-					Name:  "prom1",
-					Auth:  "bearer",
-					Token: "test-prometheus-token",
+					Name: "prom1",
+					Config: map[string]interface{}{
+						"auth":  "bearer",
+						"token": "test-prometheus-token",
+					},
 					Labels: map[string]string{
 						"auth": "bearer",
 						"type": "override", // Should override main config
@@ -927,8 +954,8 @@ func TestMergeCredentialsWithLabels(t *testing.T) {
 		mergeCredentials(mainConfig, credentials)
 
 		// Verify source credentials were merged
-		assert.Equal(t, "bearer", mainConfig.Sources[0].Auth)
-		assert.Equal(t, "test-prometheus-token", mainConfig.Sources[0].Token)
+		assert.Equal(t, "bearer", mainConfig.Sources[0].Config["auth"])
+		assert.Equal(t, "test-prometheus-token", mainConfig.Sources[0].Config["token"])
 
 		// Verify labels were merged correctly
 		require.NotNil(t, mainConfig.Sources[0].Labels)
@@ -947,7 +974,9 @@ func TestMergeCredentialsWithLabels(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 					// No labels initially
 				},
 			},
@@ -1000,21 +1029,23 @@ func TestValidateConfigWithLabels(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+						"apps": []map[string]interface{}{
+							{
+								"name":     "test app",
+								"location": "test location",
+								"metric":   "up",
+								"labels": map[string]string{
+									"cluster": "prod",
+									"team":    "platform",
+								},
+							},
+						},
+					},
 					Labels: map[string]string{
 						"instance": "prom1",
 						"type":     "prometheus",
-					},
-					Apps: []App{
-						{
-							Name:     "test app",
-							Location: "test location",
-							Metric:   "up",
-							Labels: map[string]string{
-								"cluster": "prod",
-								"team":    "platform",
-							},
-						},
 					},
 				},
 			},
@@ -1042,7 +1073,9 @@ func TestValidateConfigWithLabels(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 				},
 			},
 		}
@@ -1066,7 +1099,9 @@ func TestValidateConfigWithLabels(t *testing.T) {
 				{
 					Name: "prom1",
 					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
+					Config: map[string]interface{}{
+						"url": "http://prometheus:9090/",
+					},
 					Labels: map[string]string{
 						"valid": "label",
 						"":      "empty key", // Invalid empty key
@@ -1079,39 +1114,5 @@ func TestValidateConfigWithLabels(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "source prom1")
 		assert.Contains(t, err.Error(), "empty")
-	})
-
-	t.Run("invalid app labels", func(t *testing.T) {
-		invalidConfig := &Config{
-			Locations: []Location{
-				{
-					Name:      "test location",
-					Latitude:  31.782904,
-					Longitude: 35.214774,
-				},
-			},
-			Sources: []Source{
-				{
-					Name: "prom1",
-					Type: "prometheus",
-					URL:  "http://prometheus:9090/",
-					Apps: []App{
-						{
-							Name:     "test app",
-							Location: "test location",
-							Metric:   "up",
-							Labels: map[string]string{
-								"cluster": "prod?test", // Contains reserved character
-							},
-						},
-					},
-				},
-			},
-		}
-
-		err := validateConfig(invalidConfig)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "app test app in source prom1")
-		assert.Contains(t, err.Error(), "reserved character")
 	})
 }

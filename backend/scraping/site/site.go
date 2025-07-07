@@ -12,6 +12,12 @@ import (
 	"time"
 )
 
+// SiteConfig represents the configuration for Site sources
+type SiteConfig struct {
+	URL   string `yaml:"url"`
+	Token string `yaml:"token"`
+}
+
 // SiteScraper implements the scraping.Source interface for scraping other sites.
 type SiteScraper struct {
 }
@@ -20,10 +26,31 @@ func NewSiteScraper() *SiteScraper {
 	return &SiteScraper{}
 }
 
+// ValidateConfig validates the Site-specific configuration
+func (s *SiteScraper) ValidateConfig(source config.Source) error {
+	siteCfg, err := config.DecodeConfig[SiteConfig](source.Config, source.Name)
+	if err != nil {
+		return err
+	}
+
+	// Validate required fields
+	if siteCfg.URL == "" {
+		return fmt.Errorf("site source %s: missing 'url'", source.Name)
+	}
+
+	return nil
+}
+
 // Scrape fetches the status of all apps and locations from a remote site using the /sync endpoint.
 // Since site scraping involves a single request, the maxParallel parameter is not used.
 func (s *SiteScraper) Scrape(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
-	url := fmt.Sprintf("%s/sync", source.URL)
+	// Decode the source-specific config
+	siteCfg, err := config.DecodeConfig[SiteConfig](source.Config, source.Name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	url := fmt.Sprintf("%s/sync", siteCfg.URL)
 	client := &http.Client{Timeout: timeout}
 
 	if tlsConfig != nil {
@@ -43,8 +70,8 @@ func (s *SiteScraper) Scrape(source config.Source, serverSettings config.ServerS
 	req.Header.Set("X-Site-Sync-Timestamp", timestamp)
 
 	// Generate HMAC signature if token is provided
-	if source.Token != "" {
-		validator := hmac.NewValidator(source.Token)
+	if siteCfg.Token != "" {
+		validator := hmac.NewValidator(siteCfg.Token)
 		// For GET request, body is empty
 		signature := validator.GenerateSignature(timestamp, []byte{})
 		req.Header.Set("X-Site-Sync-Signature", signature)
@@ -105,7 +132,8 @@ func (s *SiteScraper) Scrape(source config.Source, serverSettings config.ServerS
 		// Set the source name to this scraper's source
 		response.Apps[i].Source = source.Name
 		// Set the origin URL to track where this app came from
-		response.Apps[i].OriginURL = source.URL
+		response.Apps[i].OriginURL = siteCfg.URL
+		// App labels remain as-is - source/server labels added in UpdateAppStatus
 	}
 
 	// Set correct source for locations

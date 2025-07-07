@@ -71,6 +71,14 @@ func (m *MockScraper) Scrape(source config.Source, serverSettings config.ServerS
 	return results, locations, nil
 }
 
+func (m *MockScraper) ValidateConfig(source config.Source) error {
+	// Mock validation - just check if config exists
+	if source.Config == nil {
+		return fmt.Errorf("config is required for mock scraper")
+	}
+	return nil
+}
+
 func (m *MockScraper) GetCallCount() int {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -204,12 +212,23 @@ func TestInitScrapers(t *testing.T) {
 				{
 					Name: "test-prometheus",
 					Type: "prometheus",
-					URL:  "http://localhost:9090",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9090",
+						"apps": []map[string]interface{}{
+							{
+								"name":     "test-app",
+								"location": "test-location",
+								"metric":   "up",
+							},
+						},
+					},
 				},
 				{
 					Name: "test-site",
 					Type: "site",
-					URL:  "http://localhost:8080",
+					Config: map[string]interface{}{
+						"url": "http://localhost:8080",
+					},
 				},
 			},
 		}
@@ -252,12 +271,30 @@ func TestInitScrapers(t *testing.T) {
 				{
 					Name: "prometheus-1",
 					Type: "prometheus",
-					URL:  "http://localhost:9090",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9090",
+						"apps": []map[string]interface{}{
+							{
+								"name":     "app1",
+								"location": "location1",
+								"metric":   "up",
+							},
+						},
+					},
 				},
 				{
 					Name: "prometheus-2",
 					Type: "prometheus",
-					URL:  "http://localhost:9091",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9091",
+						"apps": []map[string]interface{}{
+							{
+								"name":     "app2",
+								"location": "location2",
+								"metric":   "up",
+							},
+						},
+					},
 				},
 			},
 		}
@@ -346,7 +383,9 @@ func TestStart(t *testing.T) {
 				{
 					Name: "test-source",
 					Type: "prometheus",
-					URL:  "http://localhost:9090",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9090",
+					},
 				},
 			},
 		}
@@ -392,7 +431,9 @@ func TestStart(t *testing.T) {
 				{
 					Name: "error-source",
 					Type: "prometheus",
-					URL:  "http://localhost:9090",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9090",
+					},
 				},
 			},
 		}
@@ -418,7 +459,9 @@ func TestStart(t *testing.T) {
 				{
 					Name: "non-existent-source",
 					Type: "prometheus",
-					URL:  "http://localhost:9090",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9090",
+					},
 				},
 			},
 		}
@@ -461,8 +504,8 @@ func TestStart(t *testing.T) {
 				MaxParallel: 5,
 			},
 			Sources: []config.Source{
-				{Name: "source1", Type: "prometheus"},
-				{Name: "source2", Type: "site"},
+				{Name: "source1", Type: "prometheus", Config: map[string]interface{}{"url": "http://localhost:9090"}},
+				{Name: "source2", Type: "site", Config: map[string]interface{}{"url": "http://localhost:8080"}},
 			},
 		}
 
@@ -508,7 +551,7 @@ func TestStart(t *testing.T) {
 				MaxParallel: 1,
 			},
 			Sources: []config.Source{
-				{Name: "tls-source", Type: "prometheus"},
+				{Name: "tls-source", Type: "prometheus", Config: map[string]interface{}{"url": "http://localhost:9090"}},
 			},
 		}
 
@@ -534,7 +577,16 @@ func TestIntegration(t *testing.T) {
 				{
 					Name: "integration-test",
 					Type: "prometheus",
-					URL:  "http://localhost:9090",
+					Config: map[string]interface{}{
+						"url": "http://localhost:9090",
+						"apps": []map[string]interface{}{
+							{
+								"name":     "integration-app",
+								"location": "test-location",
+								"metric":   "up",
+							},
+						},
+					},
 				},
 			},
 			Scraping: config.ScrapingSettings{

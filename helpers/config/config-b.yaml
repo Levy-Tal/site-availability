@@ -27,32 +27,34 @@ locations:
 sources:
   - name: prom1
     type: prometheus
-    url: http://prometheus-b:9090
     labels:
       service: "staging-monitoring"
       tier: "backend"
       criticality: "medium"
-    apps:
-      - name: app3
-        location: Beer Sheva
-        metric: up{instance="app:8080", job="app"}
-        labels:
-          app_type: "web-service"
-          importance: "medium"
-          owner: "backend-team"
-          stage: "testing"
-      - name: b-app4
-        location: Netanya
-        metric: up{instance="localhost:9090", job="prometheus"}
-        labels:
-          app_type: "monitoring"
-          importance: "high"
-          owner: "sre-team"
-          stage: "staging"
+    config:
+      url: http://prometheus-b:9090
+      apps:
+        - name: app3
+          location: Beer Sheva
+          metric: up{instance="app:8080", job="app"}
+          labels:
+            app_type: "web-service"
+            importance: "medium"
+            owner: "backend-team"
+            stage: "testing"
+        - name: b-app4
+          location: Netanya
+          metric: up{instance="localhost:9090", job="prometheus"}
+          labels:
+            app_type: "monitoring"
+            importance: "high"
+            owner: "sre-team"
+            stage: "staging"
   - name: Server A
     type: site
-    url: http://server-a:8080
     labels:
       service: "remote-monitoring"
       tier: "integration"
       criticality: "low"
+    config:
+      url: http://server-a:8080
