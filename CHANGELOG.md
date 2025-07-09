@@ -1,3 +1,16 @@
+# [2.2.0](https://github.com/Levy-Tal/site-availability/compare/v2.1.1...v2.2.0) (2025-07-09)
+
+
+### Bug Fixes
+
+* **docs:** ui show the docs url and title ([8a5680b](https://github.com/Levy-Tal/site-availability/commit/8a5680bdb12729a1a8b35a076bafcc56c1a0e699))
+
+
+### Features
+
+* **http:** add http source ([38ae7e1](https://github.com/Levy-Tal/site-availability/commit/38ae7e1fa079a323c7ceeeeae09a0486635896d3))
+* **source:** new source architecture ([8747ef9](https://github.com/Levy-Tal/site-availability/commit/8747ef92e136ffd967bda9d1433e063524e61cf0))
+
 ## [2.1.1](https://github.com/Levy-Tal/site-availability/compare/v2.1.0...v2.1.1) (2025-07-03)
 
 
