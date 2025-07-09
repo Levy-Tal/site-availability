@@ -862,12 +862,18 @@ circle {
 .sidebar__suggestions li.selected {
   font-weight: 700;
   width: 100%;
+  background-color: #f1f5f9;
 }
 
 .group-options li.selected span,
 .sort-options li.selected span,
 .sidebar__suggestions li.selected span {
   font-weight: 700;
+}
+
+/* Remove checkmark from sort options when selected */
+.sort-options li .checkmark {
+  display: none;
 }
 
 /* Dropdown Scrollbars */

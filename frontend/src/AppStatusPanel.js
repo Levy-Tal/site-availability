@@ -162,8 +162,7 @@ export const AppStatusPanel = ({
         setShowSortOptions(false);
       }}
     >
-      <span>{label}</span>{" "}
-      {sortOrder === value && <span className="checkmark">✔</span>}
+      <span>{label}</span>
     </li>
   );
 
@@ -198,7 +197,7 @@ export const AppStatusPanel = ({
   // Handle group label selection
   const selectGroupLabel = (label) => {
     setSelectedGroupLabel(label);
-    setGroupLabelInput("");
+    setGroupLabelInput(label); // Set the input value to the selected label
     setShowGroupOptions(false);
   };
 
