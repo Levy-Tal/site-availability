@@ -418,7 +418,6 @@ circle {
 
 /* Position the sort dropdown specifically */
 .sort-options {
-  position: fixed;
   top: auto;
   right: 0;
   min-width: 230px;
@@ -1187,7 +1186,6 @@ circle {
 
 /* Position the sort dropdown specifically */
 .sort-options {
-  position: fixed;
   top: auto;
   right: 0;
   min-width: 230px;
