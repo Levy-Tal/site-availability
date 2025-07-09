@@ -60,3 +60,16 @@ sources:
         - name: app7
           location: Hadera
           metric: 1 - up{instance="localhost:9090", job="prometheus"}
+  - name: basic-http
+    type: http
+    labels:
+      service: "web-monitoring"
+      app: google
+    config:
+      apps:
+        - name: prom1
+          location: Netanya
+          url: "http://nginx:9090"
+        - name: prom2
+          location: Beer Sheva
+          url: "http://nginx:9090"

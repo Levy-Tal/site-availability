@@ -162,8 +162,8 @@ export const AppStatusPanel = ({
             <ul className="sort-options">
               {renderSortOption("Name A-Z", "name-asc")}
               {renderSortOption("Name Z-A", "name-desc")}
-              {renderSortOption("Status (Up-Unavailable-Down)", "status-up")}
-              {renderSortOption("Status (Down-Unavailable-Up)", "status-down")}
+              {renderSortOption("Status (Down-Unavailable-Up)", "status-up")}
+              {renderSortOption("Status (Up-Unavailable-Down)", "status-down")}
             </ul>
           )}
         </div>

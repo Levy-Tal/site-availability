@@ -8,6 +8,7 @@ import (
 	"site-availability/config"
 	"site-availability/handlers"
 	"site-availability/logging"
+	http_source "site-availability/scraping/http"
 	"site-availability/scraping/prometheus"
 	"site-availability/scraping/site"
 	"strings"
@@ -99,22 +100,41 @@ func InitScrapers(cfg *config.Config) {
 			scraper = prometheus.NewPrometheusScraper()
 		case "site":
 			scraper = site.NewSiteScraper()
+		case "http":
+			scraper = http_source.NewHTTPScraper()
 		default:
-			// Fail immediately on first unsupported type
+			// Log error and skip this source instead of failing the entire application
 			logging.Logger.WithFields(map[string]interface{}{
 				"source_name":     src.Name,
 				"source_type":     src.Type,
-				"supported_types": []string{"prometheus", "site"},
-			}).Fatal("Unsupported source type encountered. Please fix the source type in your configuration file.")
+				"supported_types": []string{"prometheus", "site", "http"},
+			}).Error("Unsupported source type encountered. Skipping this source.")
+			continue
 		}
 
 		// Validate the source configuration
 		if err := scraper.ValidateConfig(src); err != nil {
-			logging.Logger.WithError(err).WithField("source", src.Name).Fatal("Invalid source configuration")
+			// Log error and skip this source instead of failing the entire application
+			logging.Logger.WithError(err).WithFields(map[string]interface{}{
+				"source_name": src.Name,
+				"source_type": src.Type,
+			}).Error("Invalid source configuration. Skipping this source.")
+			continue
 		}
 
+		// Only add scraper if it passed validation
 		Scrapers[src.Name] = scraper
+		logging.Logger.WithFields(map[string]interface{}{
+			"source_name": src.Name,
+			"source_type": src.Type,
+		}).Info("Successfully initialized source scraper")
 	}
+
+	// Log summary of initialized scrapers
+	logging.Logger.WithFields(map[string]interface{}{
+		"total_sources":       len(cfg.Sources),
+		"initialized_sources": len(Scrapers),
+	}).Info("Source scraper initialization completed")
 }
 
 func Start(cfg *config.Config) {
@@ -128,13 +148,15 @@ func Start(cfg *config.Config) {
 		logging.Logger.WithError(err).Fatal("Invalid scraping timeout")
 	}
 
+	// Only start scrapers for sources that were successfully initialized
 	for _, source := range cfg.Sources {
-		go func(source config.Source) {
-			scraper, ok := Scrapers[source.Name]
-			if !ok {
-				logging.Logger.WithField("source", source.Name).Fatal("Unsupported source name")
-			}
+		scraper, ok := Scrapers[source.Name]
+		if !ok {
+			logging.Logger.WithField("source_name", source.Name).Warn("Skipping scraping for source that failed initialization")
+			continue
+		}
 
+		go func(source config.Source, scraper Source) {
 			ticker := time.NewTicker(interval)
 			defer ticker.Stop()
 
@@ -177,6 +199,8 @@ func Start(cfg *config.Config) {
 					"scraper_error":  err != nil,
 				}).Debug("Updated app status and location caches after scrape")
 			}
-		}(source)
+		}(source, scraper)
 	}
+
+	logging.Logger.WithField("active_scrapers", len(Scrapers)).Info("All scrapers started successfully")
 }

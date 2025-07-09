@@ -30,6 +30,7 @@ const sidebars = {
         "configuration/overview",
         "configuration/backend",
         "configuration/frontend",
+        "configuration/http-source",
         "configuration/prometheus",
       ],
     },

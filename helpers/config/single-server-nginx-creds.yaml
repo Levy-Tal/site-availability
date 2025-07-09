@@ -7,3 +7,15 @@ sources:
     config:
       auth: basic
       token: "admin:prometheus"
+  - name: basic-http
+    config:
+      apps:
+        - name: prom1
+          auth:
+            type: "basic"
+            username: "admin"
+            password: "prometheus"
+        - name: prom2
+          auth:
+            type: "bearer"
+            token: "test-token-123"

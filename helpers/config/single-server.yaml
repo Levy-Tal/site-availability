@@ -110,3 +110,17 @@ sources:
             owner: "qa-team"
             inverted: "true"
             beta: "true"
+  - name: basic-http
+    type: http
+    labels:
+      service: "web-monitoring"
+      app: google
+    config:
+      apps:
+        - name: google
+          location: Netanya
+          url: "https://www.google.com"
+          ssl_verify: false
+        - name: moogle
+          location: Beer Sheva
+          url: "https://www.mooglezczcsdvdv.com"
