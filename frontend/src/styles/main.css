@@ -1076,11 +1076,7 @@ circle {
 }
 
 .group-apps li {
-  margin-bottom: 8px;
-}
-
-.group-apps li:last-child {
-  margin-bottom: 0;
+  margin: 8px;
 }
 
 /* Button Styles */
