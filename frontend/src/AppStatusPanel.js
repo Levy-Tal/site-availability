@@ -1,6 +1,11 @@
 import React, { useRef, useEffect, useState } from "react";
-import { FaSortAmountDownAlt, FaSearch } from "react-icons/fa";
-import { fetchApps } from "./api/appStatusAPI";
+import {
+  FaSortAmountDownAlt,
+  FaSearch,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa";
+import { fetchApps, fetchLabels } from "./api/appStatusAPI";
 
 export const AppStatusPanel = ({
   site,
@@ -10,12 +15,24 @@ export const AppStatusPanel = ({
   labelFilters,
 }) => {
   const panelRef = useRef(null);
+  const groupDropdownRef = useRef(null);
+  const sortDropdownRef = useRef(null);
+  const resizeHandleRef = useRef(null);
 
   const [apps, setApps] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("name-asc");
   const [showSortOptions, setShowSortOptions] = useState(false);
+
+  // Updated group by state
+  const [showGroupOptions, setShowGroupOptions] = useState(false);
+  const [availableLabels, setAvailableLabels] = useState([]);
+  const [selectedGroupLabel, setSelectedGroupLabel] = useState(null);
+  const [groupLabelInput, setGroupLabelInput] = useState("");
+  const [filteredLabels, setFilteredLabels] = useState([]);
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [groupedApps, setGroupedApps] = useState({});
 
   // Fetch apps for this location
   const refreshApps = async () => {
@@ -30,7 +47,18 @@ export const AppStatusPanel = ({
   // Initial fetch when panel opens
   useEffect(() => {
     refreshApps();
+    loadAvailableLabels();
   }, [site.name, statusFilters, labelFilters]);
+
+  // Load available labels
+  const loadAvailableLabels = async () => {
+    try {
+      const labels = await fetchLabels();
+      setAvailableLabels(labels);
+    } catch (error) {
+      console.error("Error loading labels:", error);
+    }
+  };
 
   // Set up periodic refresh while panel is open
   useEffect(() => {
@@ -43,22 +71,27 @@ export const AppStatusPanel = ({
     }
   }, [scrapeInterval, site.name, statusFilters, labelFilters]);
 
-  // Close sort dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (
-        panelRef.current &&
-        !panelRef.current.contains(e.target) &&
-        !e.target.closest(".sort-dropdown")
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(e.target)
       ) {
         setShowSortOptions(false);
+      }
+      if (
+        groupDropdownRef.current &&
+        !groupDropdownRef.current.contains(e.target)
+      ) {
+        setShowGroupOptions(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // Filter and sort apps
+  // Filter, sort, and group apps
   useEffect(() => {
     let filtered = apps.filter((app) => app.location === site.name);
 
@@ -78,39 +111,48 @@ export const AppStatusPanel = ({
 
     filtered.sort(sortMethods[sortOrder] || (() => 0));
     setFilteredApps(filtered);
-  }, [apps, site, searchTerm, sortOrder]);
 
-  // Resizable panel
-  useEffect(() => {
-    const panel = panelRef.current;
-    const handle = panel?.querySelector(".resize-handle");
+    // Group apps if a label is selected
+    if (selectedGroupLabel) {
+      const grouped = filtered.reduce((acc, app) => {
+        const labelValue = app.labels?.[selectedGroupLabel] || "No Label";
+        if (!acc[labelValue]) {
+          acc[labelValue] = [];
+        }
+        acc[labelValue].push(app);
+        return acc;
+      }, {});
+      setGroupedApps(grouped);
+    }
+  }, [apps, site, searchTerm, sortOrder, selectedGroupLabel]);
 
-    if (!handle) return;
-
-    let isResizing = false;
-
-    const onMouseMove = (e) => {
-      if (isResizing) {
-        const newWidth = window.innerWidth - e.clientX;
-        panel.style.width = `${newWidth}px`;
+  const toggleGroup = (groupName) => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName);
+      } else {
+        newSet.add(groupName);
       }
-    };
+      return newSet;
+    });
+  };
 
-    const onMouseUp = () => {
-      isResizing = false;
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
+  const getGroupStatus = (apps) => {
+    if (apps.some((app) => app.status === "down")) return "down";
+    if (apps.some((app) => app.status === "unavailable")) return "unavailable";
+    return "up";
+  };
 
-    const onMouseDown = () => {
-      isResizing = true;
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-    };
-
-    handle.addEventListener("mousedown", onMouseDown);
-    return () => handle.removeEventListener("mousedown", onMouseDown);
-  }, []);
+  const getStatusCounts = (apps) => {
+    return apps.reduce(
+      (acc, app) => {
+        acc[app.status]++;
+        return acc;
+      },
+      { up: 0, down: 0, unavailable: 0 },
+    );
+  };
 
   const renderSortOption = (label, value) => (
     <li
@@ -120,13 +162,106 @@ export const AppStatusPanel = ({
         setShowSortOptions(false);
       }}
     >
-      {label} {sortOrder === value && <span className="checkmark">✔</span>}
+      <span>{label}</span>{" "}
+      {sortOrder === value && <span className="checkmark">✔</span>}
     </li>
   );
 
+  // Handle group label input changes
+  const handleGroupLabelInput = (e) => {
+    const value = e.target.value;
+    setGroupLabelInput(value);
+
+    if (value.length > 0) {
+      const filtered = availableLabels.filter(
+        (label) => label && label.toLowerCase().includes(value.toLowerCase()),
+      );
+      setFilteredLabels(filtered);
+    } else {
+      setFilteredLabels(availableLabels);
+    }
+  };
+
+  // Toggle group options
+  const toggleGroupOptions = async () => {
+    if (showGroupOptions) {
+      setShowGroupOptions(false);
+    } else {
+      if (availableLabels.length === 0) {
+        await loadAvailableLabels();
+      }
+      setFilteredLabels(availableLabels);
+      setShowGroupOptions(true);
+    }
+  };
+
+  // Handle group label selection
+  const selectGroupLabel = (label) => {
+    setSelectedGroupLabel(label);
+    setGroupLabelInput("");
+    setShowGroupOptions(false);
+  };
+
+  // Handle group label input key press
+  const handleGroupLabelKeyPress = (e) => {
+    if (e.key === "Enter" && groupLabelInput.trim()) {
+      const matchingLabel = availableLabels.find(
+        (label) => label.toLowerCase() === groupLabelInput.toLowerCase(),
+      );
+      if (matchingLabel) {
+        selectGroupLabel(matchingLabel);
+      }
+    }
+  };
+
+  // Resizable panel
+  useEffect(() => {
+    const panel = panelRef.current;
+    const handle = resizeHandleRef.current;
+
+    if (!handle || !panel) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseDown = (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = panel.getBoundingClientRect().width;
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    };
+
+    const onMouseMove = (e) => {
+      if (!isResizing) return;
+
+      const delta = startX - e.clientX;
+      const newWidth = Math.max(300, Math.min(800, startWidth + delta));
+      panel.style.width = `${newWidth}px`;
+    };
+
+    const onMouseUp = () => {
+      isResizing = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    handle.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      handle.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   return (
     <div className="status-panel" ref={panelRef}>
-      <div className="resize-handle" />
+      <div className="resize-handle" ref={resizeHandleRef} />
       <button
         className="close-button"
         onClick={() => typeof onClose === "function" && onClose()}
@@ -150,7 +285,46 @@ export const AppStatusPanel = ({
           />
         </div>
 
-        <div className="sort-dropdown">
+        <div className="group-dropdown" ref={groupDropdownRef}>
+          <div className="group-input-container">
+            <input
+              type="text"
+              className="group-input"
+              placeholder="Group by label..."
+              value={groupLabelInput}
+              onChange={handleGroupLabelInput}
+              onFocus={() => {
+                setFilteredLabels(availableLabels);
+                setShowGroupOptions(true);
+              }}
+              onKeyPress={handleGroupLabelKeyPress}
+            />
+            <div className="group-input-arrow" onClick={toggleGroupOptions}>
+              {showGroupOptions ? "▲" : "▼"}
+            </div>
+          </div>
+          {showGroupOptions && (
+            <ul className="group-options">
+              <li
+                className={!selectedGroupLabel ? "selected" : ""}
+                onClick={() => selectGroupLabel(null)}
+              >
+                <span>None</span>
+              </li>
+              {filteredLabels.map((label) => (
+                <li
+                  key={label}
+                  className={selectedGroupLabel === label ? "selected" : ""}
+                  onClick={() => selectGroupLabel(label)}
+                >
+                  <span>{label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="sort-dropdown" ref={sortDropdownRef}>
           <button
             className="sort-icon-button"
             onClick={() => setShowSortOptions(!showSortOptions)}
@@ -169,30 +343,94 @@ export const AppStatusPanel = ({
         </div>
       </div>
 
-      <ul>
-        {filteredApps.map((app) => {
-          const statusClass =
-            app.status === "up"
-              ? "status-up"
-              : app.status === "down"
-                ? "status-down"
-                : "status-unavailable";
+      {selectedGroupLabel ? (
+        <div className="grouped-apps">
+          {Object.entries(groupedApps).map(([groupName, groupApps]) => {
+            const isExpanded = expandedGroups.has(groupName);
+            const groupStatus = getGroupStatus(groupApps);
+            const statusCounts = getStatusCounts(groupApps);
 
-          const label =
-            app.status === "up"
-              ? "Up"
-              : app.status === "down"
-                ? "Down"
-                : "Unavailable";
+            return (
+              <div key={groupName} className="group-tab">
+                <div
+                  className={`group-header ${groupStatus}`}
+                  onClick={() => toggleGroup(groupName)}
+                >
+                  <div className="group-info">
+                    <div className={`status-line ${groupStatus}`} />
+                    <span className="group-name">{groupName}</span>
+                  </div>
+                  <div className="group-stats">
+                    <div className="status-dots">
+                      <span className="status-dot up">{statusCounts.up}</span>
+                      <span className="status-dot unavailable">
+                        {statusCounts.unavailable}
+                      </span>
+                      <span className="status-dot down">
+                        {statusCounts.down}
+                      </span>
+                    </div>
+                    {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                  </div>
+                </div>
+                {isExpanded && (
+                  <ul className="group-apps">
+                    {groupApps.map((app) => {
+                      const statusClass =
+                        app.status === "up"
+                          ? "status-up"
+                          : app.status === "down"
+                            ? "status-down"
+                            : "status-unavailable";
 
-          return (
-            <li key={app.name}>
-              <div className="app-name">{app.name}</div>
-              <div className={`status-indicator ${statusClass}`}>{label}</div>
-            </li>
-          );
-        })}
-      </ul>
+                      const label =
+                        app.status === "up"
+                          ? "Up"
+                          : app.status === "down"
+                            ? "Down"
+                            : "Unavailable";
+
+                      return (
+                        <li key={app.name}>
+                          <div className="app-name">{app.name}</div>
+                          <div className={`status-indicator ${statusClass}`}>
+                            {label}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <ul>
+          {filteredApps.map((app) => {
+            const statusClass =
+              app.status === "up"
+                ? "status-up"
+                : app.status === "down"
+                  ? "status-down"
+                  : "status-unavailable";
+
+            const label =
+              app.status === "up"
+                ? "Up"
+                : app.status === "down"
+                  ? "Down"
+                  : "Unavailable";
+
+            return (
+              <li key={app.name}>
+                <div className="app-name">{app.name}</div>
+                <div className={`status-indicator ${statusClass}`}>{label}</div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 };

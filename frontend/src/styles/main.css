@@ -311,165 +311,195 @@ circle {
   }
 }
 
-/* Search Bar */
+/* Search, Group, and Sort Container */
 .search-sort-container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-top: 72px;
-  /* Add proper spacing below the header */
   margin-bottom: 24px;
-  /* Add spacing below the search bar and sort button */
   padding: 0;
-  /* Remove padding to align with the apps list */
 }
 
 .search-bar {
-  flex-grow: 1;
-  /* Allow the search bar to grow and shrink dynamically */
-  max-width: calc(100% - 60px);
-  /* Prevent the search bar from overlapping the sort button */
+  flex: 1;
   display: flex;
   align-items: center;
-  padding: 10px;
-  /* Match the padding of the sort button */
+  height: 41px;
+  padding: 0 10px;
   background-color: #f1f5f9;
-  /* Same background as the sort button */
   border-radius: 8px;
-  /* Same border radius as the sort button */
   border: 2px solid #2d2d2d;
-  /* Explicitly set black border */
-  transition:
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
-  margin-right: 16px;
-  /* Add spacing between the search bar and sort button */
+  transition: all 0.2s ease;
+  min-width: 0;
 }
 
 .search-bar:hover {
   background-color: #e2e8f0;
   transform: scale(1.01);
-  /* Subtle zoom on hover */
 }
 
 .search-bar:focus-within {
   background-color: #ffffff;
-  /* Brighten on focus */
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
-  /* Focus ring */
 }
 
 .search-icon {
   color: #718096;
   margin-right: 8px;
-  /* Add spacing between the icon and input */
+  font-size: 14px;
 }
 
 .search-input {
   flex: 1;
-  /* Allow the input to take up available space */
   border: none;
-  /* Remove default border */
   background: none;
-  /* Remove background */
   font-weight: 400;
-  padding: 2px;
+  height: 100%;
+  padding: 0;
   color: #2d2d2d;
   font-size: 14px;
   outline: none;
-  /* Remove focus outline */
+  min-width: 0;
 }
 
 .search-input::placeholder {
   color: #a0aec0;
-  /* Lighter placeholder */
 }
 
-/* Sort Button */
+/* Sort Button and Dropdown */
+.sort-dropdown {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .sort-icon-button {
+  height: 41px;
+  width: 41px;
   background-color: #f1f5f9;
   border-radius: 8px;
-  padding: 12px;
   border: 2px solid #2d2d2d;
-  /* Match the search bar border */
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease;
-  flex-shrink: 0;
-  /* Prevent the sort button from shrinking */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
 }
 
 .sort-icon-button:hover {
+  background-color: #e2e8f0;
   transform: scale(1.05);
-  /* Subtle zoom on hover */
 }
 
-/* Sort Options */
+.sort-icon {
+  font-size: 14px;
+  color: #2d2d2d;
+}
+
+/* Dropdown Menus (Group and Sort) */
+.group-options,
 .sort-options {
   position: absolute;
-  top: calc(100% + 8px);
-  /*Increase spacing below the sort button */
-  right: 0;
-  background-color: transparent;
-  /* border: 2px solid #000000;  Match the black border style */
-  border-radius: 10px;
-  /* Softer corners */
-  list-style: none;
-  padding: 8px 0;
-  /* Consistent padding */
-  margin: 0;
+  top: 100%;
+  margin-top: 4px;
+  background-color: #fff;
+  border: 2px solid #2d2d2d;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 2000;
-  /* Ensure it appears above other elements */
-  min-width: 220px;
-  /* Ensure enough width for longer text */
+  animation: fadeIn 0.2s ease-out;
+  padding: 0;
+  list-style: none;
 }
 
+/* Position the sort dropdown specifically */
+.sort-options {
+  position: fixed;
+  top: auto;
+  right: 0;
+  min-width: 230px;
+}
+
+/* Position the group dropdown */
+.group-options {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+/* Dropdown Items */
+.group-options li,
 .sort-options li {
-  padding: 12px 20px;
-  /* More padding for a spacious feel */
-  font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-  /* Modern font */
-  font-size: 14px;
-  /* Readable size */
-  font-weight: 500;
-  /* Medium weight for clarity */
-  color: #1f2937;
-  /* Darker text for contrast */
+  padding: 12px 16px;
+  color: #2d2d2d;
   cursor: pointer;
-  /* Indicate interactivity */
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease;
-  /* Smooth transitions */
-}
-
-.sort-options li:hover {
-  /* Light gray on hover */
-  transform: translateX(4px);
-  /* Subtle shift to the right for a playful effect */
-}
-
-.sort-options li.selected {
-  /* Highlight selected option */
-  font-weight: 700;
-  /* Make selected option bold */
-}
-
-.sort-options li .checkmark {
-  margin-left: 8px;
-  /* Add spacing between text and checkmark */
-  color: #34d399;
-  /* Green checkmark for selected option */
-}
-
-.sort-dropdown {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   position: relative;
+  width: 100%;
+  display: block;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.group-options li:last-child,
+.sort-options li:last-child {
+  border-bottom: none;
+}
+
+.group-options li span,
+.sort-options li span {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.group-options li:hover span,
+.sort-options li:hover span {
+  transform: translateX(4px);
+}
+
+.group-options li.selected,
+.sort-options li.selected {
+  font-weight: 700;
+  width: 100%;
+}
+
+.group-options li.selected span,
+.sort-options li.selected span {
+  font-weight: 700;
+}
+
+/* Dropdown Scrollbars */
+.group-options::-webkit-scrollbar,
+.sort-options::-webkit-scrollbar {
+  width: 8px;
+}
+
+.group-options::-webkit-scrollbar-track,
+.sort-options::-webkit-scrollbar-track {
+  background: #fff;
+  border-radius: 4px;
+}
+
+.group-options::-webkit-scrollbar-thumb,
+.sort-options::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.group-options::-webkit-scrollbar-thumb:hover,
+.sort-options::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
 }
 
 /* Focus States */
@@ -1067,4 +1097,258 @@ circle {
 
 .status-panel::-webkit-scrollbar-thumb:hover {
   background: #1a1a1a;
+}
+
+/* Group Dropdown Styles */
+.group-dropdown {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.group-input-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  height: 41px;
+  border: none;
+}
+
+.group-input {
+  width: 100%;
+  height: 41px;
+  padding: 0 32px 0 10px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  color: #2d2d2d;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  min-width: 0;
+  border: 2px solid #2d2d2d;
+}
+
+.group-input:hover {
+  background-color: #e2e8f0;
+  transform: scale(1.01);
+}
+
+.group-input:focus {
+  outline: none;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+.group-input::placeholder {
+  color: #a0aec0;
+}
+
+.group-input-arrow {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #2d2d2d;
+  font-size: 14px;
+  font-weight: 600;
+  user-select: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.group-input-arrow:hover {
+  background-color: rgba(45, 55, 72, 0.1);
+  transform: translateY(-50%) scale(1.05);
+  color: #1a202c;
+}
+
+/* Dropdown Menus (Group and Sort) */
+.group-options,
+.sort-options {
+  position: absolute;
+  top: 100%;
+  margin-top: 4px;
+  background-color: #fff;
+  border: 2px solid #2d2d2d;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+  padding: 0;
+  list-style: none;
+}
+
+/* Position the sort dropdown specifically */
+.sort-options {
+  position: fixed;
+  top: auto;
+  right: 0;
+  min-width: 230px;
+}
+
+/* Position the group dropdown */
+.group-options {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.group-options li,
+.sort-options li {
+  padding: 12px 16px;
+  color: #2d2d2d;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.group-options li:hover,
+.sort-options li:hover {
+  background-color: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.group-options li.selected,
+.sort-options li.selected {
+  font-weight: 700;
+}
+
+/* Grouped Apps Styles */
+.grouped-apps {
+  margin-top: 24px;
+}
+
+.group-tab {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #2d2d2d;
+  background-color: #ffffff;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.group-header:hover {
+  background-color: #f1f5f9;
+}
+
+.group-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-line {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+}
+
+.status-line.up {
+  background-color: #34d399;
+}
+
+.status-line.down {
+  background-color: #f87171;
+}
+
+.status-line.unavailable {
+  background-color: #fbbf24;
+}
+
+.group-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.group-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-dot::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.up::before {
+  background-color: #34d399;
+}
+
+.status-dot.down::before {
+  background-color: #f87171;
+}
+
+.status-dot.unavailable::before {
+  background-color: #fbbf24;
+}
+
+.group-apps {
+  padding: 12px;
+  background-color: #ffffff;
+  margin: 0;
+  list-style: none;
+}
+
+.group-apps li {
+  margin-bottom: 8px;
+}
+
+.group-apps li:last-child {
+  margin-bottom: 0;
+}
+
+/* Fix resize handle */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  background-color: #e2e8f0;
+  border-radius: 3px;
+  cursor: col-resize;
+  transition: background-color 0.2s ease;
+  z-index: 1001;
+  /* Ensure it's above other elements */
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background-color: #cbd5e0;
 }
