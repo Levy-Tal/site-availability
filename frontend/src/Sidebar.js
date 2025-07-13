@@ -8,6 +8,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { fetchLabels } from "./api/appStatusAPI";
+import { userPreferences } from "./utils/storage";
 
 const Sidebar = ({
   onStatusFilterChange,
@@ -19,6 +20,16 @@ const Sidebar = ({
   selectedLabels,
   docsTitle,
 }) => {
+  // Load saved preferences on component mount
+  useEffect(() => {
+    const savedLabelFilters = userPreferences.loadLabelFilters();
+
+    // Only update label filters if the saved values are different from current
+    if (JSON.stringify(savedLabelFilters) !== JSON.stringify(selectedLabels)) {
+      onLabelFilterChange(savedLabelFilters);
+    }
+  }, []); // Only run on mount
+
   const sidebarRef = useRef(null);
   const keyDropdownRef = useRef(null);
   const valueDropdownRef = useRef(null);

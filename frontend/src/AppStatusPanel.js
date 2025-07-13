@@ -6,6 +6,7 @@ import {
   FaChevronUp,
 } from "react-icons/fa";
 import { fetchApps, fetchLabels } from "./api/appStatusAPI";
+import { userPreferences } from "./utils/storage";
 
 export const AppStatusPanel = ({
   site,
@@ -22,14 +23,18 @@ export const AppStatusPanel = ({
   const [apps, setApps] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState("name-asc");
+  const [sortOrder, setSortOrder] = useState(userPreferences.loadSortOrder());
   const [showSortOptions, setShowSortOptions] = useState(false);
 
   // Updated group by state
   const [showGroupOptions, setShowGroupOptions] = useState(false);
   const [availableLabels, setAvailableLabels] = useState([]);
-  const [selectedGroupLabel, setSelectedGroupLabel] = useState(null);
-  const [groupLabelInput, setGroupLabelInput] = useState("");
+  const [selectedGroupLabel, setSelectedGroupLabel] = useState(
+    userPreferences.loadGroupByLabel(),
+  );
+  const [groupLabelInput, setGroupLabelInput] = useState(
+    userPreferences.loadGroupByLabel() || "",
+  );
   const [filteredLabels, setFilteredLabels] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [groupedApps, setGroupedApps] = useState({});
@@ -218,6 +223,16 @@ export const AppStatusPanel = ({
     if (!selectedGroupLabel) {
       setGroupLabelInput("");
     }
+  }, [selectedGroupLabel]);
+
+  // Save sort order whenever it changes
+  useEffect(() => {
+    userPreferences.saveSortOrder(sortOrder);
+  }, [sortOrder]);
+
+  // Save group by label whenever it changes
+  useEffect(() => {
+    userPreferences.saveGroupByLabel(selectedGroupLabel);
   }, [selectedGroupLabel]);
 
   // Resizable panel
