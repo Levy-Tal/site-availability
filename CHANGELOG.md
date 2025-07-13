@@ -1,3 +1,10 @@
+# [2.4.0](https://github.com/Levy-Tal/site-availability/compare/v2.3.1...v2.4.0) (2025-07-13)
+
+
+### Features
+
+* **localstorage:** save user filters on the ui ([3205fb5](https://github.com/Levy-Tal/site-availability/commit/3205fb5cf8a983ac78d55ae5b3e9d86b4ed4c34e))
+
 ## [2.3.1](https://github.com/Levy-Tal/site-availability/compare/v2.3.0...v2.3.1) (2025-07-13)
 
 
