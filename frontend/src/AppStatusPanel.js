@@ -197,7 +197,7 @@ export const AppStatusPanel = ({
   // Handle group label selection
   const selectGroupLabel = (label) => {
     setSelectedGroupLabel(label);
-    setGroupLabelInput(label); // Set the input value to the selected label
+    setGroupLabelInput(label || ""); // Clear input when label is null/undefined
     setShowGroupOptions(false);
   };
 
@@ -212,6 +212,13 @@ export const AppStatusPanel = ({
       }
     }
   };
+
+  // Clear input when no group label is selected
+  useEffect(() => {
+    if (!selectedGroupLabel) {
+      setGroupLabelInput("");
+    }
+  }, [selectedGroupLabel]);
 
   // Resizable panel
   useEffect(() => {

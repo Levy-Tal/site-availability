@@ -247,6 +247,7 @@ circle {
 .sidebar__nav-item--active:hover {
   background-color: #e2e8f0;
   transform: translateX(4px);
+  color: #2d2d2d;
 }
 
 .sidebar--collapsed .sidebar__nav-item {
