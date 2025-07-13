@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import { fetchLocations, fetchApps } from "./api/appStatusAPI";
 import { fetchScrapeInterval } from "./api/scrapeIntervalAPI";
 import { fetchDocs } from "./api/docsAPI";
+import { userPreferences } from "./utils/storage";
 import "./styles/main.css";
 
 function App() {
@@ -13,9 +14,15 @@ function App() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [scrapeInterval, setScrapeInterval] = useState(null);
   const [docsInfo, setDocsInfo] = useState({ docs_title: "", docs_url: "" });
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [statusFilters, setStatusFilters] = useState([]);
-  const [labelFilters, setLabelFilters] = useState([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    userPreferences.loadSidebarCollapsed(),
+  );
+  const [statusFilters, setStatusFilters] = useState(
+    userPreferences.loadStatusFilters(),
+  );
+  const [labelFilters, setLabelFilters] = useState(
+    userPreferences.loadLabelFilters(),
+  );
 
   // Fetch locations with their calculated status from the server
   const refreshLocations = async () => {
@@ -101,6 +108,21 @@ function App() {
   const handleSidebarToggle = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
+
+  // Save sidebar collapsed state whenever it changes
+  useEffect(() => {
+    userPreferences.saveSidebarCollapsed(isSidebarCollapsed);
+  }, [isSidebarCollapsed]);
+
+  // Save status filters whenever they change
+  useEffect(() => {
+    userPreferences.saveStatusFilters(statusFilters);
+  }, [statusFilters]);
+
+  // Save label filters whenever they change
+  useEffect(() => {
+    userPreferences.saveLabelFilters(labelFilters);
+  }, [labelFilters]);
 
   return (
     <div
