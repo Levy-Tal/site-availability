@@ -1,3 +1,10 @@
+## [2.3.1](https://github.com/Levy-Tal/site-availability/compare/v2.3.0...v2.3.1) (2025-07-13)
+
+
+### Bug Fixes
+
+* **ui:** fix ui bugs ([1d66f59](https://github.com/Levy-Tal/site-availability/commit/1d66f59d60c61ac1cd078e5787ed6a4fb2d6458b))
+
 # [2.3.0](https://github.com/Levy-Tal/site-availability/compare/v2.2.0...v2.3.0) (2025-07-09)
 
 
