@@ -1,4 +1,3 @@
-// frontend/src/api/docsAPI.js
 export const fetchDocs = async () => {
   try {
     const response = await fetch("/api/docs");
@@ -11,7 +10,7 @@ export const fetchDocs = async () => {
     }
     return await response.json();
   } catch (error) {
-    console.error("Error fetching scrape interval:", error);
+    console.error("Error fetching docs:", error);
     throw error;
   }
 };

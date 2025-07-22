@@ -38,7 +38,7 @@ kill -9 <PID>
 yamllint config.yaml
 
 # Run with debug logging
-SA_LOG_LEVEL=debug ./site-availability
+LOG_LEVEL=debug ./site-availability
 ```
 
 3. **Check permissions:**
@@ -74,26 +74,6 @@ ping prometheus
 docker-compose exec backend wget -qO- http://prometheus:9090/metrics
 ```
 
-2. **Check Prometheus configuration:**
-
-```bash
-# Verify Prometheus targets
-curl http://prometheus:9090/api/v1/targets
-
-# Check Prometheus logs
-docker-compose logs prometheus
-```
-
-3. **Authentication issues:**
-
-```bash
-# Check HMAC secret
-echo $SA_AUTHENTICATION_HMAC_SECRET
-
-# Verify authentication headers
-curl -H "Authorization: HMAC-SHA256 <signature>" http://localhost:8080/api/apps
-```
-
 ### Frontend Issues
 
 #### Frontend Won't Load
@@ -106,39 +86,22 @@ curl -H "Authorization: HMAC-SHA256 <signature>" http://localhost:8080/api/apps
 
 **Solutions:**
 
-1. **Check Node.js setup:**
-
-```bash
-# Verify Node.js version
-node --version  # Should be 18.0+
-
-# Clear npm cache
-npm cache clean --force
-
-# Reinstall dependencies
-rm -rf node_modules package-lock.json
-npm install
-```
-
-2. **Check API connectivity:**
+1. **Check API connectivity:**
 
 ```bash
 # Test backend API
-curl http://localhost:8080/health
-
-# Check CORS settings
-curl -H "Origin: http://localhost:3000" http://localhost:8080/api/apps
+curl http://localhost:8080/api/apps
 ```
 
-3. **Check frontend configuration:**
+````
+
+3. **Check browser console:**
 
 ```javascript
-// src/config.js
-const config = {
-  apiUrl: "http://localhost:8080", // Verify this matches your backend
-  updateInterval: 30000,
-};
-```
+// Open browser developer tools (F12)
+// Look for JavaScript errors in Console tab
+// Check Network tab for failed API requests
+````
 
 #### Map Not Displaying
 
@@ -178,40 +141,6 @@ curl http://localhost:8080/api/locations | jq
 
 ### Docker Issues
 
-#### Container Build Failures
-
-**Symptoms:**
-
-- Docker build errors
-- Missing dependencies
-- Permission denied errors
-
-**Solutions:**
-
-1. **Check Dockerfile:**
-
-```bash
-# Build with verbose output
-docker build --no-cache -t site-availability-backend backend/
-
-# Check base image
-docker pull golang:1.21-alpine
-
-# Verify file permissions
-ls -la backend/
-```
-
-2. **Disk space issues:**
-
-```bash
-# Check available space
-df -h
-
-# Clean up Docker
-docker system prune -a
-docker volume prune
-```
-
 #### Container Runtime Issues
 
 **Symptoms:**
@@ -226,33 +155,19 @@ docker volume prune
 
 ```bash
 # View logs
-docker-compose logs backend
-docker-compose logs frontend
-
-# Follow logs in real-time
-docker-compose logs -f backend
+docker ps
+docker logs -f <container-name>
 ```
 
-2. **Resource limits:**
+````
+
+3. **Restart containers:**
 
 ```bash
-# Check resource usage
-docker stats
 
-# Monitor memory usage
-docker exec -it <container> free -h
-```
-
-3. **Network issues:**
-
-```bash
-# Check network configuration
-docker network ls
-docker network inspect site-availability_default
-
-# Test inter-container connectivity
-docker-compose exec frontend ping backend
-```
+# Restart all services
+docker compose down && docker-compose up -d
+````
 
 ### Kubernetes/Helm Issues
 
@@ -361,11 +276,12 @@ locations:
     longitude: -74.005974
 ```
 
-2. **Check data mapping:**
+2. **Check coordinate format:**
 
-```bash
-# Verify app-to-location mapping
-curl http://localhost:8080/api/apps | jq '.[] | {name, location}'
+```yaml
+# Ensure coordinates are decimal degrees
+# Latitude: -90 to 90
+# Longitude: -180 to 180
 ```
 
 ## Debugging Tools
@@ -374,20 +290,15 @@ curl http://localhost:8080/api/apps | jq '.[] | {name, location}'
 
 ```bash
 # Backend logs with debug level
-SA_LOG_LEVEL=debug ./site-availability
+LOG_LEVEL=debug
 
-# Follow logs in real-time
-tail -f /var/log/site-availability.log
-
-# Search for specific errors
-grep -i "error" /var/log/site-availability.log
 ```
 
 ### API Testing
 
 ```bash
 # Health check
-curl http://localhost:8080/health
+curl http://localhost:8080/healthz
 
 # Get all applications
 curl http://localhost:8080/api/apps | jq
@@ -398,51 +309,6 @@ curl http://localhost:8080/api/locations | jq
 # Test metrics endpoint
 curl http://localhost:8080/metrics
 ```
-
-### Network Debugging
-
-```bash
-# Test connectivity
-telnet prometheus 9090
-
-# Check DNS resolution
-nslookup prometheus
-
-# Trace network path
-traceroute prometheus
-
-# Check firewall rules
-iptables -L
-```
-
-## Performance Issues
-
-### High Memory Usage
-
-**Solutions:**
-
-1. Increase scrape intervals
-2. Reduce number of monitored metrics
-3. Implement metric filtering
-4. Use Prometheus recording rules
-
-### Slow Response Times
-
-**Solutions:**
-
-1. Optimize Prometheus queries
-2. Add caching layers
-3. Use Prometheus federation
-4. Scale horizontally
-
-### High CPU Usage
-
-**Solutions:**
-
-1. Profile the application
-2. Optimize metric processing
-3. Reduce scraping frequency
-4. Use more efficient queries
 
 ## Getting Help
 
@@ -458,21 +324,13 @@ iptables -L
 Include the following information:
 
 ```bash
-# System information
-uname -a
-docker --version
-go version
-node --version
 
-# Application logs
-SA_LOG_LEVEL=debug ./site-availability 2>&1
+# Application logs in debug mode
+LOG_LEVEL=debug
 
 # Configuration (remove sensitive data)
 cat config.yaml
 
-# Container status (if using Docker)
-docker-compose ps
-docker-compose logs
 ```
 
 ### Community Resources

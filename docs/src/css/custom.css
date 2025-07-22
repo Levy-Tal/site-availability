@@ -676,3 +676,13 @@ tbody tr:hover {
   background: var(--sa-light-text);
   border: 1px solid var(--sa-dark-bg);
 }
+
+/* Feature Image Styling */
+.featureImage {
+  border-radius: 100% !important;
+}
+
+/* Target the CSS module class with hash */
+[class*="featureImage"] {
+  border-radius: 100% !important;
+}
