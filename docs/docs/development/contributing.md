@@ -96,54 +96,6 @@ We welcome:
 
 ## Development Guidelines
 
-### Code Style
-
-#### Go Code Style
-
-Follow standard Go conventions:
-
-```go
-// Good: Clear, concise function names
-func GetApplicationStatus(appName string) (*Status, error) {
-    // Implementation
-}
-
-// Good: Proper error handling
-if err != nil {
-    return nil, fmt.Errorf("failed to get status: %w", err)
-}
-
-// Good: Use meaningful variable names
-prometheusURL := config.GetPrometheusURL()
-```
-
-#### JavaScript/React Style
-
-Use modern JavaScript and React patterns:
-
-```javascript
-// Good: Use hooks and functional components
-const AppStatusPanel = ({ applications }) => {
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // Effect logic
-  }, [applications]);
-
-  return <div className="app-status-panel">{/* Component JSX */}</div>;
-};
-
-// Good: Use arrow functions and destructuring
-const fetchApplications = async () => {
-  try {
-    const { data } = await api.getApplications();
-    return data;
-  } catch (error) {
-    console.error("Failed to fetch applications:", error);
-  }
-};
-```
-
 ### Commit Messages
 
 Use conventional commit format:
@@ -253,41 +205,6 @@ describe("AppStatusPanel", () => {
 });
 ```
 
-### Performance Considerations
-
-#### Backend Performance
-
-- Use context for cancellation
-- Implement proper error handling
-- Add metrics and monitoring
-- Use connection pooling
-
-```go
-func (s *Service) ScrapeWithTimeout(ctx context.Context, target string) error {
-    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-    defer cancel()
-
-    return s.scraper.Scrape(ctx, target)
-}
-```
-
-#### Frontend Performance
-
-- Minimize re-renders
-- Use React.memo for expensive components
-- Implement proper loading states
-- Optimize API calls
-
-```javascript
-const ExpensiveComponent = React.memo(({ data }) => {
-  const processedData = useMemo(() => {
-    return processData(data);
-  }, [data]);
-
-  return <div>{processedData}</div>;
-});
-```
-
 ## Review Process
 
 ### Pull Request Guidelines
@@ -319,26 +236,6 @@ When reviewing:
 - Verify tests are adequate
 - Ensure documentation is accurate
 
-## Release Process
-
-### Versioning
-
-We use [Semantic Versioning](https://semver.org/):
-
-- `MAJOR.MINOR.PATCH`
-- `MAJOR`: Breaking changes
-- `MINOR`: New features (backward compatible)
-- `PATCH`: Bug fixes (backward compatible)
-
-### Release Checklist
-
-1. Update CHANGELOG.md
-2. Update version in relevant files
-3. Create release tag
-4. Build and test release artifacts
-5. Update documentation
-6. Announce release
-
 ## Community Guidelines
 
 ### Code of Conduct
@@ -353,7 +250,7 @@ We use [Semantic Versioning](https://semver.org/):
 - **Issues**: Bug reports and feature requests
 - **Discussions**: General questions and ideas
 - **Pull Requests**: Code contributions
-- **Security**: security@example.com for security issues
+- **Security**: add email in the issue , and the team will make contact with you.
 
 ### Getting Help
 
@@ -361,13 +258,5 @@ We use [Semantic Versioning](https://semver.org/):
 2. Search existing issues
 3. Ask in GitHub Discussions
 4. Create an issue with detailed information
-
-## Recognition
-
-Contributors are recognized in:
-
-- CONTRIBUTORS.md file
-- Release notes
-- Annual contributor highlights
 
 Thank you for contributing to Site Availability Monitoring! 🎉
