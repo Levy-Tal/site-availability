@@ -21,10 +21,11 @@ This guide covers the essential testing commands and practices for Site Availabi
   go test -race ./...
   ```
 - Generate coverage report:
-  ```bash
-  go test -coverprofile=coverage.out ./...
-  go tool cover -html=coverage.out -o coverage.html
-  ```
+
+```bash
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out -o coverage.html
+```
 
 ## Frontend (React) Testing
 
@@ -33,13 +34,16 @@ This guide covers the essential testing commands and practices for Site Availabi
   npm test
   ```
 - Run with coverage:
-  ```bash
-  npm test -- --coverage
-  ```
+
+```bash
+npm test -- --coverage
+```
+
 - Run specific test file:
-  ```bash
+
+```bash
   npm test -- AppStatusPanel.test.js
-  ```
+```
 
 ## Continuous Integration
 

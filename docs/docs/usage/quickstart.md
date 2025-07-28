@@ -63,7 +63,7 @@ sources:
       tier: "backend"
     config:
       url: http://prometheus:9090
-      apps:
+apps:
         - name: myApp
           location: London
           metric: up{instance="app:8080", job="app"}
@@ -71,7 +71,7 @@ sources:
             app_type: "web-service"
             importance: "medium"
         - name: myPrometheus
-          location: New York City
+    location: New York City
           metric: up{instance="localhost:9090", job="prometheus"}
           labels:
             app_type: "prometheus"
