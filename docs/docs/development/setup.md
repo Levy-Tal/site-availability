@@ -10,8 +10,8 @@ Set up your local development environment for contributing to Site Availability 
 
 ### Required Software
 
-- **Go** (v1.19+): [Download](https://golang.org/dl/)
-- **Node.js** (v18.0+): [Download](https://nodejs.org/)
+- **Go** (v1.24): [Download](https://golang.org/dl/)
+- **Node.js** (v18): [Download](https://nodejs.org/)
 - **Git**: [Installation guide](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 
 ### Recommended Tools
@@ -28,6 +28,13 @@ Set up your local development environment for contributing to Site Availability 
 ```bash
 git clone https://github.com/Levy-Tal/site-availability.git
 cd site-availability
+```
+
+### Install Dependencies
+
+```bash
+# Install all dependencies (frontend, backend, docs)
+make install
 ```
 
 ### Environment Setup
@@ -84,96 +91,26 @@ apps:
     prometheus: http://localhost:9090/
 ```
 
-### Running the Backend
+### Running the Backend+Frontend
 
 ```bash
-# Development mode with hot reload
-go run main.go
-
-# Or build and run
-go build -o site-availability main.go
-./site-availability
+# Build and run the server locally
+make build
 ```
+
+This command will:
+
+- Build the frontend
+- Copy the frontend build to the backend static directory
+- Start the backend server with the built frontend
 
 ### Testing
 
 ```bash
 # Run all tests
-go test ./...
+make test
 
-# Run tests with coverage
-go test -cover ./...
 
-# Run specific package tests
-go test ./handlers/...
-
-# Generate coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
-
-## Frontend Development
-
-### Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Verify setup
-npm --version
-node --version
-```
-
-### Configuration
-
-Edit `src/config.js` for development:
-
-```javascript
-const config = {
-  apiUrl: "http://localhost:8080",
-  map: {
-    updateInterval: 10000, // 10 seconds for development
-    defaultZoom: 3,
-  },
-  features: {
-    debugMode: true,
-  },
-};
-```
-
-### Running the Frontend
-
-```bash
-# Start development server
-npm start
-
-# The app will open at http://localhost:3000
-```
-
-### Testing
-
-```bash
-# Run tests
-npm test
-
-# Run tests with coverage
-npm test -- --coverage
-
-# Run tests in watch mode
-npm test -- --watch
-```
-
-### Building
-
-```bash
-# Create production build
-npm run build
-
-# Serve build locally
-npx serve -s build
 ```
 
 ## Development Workflow
@@ -195,14 +132,17 @@ npx serve -s build
 3. **Test your changes**:
 
    ```bash
-   # Backend tests
-   cd backend && go test ./...
-
-   # Frontend tests
-   cd frontend && npm test
+   # Run all tests
+   make test
    ```
 
-4. **Commit changes**:
+4. **Run pre-commit hooks**:
+
+   ```bash
+   make pre-commit
+   ```
+
+5. **Commit changes**:
    ```bash
    git add .
    git commit -m "feat: add new feature"
@@ -213,8 +153,11 @@ npx serve -s build
 Start the complete stack:
 
 ```bash
-cd helpers/docker-compose/single-server
-docker-compose up -d
+# Run using Docker Compose
+make run
+
+# Stop containers
+make down
 ```
 
 This provides:
@@ -241,74 +184,14 @@ curl http://localhost:8080/api/locations | jq
 curl http://localhost:8080/metrics
 ```
 
-## Code Quality
-
-### Linting
-
-```bash
-# Backend linting
-cd backend
-golangci-lint run
-
-# Frontend linting
-cd frontend
-npm run lint
-```
-
-### Formatting
-
-```bash
-# Format Go code
-gofmt -w .
-goimports -w .
-
-# Format JavaScript/React code
-cd frontend
-npm run format
-```
-
 ### Pre-commit Hooks
 
 Install pre-commit hooks:
 
 ```bash
-# Install pre-commit
-pip install pre-commit
-
-# Install hooks
-pre-commit install
-
-# Run manually
-pre-commit run --all-files
+# Run pre-commit hooks
+make pre-commit
 ```
-
-## IDE Setup
-
-### VS Code
-
-Recommended extensions:
-
-- Go (by Google)
-- ES7+ React/Redux/React-Native snippets
-- Prettier
-- ESLint
-- REST Client
-
-Create `.vscode/settings.json`:
-
-```json
-{
-  "go.buildOnSave": "package",
-  "go.lintOnSave": "package",
-  "go.testOnSave": "package",
-  "editor.formatOnSave": true,
-  "eslint.autoFixOnSave": true
-}
-```
-
-### GoLand/WebStorm
-
-Configure Go modules and Node.js interpreter in IDE settings.
 
 ## Debugging
 
@@ -316,20 +199,15 @@ Configure Go modules and Node.js interpreter in IDE settings.
 
 ```bash
 # Run with debug logging
-LOG_LEVEL=debug go run main.go
+LOG_LEVEL=debug make build
 
-# Use delve debugger
-go install github.com/go-delve/delve/cmd/dlv@latest
-dlv debug main.go
 ```
 
-### Frontend Debugging
+## Documentation
 
 ```bash
-# Enable debug mode
-REACT_APP_DEBUG=true npm start
-
-# Use React Developer Tools browser extension
+# Run docs website locally
+make docs
 ```
 
 ## Common Issues

@@ -1,4 +1,3 @@
-// frontend/src/api/scrapeIntervalAPI.js
 export const fetchScrapeInterval = async () => {
   try {
     const response = await fetch("/api/scrape-interval");

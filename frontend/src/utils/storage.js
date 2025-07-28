@@ -1,4 +1,3 @@
-// Storage utility for saving user preferences
 const STORAGE_KEYS = {
   STATUS_FILTERS: "site-availability-status-filters",
   LABEL_FILTERS: "site-availability-label-filters",
@@ -7,9 +6,7 @@ const STORAGE_KEYS = {
   SIDEBAR_COLLAPSED: "site-availability-sidebar-collapsed",
 };
 
-// Helper functions for localStorage
 const storage = {
-  // Save data to localStorage
   save: (key, data) => {
     try {
       localStorage.setItem(key, JSON.stringify(data));
@@ -18,7 +15,6 @@ const storage = {
     }
   },
 
-  // Load data from localStorage
   load: (key, defaultValue = null) => {
     try {
       const item = localStorage.getItem(key);
@@ -29,7 +25,6 @@ const storage = {
     }
   },
 
-  // Remove data from localStorage
   remove: (key) => {
     try {
       localStorage.removeItem(key);
@@ -39,9 +34,7 @@ const storage = {
   },
 };
 
-// User preferences management
 export const userPreferences = {
-  // Status filters
   saveStatusFilters: (filters) => {
     storage.save(STORAGE_KEYS.STATUS_FILTERS, filters);
   },
@@ -50,7 +43,6 @@ export const userPreferences = {
     return storage.load(STORAGE_KEYS.STATUS_FILTERS, []);
   },
 
-  // Label filters
   saveLabelFilters: (filters) => {
     storage.save(STORAGE_KEYS.LABEL_FILTERS, filters);
   },
@@ -59,7 +51,6 @@ export const userPreferences = {
     return storage.load(STORAGE_KEYS.LABEL_FILTERS, []);
   },
 
-  // Group by label
   saveGroupByLabel: (label) => {
     storage.save(STORAGE_KEYS.GROUP_BY_LABEL, label);
   },
@@ -68,7 +59,6 @@ export const userPreferences = {
     return storage.load(STORAGE_KEYS.GROUP_BY_LABEL, null);
   },
 
-  // Sort order
   saveSortOrder: (order) => {
     storage.save(STORAGE_KEYS.SORT_ORDER, order);
   },
@@ -77,7 +67,6 @@ export const userPreferences = {
     return storage.load(STORAGE_KEYS.SORT_ORDER, "name-asc");
   },
 
-  // Sidebar collapsed state
   saveSidebarCollapsed: (collapsed) => {
     storage.save(STORAGE_KEYS.SIDEBAR_COLLAPSED, collapsed);
   },
@@ -86,7 +75,6 @@ export const userPreferences = {
     return storage.load(STORAGE_KEYS.SIDEBAR_COLLAPSED, false);
   },
 
-  // Clear all preferences
   clearAll: () => {
     Object.values(STORAGE_KEYS).forEach((key) => {
       storage.remove(key);

@@ -46,7 +46,11 @@ export const MapComponent = ({ locations, onSiteClick }) => {
 
     let scaleFactor, zoomFactor, baseSize;
     console.log("lonRange", lonRange);
-    if (lonRange > 100) {
+    if (lonRange > 200) {
+      scaleFactor = 220;
+      zoomFactor = 1;
+      baseSize = 0.7;
+    } else if (lonRange > 100) {
       scaleFactor = 300;
       zoomFactor = 1;
       baseSize = 0.7;
@@ -150,16 +154,14 @@ export const MapComponent = ({ locations, onSiteClick }) => {
           </Geographies>
 
           {locations.map((site, index) => {
-            // Use server-calculated status directly (no client-side calculation needed)
-            // null status means no apps in location, show gray
             const color =
               site.status === "up"
-                ? "#10B981" // green
+                ? "#10B981"
                 : site.status === "down"
-                  ? "#EF4444" // red
+                  ? "#EF4444"
                   : site.status === "unavailable"
-                    ? "#F59E0B" // yellow
-                    : "#D6D6DA"; // gray (null status or unknown/default)
+                    ? "#F59E0B"
+                    : "#D6D6DA";
 
             const isHovered = hoveredMarker === site.name;
             const markerScale =

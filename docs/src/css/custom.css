@@ -30,6 +30,7 @@
   --sa-letter-spacing: 0.02em;
 
   /* Spacing */
+  --sa-spacing-non: 0px;
   --sa-spacing-xs: 4px;
   --sa-spacing-sm: 8px;
   --sa-spacing-md: 12px;
@@ -210,7 +211,7 @@ h2 {
 }
 
 .menu__link--active {
-  border: 2px solid var(--sa-dark-bg);
+  border: 0px solid var(--sa-dark-bg);
   background: linear-gradient(
     135deg,
     var(--sa-white) 0%,
@@ -244,7 +245,7 @@ h2 {
   background: var(--sa-white);
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius-lg);
-  padding: var(--sa-spacing-lg);
+  padding: var(--sa-spacing-non);
   margin-bottom: var(--sa-spacing-lg);
   box-shadow: 0 2px 8px var(--sa-shadow);
   transition: var(--sa-transition);
@@ -675,4 +676,14 @@ tbody tr:hover {
 [data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: var(--sa-light-text);
   border: 1px solid var(--sa-dark-bg);
+}
+
+/* Feature Image Styling */
+.featureImage {
+  border-radius: 100% !important;
+}
+
+/* Target the CSS module class with hash */
+[class*="featureImage"] {
+  border-radius: 100% !important;
 }

@@ -13,67 +13,62 @@
  */
 const sidebars = {
   tutorialSidebar: [
-    "intro",
+    "introduction",
     {
       type: "category",
-      label: "Getting Started",
+      label: "Usage",
       items: [
-        "getting-started/installation",
-        "getting-started/quick-start",
-        "getting-started/docker",
-      ],
-    },
-    {
-      type: "category",
-      label: "Configuration",
-      items: [
-        "configuration/overview",
-        "configuration/backend",
-        "configuration/frontend",
-        "configuration/http-source",
-        "configuration/prometheus",
-      ],
-    },
-    {
-      type: "category",
-      label: "Deployment",
-      items: [
-        "deployment/docker-compose",
-        "deployment/kubernetes",
-        "deployment/helm",
-        "deployment/production",
+        "usage/quickstart",
+        "usage/terminology",
+        {
+          type: "category",
+          label: "Configuration",
+          items: [
+            "usage/configuration/server",
+            {
+              type: "category",
+              label: "Sources",
+              items: [
+                "usage/configuration/sources/prometheus",
+                "usage/configuration/sources/site",
+                "usage/configuration/sources/http",
+              ],
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Installation",
+          items: [
+            "usage/installation/docker-compose",
+            "usage/installation/helm-chart",
+          ],
+        },
+        "usage/troubleshooting",
       ],
     },
     {
       type: "category",
       label: "Development",
       items: [
-        "development/setup",
         "development/architecture",
-        "development/contributing",
+        "development/setup",
+        "development/frontend",
+        {
+          type: "category",
+          label: "Backend",
+          items: ["development/backend/sources"],
+        },
         "development/testing",
+        "development/contributing",
       ],
     },
     {
       type: "category",
-      label: "API Reference",
-      items: [
-        "api/overview",
-        "api/endpoints",
-        "api/authentication",
-        "api/metrics",
-      ],
+      label: "API",
+      items: ["api/overview", "api/endpoints"],
     },
-    {
-      type: "category",
-      label: "Frontend",
-      items: [
-        "frontend/overview",
-        "frontend/components",
-        "frontend/configuration",
-      ],
-    },
-    "troubleshooting",
+    "metrics",
   ],
 };
 

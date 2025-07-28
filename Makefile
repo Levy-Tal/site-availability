@@ -1,7 +1,7 @@
 RELEASE_DIR=release
 HELM_CHART_PATH=chart
 
-.PHONY: help build docker run release semantic-release install-plugins pre-commit
+.PHONY: help build docker run release semantic-release install-plugins pre-commit docs
 
 help:  ## Show available commands
 	@echo "Available commands:"
@@ -16,6 +16,7 @@ test:  ## Run tests
 install:  ## Install dependencies
 	@npm install --prefix frontend
 	@cd backend && go mod tidy
+	@cd docs && npm install
 
 install-nvm:  ## Install nvm
 	@curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
@@ -41,6 +42,9 @@ docker:   ## Build the Docker image
 
 run:   ## Run the app using Docker Compose
 	@cd helpers && docker compose up -d --build
+
+docs:  ## Run the docs website locally in developer mode
+	@cd docs && npm start
 
 down:   ## Stop and remove Docker Compose containers
 	@cd helpers && docker compose down

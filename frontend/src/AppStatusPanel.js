@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   FaSortAmountDownAlt,
   FaSearch,
@@ -14,6 +14,7 @@ export const AppStatusPanel = ({
   scrapeInterval,
   statusFilters,
   labelFilters,
+  refreshLocations,
 }) => {
   const panelRef = useRef(null);
   const groupDropdownRef = useRef(null);
@@ -39,29 +40,34 @@ export const AppStatusPanel = ({
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [groupedApps, setGroupedApps] = useState({});
 
-  // Fetch apps for this location
-  const refreshApps = async () => {
+  // Fetch apps for this location and refresh locations simultaneously
+  const refreshApps = useCallback(async () => {
     try {
-      const appsData = await fetchApps(site.name, statusFilters, labelFilters);
+      // Execute both API calls simultaneously
+      const [appsData] = await Promise.all([
+        fetchApps(site.name, statusFilters, labelFilters),
+        refreshLocations ? refreshLocations() : Promise.resolve(),
+      ]);
       setApps(appsData);
     } catch (error) {
       console.error("Error fetching apps for location:", error);
     }
-  };
+  }, [site.name, statusFilters, labelFilters, refreshLocations]);
 
-  // Initial fetch when panel opens
+  // Initial fetch when panel opens - synchronized refresh
   useEffect(() => {
     refreshApps();
-    loadAvailableLabels();
-  }, [site.name, statusFilters, labelFilters]);
+  }, [refreshApps]);
 
   // Load available labels
   const loadAvailableLabels = async () => {
     try {
       const labels = await fetchLabels();
       setAvailableLabels(labels);
+      return labels;
     } catch (error) {
       console.error("Error loading labels:", error);
+      return [];
     }
   };
 
@@ -74,7 +80,7 @@ export const AppStatusPanel = ({
 
       return () => clearInterval(intervalId);
     }
-  }, [scrapeInterval, site.name, statusFilters, labelFilters]);
+  }, [scrapeInterval, refreshApps]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -192,9 +198,11 @@ export const AppStatusPanel = ({
       setShowGroupOptions(false);
     } else {
       if (availableLabels.length === 0) {
-        await loadAvailableLabels();
+        const labels = await loadAvailableLabels();
+        setFilteredLabels(labels);
+      } else {
+        setFilteredLabels(availableLabels);
       }
-      setFilteredLabels(availableLabels);
       setShowGroupOptions(true);
     }
   };
@@ -234,6 +242,13 @@ export const AppStatusPanel = ({
   useEffect(() => {
     userPreferences.saveGroupByLabel(selectedGroupLabel);
   }, [selectedGroupLabel]);
+
+  // Update filtered labels when available labels change and dropdown is open
+  useEffect(() => {
+    if (showGroupOptions && availableLabels.length > 0) {
+      setFilteredLabels(availableLabels);
+    }
+  }, [availableLabels, showGroupOptions]);
 
   // Resizable panel
   useEffect(() => {
@@ -314,8 +329,13 @@ export const AppStatusPanel = ({
               placeholder="Group by label..."
               value={groupLabelInput}
               onChange={handleGroupLabelInput}
-              onFocus={() => {
-                setFilteredLabels(availableLabels);
+              onFocus={async () => {
+                if (availableLabels.length === 0) {
+                  const labels = await loadAvailableLabels();
+                  setFilteredLabels(labels);
+                } else {
+                  setFilteredLabels(availableLabels);
+                }
                 setShowGroupOptions(true);
               }}
               onKeyPress={handleGroupLabelKeyPress}

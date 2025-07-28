@@ -1,11 +1,7 @@
-// frontend/src/api/appStatusAPI.js
-
-// Fetch locations with their calculated status
 export const fetchLocations = async (statusFilters = [], labelFilters = []) => {
   try {
     const params = new URLSearchParams();
 
-    // Add multiple status filters if provided
     if (Array.isArray(statusFilters) && statusFilters.length > 0) {
       statusFilters.forEach((status) => {
         params.append("status", status);
@@ -37,7 +33,6 @@ export const fetchLocations = async (statusFilters = [], labelFilters = []) => {
   }
 };
 
-// Fetch apps for a specific location or all apps
 export const fetchApps = async (
   locationName = null,
   statusFilters = [],
@@ -50,7 +45,6 @@ export const fetchApps = async (
       params.append("location", locationName);
     }
 
-    // Add multiple status filters if provided
     if (Array.isArray(statusFilters) && statusFilters.length > 0) {
       statusFilters.forEach((status) => {
         params.append("status", status);
@@ -80,7 +74,6 @@ export const fetchApps = async (
   }
 };
 
-// Fetch available labels
 export const fetchLabels = async (key = null) => {
   try {
     const url = key ? `/api/labels?${encodeURIComponent(key)}` : "/api/labels";

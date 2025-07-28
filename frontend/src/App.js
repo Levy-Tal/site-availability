@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { MapComponent } from "./map";
 import { AppStatusPanel } from "./AppStatusPanel";
 import Sidebar from "./Sidebar";
@@ -25,14 +25,14 @@ function App() {
   );
 
   // Fetch locations with their calculated status from the server
-  const refreshLocations = async () => {
+  const refreshLocations = useCallback(async () => {
     try {
       const locationsData = await fetchLocations(statusFilters, labelFilters);
       setLocations(locationsData);
     } catch (error) {
       console.error("Error refreshing locations:", error);
     }
-  };
+  }, [statusFilters, labelFilters]);
 
   useEffect(() => {
     // Fetch scrape interval, locations, and docs info on initial load
@@ -52,8 +52,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (scrapeInterval) {
-      // Set up periodic refresh of locations
+    if (scrapeInterval && !isPanelOpen) {
+      // Only set up periodic refresh of locations when panel is closed
+      // When panel is open, it will coordinate the refresh
       const intervalId = setInterval(() => {
         refreshLocations();
       }, scrapeInterval);
@@ -61,7 +62,7 @@ function App() {
       // Clean up interval on component unmount or when scrapeInterval changes
       return () => clearInterval(intervalId);
     }
-  }, [scrapeInterval, statusFilters, labelFilters]);
+  }, [scrapeInterval, statusFilters, labelFilters, isPanelOpen]);
 
   // Refresh locations when filters change
   useEffect(() => {
@@ -150,6 +151,7 @@ function App() {
           scrapeInterval={scrapeInterval}
           statusFilters={statusFilters}
           labelFilters={labelFilters}
+          refreshLocations={refreshLocations}
         />
       )}
     </div>

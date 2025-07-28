@@ -20,15 +20,13 @@ const Sidebar = ({
   selectedLabels,
   docsTitle,
 }) => {
-  // Load saved preferences on component mount
   useEffect(() => {
     const savedLabelFilters = userPreferences.loadLabelFilters();
 
-    // Only update label filters if the saved values are different from current
     if (JSON.stringify(savedLabelFilters) !== JSON.stringify(selectedLabels)) {
       onLabelFilterChange(savedLabelFilters);
     }
-  }, []); // Only run on mount
+  }, []);
 
   const sidebarRef = useRef(null);
   const keyDropdownRef = useRef(null);
@@ -42,15 +40,8 @@ const Sidebar = ({
   const [showKeySuggestions, setShowKeySuggestions] = useState(false);
   const [showValueSuggestions, setShowValueSuggestions] = useState(false);
 
-  // Load labels on component mount - now done dynamically on user interaction
-  useEffect(() => {
-    // Labels are now loaded dynamically when user focuses on input
-  }, []);
-
-  // Close suggestions on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      // Close key suggestions if clicking outside key dropdown
       if (
         showKeySuggestions &&
         keyDropdownRef.current &&
@@ -59,7 +50,6 @@ const Sidebar = ({
         setShowKeySuggestions(false);
       }
 
-      // Close value suggestions if clicking outside value dropdown
       if (
         showValueSuggestions &&
         valueDropdownRef.current &&
@@ -73,12 +63,10 @@ const Sidebar = ({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [showKeySuggestions, showValueSuggestions]);
 
-  // Handle key input changes
   const handleKeyInputChange = async (e) => {
     const value = e.target.value;
     setKeyInput(value);
 
-    // If key input is cleared, reset selected key and disable value input
     if (value.trim() === "") {
       setSelectedKey("");
       setValueInput("");
@@ -87,7 +75,6 @@ const Sidebar = ({
     }
 
     if (value.length > 0) {
-      // Filter existing key suggestions
       const filteredKeys = labelKeys.filter(
         (key) => key && key.toLowerCase().includes(value.toLowerCase()),
       );
@@ -99,13 +86,11 @@ const Sidebar = ({
     }
   };
 
-  // Toggle key suggestions
   const toggleKeySuggestions = async () => {
     if (showKeySuggestions) {
       setShowKeySuggestions(false);
     } else {
       if (labelKeys.length === 0) {
-        // Load keys if not already loaded
         await handleKeyInputFocus();
       } else {
         setKeySuggestions(labelKeys);
@@ -114,15 +99,13 @@ const Sidebar = ({
     }
   };
 
-  // Toggle value suggestions
   const toggleValueSuggestions = async () => {
-    if (!selectedKey) return; // Can't toggle if no key selected
+    if (!selectedKey) return;
 
     if (showValueSuggestions) {
       setShowValueSuggestions(false);
     } else {
       if (valueSuggestions.length === 0) {
-        // Load values if not already loaded
         await handleValueInputFocus();
       } else {
         setShowValueSuggestions(true);
@@ -130,13 +113,11 @@ const Sidebar = ({
     }
   };
 
-  // Handle value input changes
   const handleValueInputChange = async (e) => {
     const value = e.target.value;
     setValueInput(value);
 
     if (selectedKey && value.length > 0) {
-      // Filter existing value suggestions
       const filteredValues = valueSuggestions.filter(
         (val) => val && val.toLowerCase().includes(value.toLowerCase()),
       );
@@ -146,7 +127,6 @@ const Sidebar = ({
     }
   };
 
-  // Handle key input focus
   const handleKeyInputFocus = async () => {
     try {
       const response = await fetchLabels();
@@ -159,20 +139,16 @@ const Sidebar = ({
     }
   };
 
-  // Handle value input focus
   const handleValueInputFocus = async () => {
     if (selectedKey) {
       try {
         const response = await fetchLabels(selectedKey);
-        // The API may return different formats for values
         let values = [];
         if (Array.isArray(response)) {
-          // If response is an array of strings (value names)
           values = response.filter(
             (value) => value && typeof value === "string",
           );
         } else if (response && Array.isArray(response.labels)) {
-          // If response contains a labels array with objects
           values = response.labels
             .filter((label) => label && label.value)
             .map((label) => label.value);
@@ -185,7 +161,6 @@ const Sidebar = ({
     }
   };
 
-  // Handle key selection
   const selectKey = (key) => {
     setKeyInput(key);
     setSelectedKey(key);
@@ -195,15 +170,12 @@ const Sidebar = ({
     setShowValueSuggestions(false);
   };
 
-  // Handle value selection
   const selectValue = (value) => {
     setValueInput(value);
     setShowValueSuggestions(false);
-    // Automatically add the label when value is selected - pass both key and value directly
     addLabelFilter(value, selectedKey);
   };
 
-  // Handle key press events
   const handleKeyInputKeyPress = (e) => {
     if (e.key === "Enter" && keyInput.trim()) {
       selectKey(keyInput.trim());
