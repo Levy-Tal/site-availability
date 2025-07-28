@@ -1,3 +1,10 @@
+## [2.4.1](https://github.com/Levy-Tal/site-availability/compare/v2.4.0...v2.4.1) (2025-07-28)
+
+
+### Bug Fixes
+
+* **sync:** fix locations and apps sync ([bc78f30](https://github.com/Levy-Tal/site-availability/commit/bc78f30969ced08bf88d0ce0871cb539352c3589))
+
 # [2.4.0](https://github.com/Levy-Tal/site-availability/compare/v2.3.1...v2.4.0) (2025-07-13)
 
 
