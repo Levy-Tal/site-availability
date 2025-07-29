@@ -1,0 +1,150 @@
+server_settings:
+  port: "8080"
+  session_timeout: 12h
+
+  # Define roles and their label permissions for testing
+  roles:
+    frontend:
+      team: frontend
+      env: production
+    backend:
+      team: backend
+      env: production
+    devops:
+      team: devops
+    qa-staging:
+      env: staging
+    qa-testing:
+      env: testing
+    eu-west:
+      region: eu-west
+    eu-central:
+      region: eu-central
+    admin: {} # Full access
+
+  # OIDC Configuration for Keycloak
+  oidc:
+    enabled: true
+    config:
+      name: "Keycloak SSO"
+      issuer: "http://keycloak:8080/realms/site-availability"
+      clientID: "site-availability-client"
+      groupScope: "groups"
+      userNameScope: "preferred_username"
+    permissions:
+      users:
+        # Individual user permissions
+        admin:
+          - admin
+        frontend-user:
+          - frontend
+        backend-user:
+          - backend
+      groups:
+        # Group-based permissions
+        developers:
+          - frontend
+          - backend
+        devops:
+          - devops
+          - admin
+        qa-team:
+          - qa-staging
+          - qa-testing
+        eu-team:
+          - eu-west
+          - eu-central
+
+  # Keep local admin as fallback
+  local_admin:
+    enabled: true
+    username: admin
+
+# Sample data for testing
+locations:
+  - name: "US East"
+    latitude: 40.7128
+    longitude: -74.0060
+  - name: "EU West"
+    latitude: 51.5074
+    longitude: -0.1278
+
+sources:
+  - name: frontend-app-prod
+    type: http
+    labels:
+      team: frontend
+      env: production
+      region: us-east
+    config:
+      apps:
+        - name: frontend-app
+          location: "US East"
+          url: "https://httpbin.org/status/200"
+
+  - name: backend-api-prod
+    type: http
+    labels:
+      team: backend
+      env: production
+      region: us-east
+    config:
+      apps:
+        - name: backend-api
+          location: "US East"
+          url: "https://httpbin.org/status/200"
+
+  - name: devops-monitoring
+    type: http
+    labels:
+      team: devops
+      region: us-east
+    config:
+      apps:
+        - name: monitoring-dashboard
+          location: "US East"
+          url: "https://httpbin.org/status/200"
+
+  - name: qa-staging
+    type: http
+    labels:
+      env: staging
+      region: us-east
+    config:
+      apps:
+        - name: staging-app
+          location: "US East"
+          url: "https://httpbin.org/status/200"
+
+  - name: eu-frontend
+    type: http
+    labels:
+      team: frontend
+      env: production
+      region: eu-west
+    config:
+      apps:
+        - name: eu-frontend-app
+          location: "EU West"
+          url: "https://httpbin.org/status/200"
+
+  - name: eu-backend
+    type: http
+    labels:
+      team: backend
+      env: production
+      region: eu-central
+    config:
+      apps:
+        - name: eu-backend-api
+          location: "EU West"
+          url: "https://httpbin.org/status/200"
+
+scraping:
+  interval: "30s"
+  timeout: "10s"
+  max_parallel: 5
+
+documentation:
+  title: "OIDC Testing Environment"
+  url: "https://github.com/your-org/site-availability"

@@ -1,0 +1,256 @@
+{
+  "realm": "site-availability",
+  "enabled": true,
+  "displayName": "Site Availability OIDC Testing",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Site Availability</span></div>",
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "site-availability-client",
+      "name": "Site Availability Application",
+      "description": "OIDC client for Site Availability testing",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "site-availability-secret-123",
+      "redirectUris": [
+        "http://localhost:8080/auth/oidc/callback",
+        "http://site-availability:8080/auth/oidc/callback"
+      ],
+      "webOrigins": ["http://localhost:8080", "http://site-availability:8080"],
+      "protocol": "openid-connect",
+      "attributes": {
+        "saml.assertion.signature": "false",
+        "saml.force.post.binding": "false",
+        "saml.multivalued.roles": "false",
+        "saml.encrypt": "false",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "saml.server.signature": "false",
+        "saml.server.signature.keyinfo.ext": "false",
+        "exclude.session.state.from.auth.response": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "saml.artifact.binding": "false",
+        "backchannel.logout.session.required": "true",
+        "client_credentials.use_refresh_token": "false",
+        "saml_force_name_id_format": "false",
+        "require.pushed.authorization.requests": "false",
+        "saml.client.signature": "false",
+        "tls.client.certificate.bound.access.tokens": "false",
+        "saml.authnstatement": "false",
+        "display.on.consent.screen": "false",
+        "saml.onetimeuse.condition": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "role_list",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt",
+        "groups"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "groups",
+      "description": "User group membership",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "gui.order": "",
+        "consent.screen.text": ""
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "developers",
+      "path": "/developers",
+      "attributes": {},
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroups": []
+    },
+    {
+      "name": "devops",
+      "path": "/devops",
+      "attributes": {},
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroups": []
+    },
+    {
+      "name": "qa-team",
+      "path": "/qa-team",
+      "attributes": {},
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroups": []
+    },
+    {
+      "name": "eu-team",
+      "path": "/eu-team",
+      "attributes": {},
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroups": []
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {},
+      "realmRoles": ["user"],
+      "groups": ["/devops"]
+    },
+    {
+      "username": "frontend-user",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Frontend",
+      "lastName": "Developer",
+      "email": "frontend@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "frontend123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {},
+      "realmRoles": ["user"],
+      "groups": ["/developers"]
+    },
+    {
+      "username": "backend-user",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Backend",
+      "lastName": "Developer",
+      "email": "backend@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "backend123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {},
+      "realmRoles": ["user"],
+      "groups": ["/developers"]
+    },
+    {
+      "username": "qa-user",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "QA",
+      "lastName": "Tester",
+      "email": "qa@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "qa123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {},
+      "realmRoles": ["user"],
+      "groups": ["/qa-team"]
+    },
+    {
+      "username": "eu-user",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "European",
+      "lastName": "User",
+      "email": "eu@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "eu123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {},
+      "realmRoles": ["user"],
+      "groups": ["/eu-team"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Default user role",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "site-availability"
+      }
+    ]
+  },
+  "defaultRoles": ["user"],
+  "requiredCredentials": ["password"],
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyDigits": 6,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "otpSupportedApplications": ["FreeOTP", "Google Authenticator"],
+  "browserSecurityHeaders": {
+    "contentSecurityPolicyReportOnly": "",
+    "xContentTypeOptions": "nosniff",
+    "xRobotsTag": "none",
+    "xFrameOptions": "SAMEORIGIN",
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "xXSSProtection": "1; mode=block",
+    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+  }
+}

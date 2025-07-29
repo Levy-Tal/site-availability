@@ -22,6 +22,12 @@ class AuthAPI {
     return response.json();
   }
 
+  async oidcLogin() {
+    // Redirect to OIDC login endpoint
+    // The backend will handle the redirect to the OIDC provider
+    window.location.href = `${this.baseURL}/oidc/login`;
+  }
+
   async logout() {
     const response = await fetch(`${this.baseURL}/logout`, {
       method: "POST",
@@ -107,5 +113,11 @@ const authAPI = new AuthAPI();
 export { authAPI, AuthError };
 
 // Export individual methods for convenience
-export const { login, logout, getCurrentUser, validateSession, getAuthConfig } =
-  authAPI;
+export const {
+  login,
+  logout,
+  getCurrentUser,
+  validateSession,
+  getAuthConfig,
+  oidcLogin,
+} = authAPI;

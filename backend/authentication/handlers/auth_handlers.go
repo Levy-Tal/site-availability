@@ -3,9 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 
 	"site-availability/authentication/local"
 	"site-availability/authentication/middleware"
+	"site-availability/authentication/oidc"
 	"site-availability/authentication/session"
 	"site-availability/config"
 	"site-availability/logging"
@@ -16,15 +18,22 @@ type AuthHandlers struct {
 	config         *config.Config
 	sessionManager *session.Manager
 	localAuth      *local.LocalAuthenticator
+	oidcAuth       *oidc.OIDCAuthenticator
 }
 
 // NewAuthHandlers creates a new authentication handlers instance
-func NewAuthHandlers(cfg *config.Config, sessionManager *session.Manager) *AuthHandlers {
+func NewAuthHandlers(cfg *config.Config, sessionManager *session.Manager) (*AuthHandlers, error) {
+	oidcAuth, err := oidc.NewOIDCAuthenticator(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &AuthHandlers{
 		config:         cfg,
 		sessionManager: sessionManager,
 		localAuth:      local.NewLocalAuthenticator(cfg),
-	}
+		oidcAuth:       oidcAuth,
+	}, nil
 }
 
 // LoginRequest represents the login request payload
@@ -227,24 +236,150 @@ func (ah *AuthHandlers) sendError(w http.ResponseWriter, statusCode int, message
 
 // HandleAuthConfig returns authentication configuration
 func (ah *AuthHandlers) HandleAuthConfig(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		ah.sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
+	var authMethods []string
+
+	if ah.localAuth.IsEnabled() {
+		authMethods = append(authMethods, "local")
+	}
+
+	if ah.oidcAuth.IsEnabled() {
+		authMethods = append(authMethods, "oidc")
 	}
 
 	response := map[string]interface{}{
-		"auth_enabled": ah.localAuth.IsEnabled(),
-		"auth_methods": []string{},
+		"auth_enabled": ah.localAuth.IsEnabled() || ah.oidcAuth.IsEnabled(),
+		"auth_methods": authMethods,
 	}
 
-	if ah.localAuth.IsEnabled() {
-		response["auth_methods"] = []string{"local"}
+	// Add OIDC provider info if enabled
+	if ah.oidcAuth.IsEnabled() {
+		response["oidc_provider_name"] = ah.oidcAuth.GetProviderName()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logging.Logger.WithError(err).Error("Failed to encode auth config response")
 	}
+}
+
+// HandleOIDCLogin initiates the OIDC authentication flow
+func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) {
+	if !ah.oidcAuth.IsEnabled() {
+		ah.sendError(w, http.StatusBadRequest, "OIDC authentication is not enabled")
+		return
+	}
+
+	// Get the redirect URL from the request
+	redirectURL := r.URL.Query().Get("redirect_url")
+	if redirectURL == "" {
+		// Default redirect URL
+		redirectURL = "http://" + r.Host + "/auth/oidc/callback"
+	} else {
+		// Validate the redirect URL
+		parsedURL, err := oidc.ParseRedirectURL(redirectURL)
+		if err != nil {
+			ah.sendError(w, http.StatusBadRequest, "Invalid redirect URL")
+			return
+		}
+		redirectURL = parsedURL
+	}
+
+	// Generate authorization URL
+	authURL, state, err := ah.oidcAuth.GenerateAuthURL(redirectURL)
+	if err != nil {
+		logging.Logger.WithError(err).Error("Failed to generate OIDC auth URL")
+		ah.sendError(w, http.StatusInternalServerError, "Failed to initiate OIDC login")
+		return
+	}
+
+	// Store state in session/cookie for validation (simplified approach)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "oidc_state",
+		Value:    state,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   600, // 10 minutes
+	})
+
+	// Redirect to OIDC provider
+	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
+// HandleOIDCCallback handles the OIDC callback after authentication
+func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Request) {
+	if !ah.oidcAuth.IsEnabled() {
+		ah.sendError(w, http.StatusBadRequest, "OIDC authentication is not enabled")
+		return
+	}
+
+	// Get authorization code
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		ah.sendError(w, http.StatusBadRequest, "Missing authorization code")
+		return
+	}
+
+	// Get and validate state
+	receivedState := r.URL.Query().Get("state")
+	stateCookie, err := r.Cookie("oidc_state")
+	if err != nil || !oidc.ValidateState(receivedState, stateCookie.Value) {
+		ah.sendError(w, http.StatusBadRequest, "Invalid state parameter")
+		return
+	}
+
+	// Clear state cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "oidc_state",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1, // Delete cookie
+	})
+
+	// Exchange code for user info
+	userInfo, err := ah.oidcAuth.HandleCallback(r.Context(), code)
+	if err != nil {
+		logging.Logger.WithError(err).Error("OIDC callback failed")
+		ah.sendError(w, http.StatusUnauthorized, "OIDC authentication failed")
+		return
+	}
+
+	// Create session
+	sessionInfo, err := ah.sessionManager.CreateSession(userInfo.Username, userInfo.IsAdmin, userInfo.Roles, userInfo.Groups)
+	if err != nil {
+		logging.Logger.WithError(err).Error("Failed to create session for OIDC user")
+		ah.sendError(w, http.StatusInternalServerError, "Failed to create session")
+		return
+	}
+
+	// Set session cookie
+	cookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionInfo.ID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteStrictMode,
+		Expires:  sessionInfo.ExpiresAt,
+	}
+	http.SetCookie(w, cookie)
+
+	// Redirect to application or return success
+	redirectTo := r.URL.Query().Get("redirect_to")
+	if redirectTo == "" {
+		redirectTo = "/" // Default to home page
+	}
+
+	// For security, validate redirect_to URL
+	if parsedURL, err := url.Parse(redirectTo); err != nil || (parsedURL.Host != "" && parsedURL.Host != r.Host) {
+		redirectTo = "/" // Fallback to safe default
+	}
+
+	http.Redirect(w, r, redirectTo, http.StatusFound)
 }
 
 // GetSessionCount returns the number of active sessions (for debugging/monitoring)

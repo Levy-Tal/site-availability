@@ -102,8 +102,8 @@ server_settings:
 
     # DevOps role - can see multiple environments
     devops:
-      env: "production"
-      region: "us-east"
+    env: "production"
+    region: "us-east"
 
     # QA role - can see staging environment
     qa:
@@ -150,6 +150,159 @@ Users can have multiple roles. The system combines permissions from all roles:
 # - env=production (from frontend role)
 # - env=staging (from qa role)
 ```
+
+## OIDC Authentication
+
+Site Availability supports OpenID Connect (OIDC) authentication for integration with enterprise identity providers like Keycloak, Auth0, Azure AD, and others.
+
+### Configuration
+
+Configure OIDC in your `config.yaml`:
+
+```yaml
+server_settings:
+  session_timeout: 12h
+
+  # Define roles and their label permissions
+  roles:
+    frontend:
+      team: frontend
+      env: production
+    backend:
+      team: backend
+    admin: {} # Empty means full access
+
+  # OIDC Configuration
+  oidc:
+    enabled: true
+    config:
+      name: "Keycloak" # Display name for the provider
+      issuer: "https://keycloak.example.com/realms/master"
+      clientID: "site-availability"
+      groupScope: "groups" # Claim name for user groups
+      userNameScope: "preferred_username" # Claim name for username
+    permissions:
+      users:
+        # Map specific users to roles
+        john.doe:
+          - frontend
+          - backend
+        admin.user:
+          - admin
+      groups:
+        # Map OIDC groups to roles
+        developers:
+          - frontend
+          - backend
+        devops:
+          - admin
+        qa-team:
+          - qa
+```
+
+Add the client secret in your `credentials.yaml`:
+
+```yaml
+server_settings:
+  oidc:
+    config:
+      clientSecret: "your-oidc-client-secret"
+```
+
+### OIDC Provider Setup
+
+#### Keycloak Example
+
+1. Create a new client in Keycloak
+2. Set client type to "OpenID Connect"
+3. Configure redirect URI: `http://your-domain/auth/oidc/callback`
+4. Enable "Client authentication"
+5. Add groups to the client scope
+
+#### Generic OIDC Provider
+
+Ensure your OIDC provider includes:
+
+- `groups` claim in ID tokens (or configure `groupScope`)
+- `preferred_username` or similar claim (configure `userNameScope`)
+- Standard OpenID Connect discovery endpoint
+
+### User and Group Mapping
+
+#### User-Based Mapping
+
+Map individual users to roles:
+
+```yaml
+permissions:
+  users:
+    alice@example.com:
+      - frontend
+      - qa
+    bob@example.com:
+      - admin
+```
+
+#### Group-Based Mapping
+
+Map OIDC groups to application roles:
+
+```yaml
+permissions:
+  groups:
+    frontend-team:
+      - frontend
+    backend-team:
+      - backend
+    devops-team:
+      - admin
+```
+
+### Fallback Mechanism
+
+If the OIDC provider is unavailable, you can configure local admin as a fallback:
+
+```yaml
+server_settings:
+  # OIDC configuration (primary)
+  oidc:
+    enabled: true
+    # ... oidc config ...
+
+  # Local admin fallback
+  local_admin:
+    enabled: true
+    username: admin
+```
+
+When OIDC provider is down:
+
+- Users will see a warning message
+- Local admin authentication remains available
+- Server continues to operate normally
+
+### OIDC Security Features
+
+- **State Parameter**: CSRF protection using cryptographically secure state
+- **Token Validation**: Full JWT signature verification
+- **Timeout Handling**: 10-second timeout for provider initialization
+- **Secure Cookies**: HttpOnly, Secure, and SameSite cookie attributes
+- **Graceful Degradation**: Automatic fallback to local auth when provider unavailable
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Provider Unreachable**: Check issuer URL and network connectivity
+2. **Invalid Client**: Verify clientID and clientSecret
+3. **Missing Claims**: Ensure groups and username scopes are configured
+4. **Redirect Mismatch**: Verify redirect URI in provider matches application
+
+#### Error Messages
+
+- `OIDC provider unavailable`: Provider cannot be reached, local auth available
+- `Invalid state parameter`: Possible CSRF attack or session timeout
+- `Failed to extract username`: Username scope not configured properly
 
 ### Security Considerations
 

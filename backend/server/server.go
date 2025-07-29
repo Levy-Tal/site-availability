@@ -64,7 +64,10 @@ func (s *Server) initAuthentication() {
 	s.sessionManager = session.NewManager(sessionTimeout)
 
 	// Initialize auth handlers
-	s.authHandlers = handlers.NewAuthHandlers(s.config, s.sessionManager)
+	s.authHandlers, err = handlers.NewAuthHandlers(s.config, s.sessionManager)
+	if err != nil {
+		logging.Logger.WithError(err).Fatal("Failed to initialize authentication handlers")
+	}
 
 	// Initialize auth middleware
 	s.authMiddleware = middleware.NewAuthMiddleware(s.config, s.sessionManager)
@@ -87,6 +90,10 @@ func (s *Server) setupRoutes() {
 	s.mux.HandleFunc("/auth/login", s.authHandlers.HandleLogin)
 	s.mux.HandleFunc("/auth/user", s.authMiddleware.RequireAuth(s.authHandlers.HandleUser))
 	s.mux.HandleFunc("/auth/logout", s.authHandlers.HandleLogout)
+
+	// OIDC endpoints
+	s.mux.HandleFunc("/auth/oidc/login", s.authHandlers.HandleOIDCLogin)
+	s.mux.HandleFunc("/auth/oidc/callback", s.authHandlers.HandleOIDCCallback)
 
 	// Protected API endpoints
 	s.mux.HandleFunc("/api/locations", s.requireAuthAndAuthz(func(w http.ResponseWriter, r *http.Request) {

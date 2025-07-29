@@ -28,6 +28,7 @@ type ServerSettings struct {
 	SessionTimeout string                `yaml:"session_timeout,omitempty"`
 	LocalAdmin     LocalAdminConfig      `yaml:"local_admin,omitempty"`
 	Roles          map[string]RoleConfig `yaml:"roles,omitempty"`
+	OIDC           OIDCConfig            `yaml:"oidc,omitempty"`
 }
 
 type LocalAdminConfig struct {
@@ -38,6 +39,26 @@ type LocalAdminConfig struct {
 
 type RoleConfig struct {
 	Labels map[string]string `yaml:",inline"`
+}
+
+type OIDCConfig struct {
+	Enabled     bool               `yaml:"enabled"`
+	Config      OIDCProviderConfig `yaml:"config,omitempty"`
+	Permissions OIDCPermissions    `yaml:"permissions,omitempty"`
+}
+
+type OIDCProviderConfig struct {
+	Name          string `yaml:"name,omitempty"`
+	Issuer        string `yaml:"issuer,omitempty"`
+	ClientID      string `yaml:"clientID,omitempty"`
+	ClientSecret  string `yaml:"clientSecret,omitempty"`
+	GroupScope    string `yaml:"groupScope,omitempty"`
+	UserNameScope string `yaml:"userNameScope,omitempty"`
+}
+
+type OIDCPermissions struct {
+	Users  map[string][]string `yaml:"users,omitempty"`
+	Groups map[string][]string `yaml:"groups,omitempty"`
 }
 
 type ScrapingSettings struct {
@@ -195,6 +216,25 @@ func validateAuthConfig(serverSettings *ServerSettings) error {
 	if serverSettings.SessionTimeout != "" {
 		if !strings.HasSuffix(serverSettings.SessionTimeout, "h") && !strings.HasSuffix(serverSettings.SessionTimeout, "m") {
 			return fmt.Errorf("auth config error: session_timeout must be in format like '12h' or '30m'")
+		}
+	}
+
+	// If OIDC is enabled, validate configuration
+	if serverSettings.OIDC.Enabled {
+		if strings.TrimSpace(serverSettings.OIDC.Config.Issuer) == "" {
+			return fmt.Errorf("auth config error: OIDC issuer is required when OIDC is enabled")
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.ClientID) == "" {
+			return fmt.Errorf("auth config error: OIDC clientID is required when OIDC is enabled")
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.ClientSecret) == "" {
+			return fmt.Errorf("auth config error: OIDC clientSecret is required when OIDC is enabled")
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.GroupScope) == "" {
+			serverSettings.OIDC.Config.GroupScope = "groups" // Default value
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.UserNameScope) == "" {
+			serverSettings.OIDC.Config.UserNameScope = "preferred_username" // Default value
 		}
 	}
 
