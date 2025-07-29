@@ -55,6 +55,9 @@ services:
     environment:
       - CONFIG_FILE=/app/config/config.yaml
       - CREDENTIALS_FILE=/app/config/credentials.yaml
+      - LOG_LEVEL=debug
+    extra_hosts:
+      - "localhost:host-gateway" # Allow container to access host's localhost
     networks:
       - oidc-network
     depends_on:

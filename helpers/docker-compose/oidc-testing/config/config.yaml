@@ -27,7 +27,7 @@ server_settings:
     enabled: true
     config:
       name: "Keycloak SSO"
-      issuer: "http://keycloak:8080/realms/site-availability"
+      issuer: "http://192.168.1.239:8090/realms/site-availability"
       clientID: "site-availability-client"
       groupScope: "groups"
       userNameScope: "preferred_username"
@@ -141,10 +141,10 @@ sources:
           url: "https://httpbin.org/status/200"
 
 scraping:
-  interval: "30s"
+  interval: "300s"
   timeout: "10s"
   max_parallel: 5
 
 documentation:
-  title: "OIDC Testing Environment"
+  title: "Documentation"
   url: "https://github.com/your-org/site-availability"

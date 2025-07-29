@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -311,6 +312,18 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 	if !ah.oidcAuth.IsEnabled() {
 		ah.sendError(w, http.StatusBadRequest, "OIDC authentication is not enabled")
+		return
+	}
+
+	// Check for OIDC error response first
+	if errorParam := r.URL.Query().Get("error"); errorParam != "" {
+		errorDescription := r.URL.Query().Get("error_description")
+		logging.Logger.WithFields(map[string]interface{}{
+			"error":             errorParam,
+			"error_description": errorDescription,
+		}).Error("OIDC authentication error from provider")
+
+		ah.sendError(w, http.StatusBadRequest, fmt.Sprintf("OIDC authentication failed: %s - %s", errorParam, errorDescription))
 		return
 	}
 

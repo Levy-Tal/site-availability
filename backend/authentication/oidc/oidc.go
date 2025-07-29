@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"sync"
 
 	"site-availability/config"
 
@@ -19,6 +20,7 @@ type OIDCAuthenticator struct {
 	provider     *oidc.Provider
 	oauth2Config *oauth2.Config
 	verifier     *oidc.IDTokenVerifier
+	initMutex    sync.RWMutex
 }
 
 // UserInfo represents authenticated user information from OIDC
@@ -28,14 +30,6 @@ type UserInfo struct {
 	Roles      []string `json:"roles"`
 	Groups     []string `json:"groups"`
 	AuthMethod string   `json:"auth_method"`
-}
-
-// OIDCClaims represents the claims we extract from OIDC tokens
-type OIDCClaims struct {
-	PreferredUsername string   `json:"preferred_username"`
-	Name              string   `json:"name"`
-	Email             string   `json:"email"`
-	Groups            []string `json:"groups"`
 }
 
 // NewOIDCAuthenticator creates a new OIDC authenticator
@@ -55,9 +49,33 @@ func (oa *OIDCAuthenticator) initProvider() error {
 		return fmt.Errorf("OIDC is not enabled")
 	}
 
+	oa.initMutex.RLock()
+	if oa.provider != nil {
+		oa.initMutex.RUnlock()
+		return nil
+	}
+	oa.initMutex.RUnlock()
+
+	oa.initMutex.Lock()
+	defer oa.initMutex.Unlock()
+
 	// If already initialized, return
 	if oa.provider != nil {
 		return nil
+	}
+
+	// Validate required configuration
+	if oa.config.ServerSettings.OIDC.Config.Issuer == "" {
+		return fmt.Errorf("OIDC issuer is required")
+	}
+	if oa.config.ServerSettings.OIDC.Config.ClientID == "" {
+		return fmt.Errorf("OIDC clientID is required")
+	}
+	if oa.config.ServerSettings.OIDC.Config.ClientSecret == "" {
+		return fmt.Errorf("OIDC clientSecret is required")
+	}
+	if oa.config.ServerSettings.OIDC.Config.GroupScope == "" {
+		return fmt.Errorf("OIDC groupScope is required")
 	}
 
 	ctx := context.Background()
@@ -74,7 +92,7 @@ func (oa *OIDCAuthenticator) initProvider() error {
 		ClientSecret: oa.config.ServerSettings.OIDC.Config.ClientSecret,
 		RedirectURL:  "http://localhost:8080/auth/oidc/callback", // Will be configured dynamically
 		Endpoint:     provider.Endpoint(),
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", oa.config.ServerSettings.OIDC.Config.GroupScope},
+		Scopes:       []string{oidc.ScopeOpenID, oa.config.ServerSettings.OIDC.Config.GroupScope},
 	}
 
 	// Configure ID token verifier
@@ -114,12 +132,13 @@ func (oa *OIDCAuthenticator) GenerateAuthURL(redirectURL string) (string, string
 		return "", "", fmt.Errorf("failed to generate state: %w", err)
 	}
 
-	// Update redirect URL if provided
+	// Create a copy of oauth2Config to avoid modifying shared state
+	configCopy := *oa.oauth2Config
 	if redirectURL != "" {
-		oa.oauth2Config.RedirectURL = redirectURL
+		configCopy.RedirectURL = redirectURL
 	}
 
-	authURL := oa.oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOffline)
+	authURL := configCopy.AuthCodeURL(state)
 	return authURL, state, nil
 }
 
@@ -152,50 +171,84 @@ func (oa *OIDCAuthenticator) HandleCallback(ctx context.Context, code string) (*
 		return nil, fmt.Errorf("failed to verify ID token: %w", err)
 	}
 
-	// Extract claims
-	var claims OIDCClaims
-	if err := idToken.Claims(&claims); err != nil {
+	// Extract claims as a map to allow dynamic access based on config
+	var allClaims map[string]interface{}
+	if err := idToken.Claims(&allClaims); err != nil {
 		return nil, fmt.Errorf("failed to extract claims: %w", err)
 	}
 
-	// Get username from configured scope
-	username := oa.extractUsername(claims)
+	// Get username from configured claim field
+	username := oa.extractUsername(allClaims)
 	if username == "" {
-		return nil, fmt.Errorf("failed to extract username from token")
+		return nil, fmt.Errorf("failed to extract username from token: userNameScope='%s', claim value is empty or missing",
+			oa.config.ServerSettings.OIDC.Config.UserNameScope)
 	}
 
+	// Extract groups from configured claim field
+	groups := oa.extractGroups(allClaims)
+
 	// Get user roles based on username and groups
-	roles, isAdmin := oa.getUserRoles(username, claims.Groups)
+	roles, isAdmin := oa.getUserRoles(username, groups)
 
 	return &UserInfo{
 		Username:   username,
 		IsAdmin:    isAdmin,
 		Roles:      roles,
-		Groups:     claims.Groups,
+		Groups:     groups,
 		AuthMethod: "oidc",
 	}, nil
 }
 
-// extractUsername gets the username from claims based on configured scope
-func (oa *OIDCAuthenticator) extractUsername(claims OIDCClaims) string {
+// extractUsername extracts the username from claims based on configuration
+func (oa *OIDCAuthenticator) extractUsername(claims map[string]interface{}) string {
 	userNameScope := oa.config.ServerSettings.OIDC.Config.UserNameScope
+	if userNameScope == "" {
+		return "" // No username scope configured
+	}
 
-	switch userNameScope {
-	case "name":
-		return claims.Name
-	case "email":
-		return claims.Email
-	case "preferred_username":
-		return claims.PreferredUsername
+	// Get the claim value based on the configured userNameScope
+	claimValue, exists := claims[userNameScope]
+	if !exists {
+		return "" // Configured claim doesn't exist
+	}
+
+	// Ensure the claim value is a string
+	username, ok := claimValue.(string)
+	if !ok {
+		return "" // Claim value is not a string
+	}
+
+	return username
+}
+
+// extractGroups extracts the groups from claims based on the configured groupScope
+func (oa *OIDCAuthenticator) extractGroups(claims map[string]interface{}) []string {
+	groupScope := oa.config.ServerSettings.OIDC.Config.GroupScope
+	if groupScope == "" {
+		return []string{} // No group scope configured
+	}
+
+	// Get the claim value based on the configured groupScope
+	claimValue, exists := claims[groupScope]
+	if !exists {
+		return []string{} // Configured claim doesn't exist
+	}
+
+	// Handle different possible types for the groups claim
+	switch v := claimValue.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		// Convert []interface{} to []string
+		var groups []string
+		for _, item := range v {
+			if str, ok := item.(string); ok {
+				groups = append(groups, str)
+			}
+		}
+		return groups
 	default:
-		// Default to preferred_username
-		if claims.PreferredUsername != "" {
-			return claims.PreferredUsername
-		}
-		if claims.Name != "" {
-			return claims.Name
-		}
-		return claims.Email
+		return []string{} // Claim value is not a compatible type
 	}
 }
 
@@ -232,7 +285,8 @@ func (oa *OIDCAuthenticator) getUserRoles(username string, groups []string) ([]s
 		roles = append(roles, role)
 	}
 
-	// If no roles assigned, return empty slice
+	// If no roles assigned, return empty slice (user will have no permissions)
+	// This is expected behavior for users without explicit role assignments
 	if len(roles) == 0 {
 		return []string{}, false
 	}

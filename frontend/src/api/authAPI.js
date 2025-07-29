@@ -112,12 +112,10 @@ const authAPI = new AuthAPI();
 
 export { authAPI, AuthError };
 
-// Export individual methods for convenience
-export const {
-  login,
-  logout,
-  getCurrentUser,
-  validateSession,
-  getAuthConfig,
-  oidcLogin,
-} = authAPI;
+// Export individual methods for convenience - bound to maintain context
+export const login = authAPI.login.bind(authAPI);
+export const logout = authAPI.logout.bind(authAPI);
+export const getCurrentUser = authAPI.getCurrentUser.bind(authAPI);
+export const validateSession = authAPI.validateSession.bind(authAPI);
+export const getAuthConfig = authAPI.getAuthConfig.bind(authAPI);
+export const oidcLogin = authAPI.oidcLogin.bind(authAPI);
