@@ -20,11 +20,24 @@ type Config struct {
 }
 
 type ServerSettings struct {
-	Port         string            `yaml:"port"`
-	CustomCAPath string            `yaml:"custom_ca_path"`
-	SyncEnable   bool              `yaml:"sync_enable"`
-	Token        string            `yaml:"token"`
-	Labels       map[string]string `yaml:"labels,omitempty"`
+	Port           string                `yaml:"port"`
+	CustomCAPath   string                `yaml:"custom_ca_path"`
+	SyncEnable     bool                  `yaml:"sync_enable"`
+	Token          string                `yaml:"token"`
+	Labels         map[string]string     `yaml:"labels,omitempty"`
+	SessionTimeout string                `yaml:"session_timeout,omitempty"`
+	LocalAdmin     LocalAdminConfig      `yaml:"local_admin,omitempty"`
+	Roles          map[string]RoleConfig `yaml:"roles,omitempty"`
+}
+
+type LocalAdminConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
+}
+
+type RoleConfig struct {
+	Labels map[string]string `yaml:",inline"`
 }
 
 type ScrapingSettings struct {
@@ -126,6 +139,11 @@ func validateConfig(config *Config) error {
 		return err
 	}
 
+	// Validate authentication configuration
+	if err := validateAuthConfig(&config.ServerSettings); err != nil {
+		return err
+	}
+
 	if len(config.Locations) == 0 {
 		return fmt.Errorf("config validation error: at least one location is required")
 	}
@@ -156,6 +174,27 @@ func validateConfig(config *Config) error {
 
 		if err := validateLabels(source.Labels, fmt.Sprintf("source %s", source.Name)); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAuthConfig(serverSettings *ServerSettings) error {
+	// If local admin is enabled, validate configuration
+	if serverSettings.LocalAdmin.Enabled {
+		if strings.TrimSpace(serverSettings.LocalAdmin.Username) == "" {
+			return fmt.Errorf("auth config error: local admin username is required when local admin is enabled")
+		}
+		if strings.TrimSpace(serverSettings.LocalAdmin.Password) == "" {
+			return fmt.Errorf("auth config error: local admin password is required when local admin is enabled")
+		}
+	}
+
+	// Validate session timeout format if provided
+	if serverSettings.SessionTimeout != "" {
+		if !strings.HasSuffix(serverSettings.SessionTimeout, "h") && !strings.HasSuffix(serverSettings.SessionTimeout, "m") {
+			return fmt.Errorf("auth config error: session_timeout must be in format like '12h' or '30m'")
 		}
 	}
 

@@ -14,11 +14,13 @@ const Sidebar = ({
   onStatusFilterChange,
   onLabelFilterChange,
   onDocsClick,
+  onUserInfoClick,
   isCollapsed,
   onToggleCollapse,
   selectedStatusFilters,
   selectedLabels,
   docsTitle,
+  user,
 }) => {
   useEffect(() => {
     const savedLabelFilters = userPreferences.loadLabelFilters();
@@ -246,7 +248,11 @@ const Sidebar = ({
             <FaMap className="sidebar__nav-icon" />
             {!isCollapsed && <span>Map</span>}
           </div>
-          <div className="sidebar__nav-item">
+          <div
+            className="sidebar__nav-item"
+            onClick={onUserInfoClick}
+            style={onUserInfoClick ? { cursor: "pointer" } : {}}
+          >
             <FaUser className="sidebar__nav-icon" />
             {!isCollapsed && <span>User Info</span>}
           </div>

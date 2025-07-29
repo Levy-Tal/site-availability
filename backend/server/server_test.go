@@ -107,6 +107,7 @@ func TestSetupRoutes(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		// Test API routes
@@ -291,6 +292,7 @@ func TestRouteHandlers(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/api/locations", nil)
@@ -309,6 +311,7 @@ func TestRouteHandlers(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/api/scrape-interval", nil)
@@ -328,6 +331,7 @@ func TestRouteHandlers(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/api/docs", nil)
@@ -340,6 +344,7 @@ func TestRouteHandlers(t *testing.T) {
 
 	t.Run("metrics endpoint", func(t *testing.T) {
 		server := NewServer(&config.Config{})
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/metrics", nil)
@@ -426,6 +431,7 @@ func TestServerBehavior(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		// Test that specific API paths work correctly
@@ -472,6 +478,7 @@ func TestServerBehavior(t *testing.T) {
 
 	t.Run("method handling for endpoints", func(t *testing.T) {
 		server := NewServer(&config.Config{})
+		server.initAuthentication()
 		server.setupRoutes()
 
 		// Test that endpoints accept different HTTP methods

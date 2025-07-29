@@ -1,0 +1,28 @@
+server_settings:
+  port: "8080"
+  local_admin:
+    enabled: false # Authentication disabled
+
+scraping:
+  interval: "30s"
+  timeout: "10s"
+  max_parallel: 5
+
+documentation:
+  title: "Site Availability Monitor"
+  url: "https://your-docs-url.com"
+
+locations:
+  - name: "US East"
+    latitude: 40.7128
+    longitude: -74.0060
+
+sources:
+  - name: "example-api"
+    type: "http"
+    labels:
+      env: "test"
+    config:
+      url: "https://httpbin.org/status/200"
+      method: "GET"
+      expected_status: 200

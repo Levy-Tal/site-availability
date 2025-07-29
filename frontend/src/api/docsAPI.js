@@ -1,6 +1,8 @@
 export const fetchDocs = async () => {
   try {
-    const response = await fetch("/api/docs");
+    const response = await fetch("/api/docs", {
+      credentials: "include",
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }

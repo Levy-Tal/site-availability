@@ -45,7 +45,6 @@ export const MapComponent = ({ locations, onSiteClick }) => {
     const lonRange = bounds.maxLon - bounds.minLon;
 
     let scaleFactor, zoomFactor, baseSize;
-    console.log("lonRange", lonRange);
     if (lonRange > 200) {
       scaleFactor = 220;
       zoomFactor = 1;
