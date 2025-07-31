@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"site-availability/logging"
 	"site-availability/yaml"
@@ -214,8 +215,9 @@ func validateAuthConfig(serverSettings *ServerSettings) error {
 
 	// Validate session timeout format if provided
 	if serverSettings.SessionTimeout != "" {
-		if !strings.HasSuffix(serverSettings.SessionTimeout, "h") && !strings.HasSuffix(serverSettings.SessionTimeout, "m") {
-			return fmt.Errorf("auth config error: session_timeout must be in format like '12h' or '30m'")
+		if _, err := time.ParseDuration(serverSettings.SessionTimeout); err != nil {
+			return fmt.Errorf("auth config error: invalid session_timeout format %q: %w (valid examples: '12h', '30m', '90s', '1h30m')",
+				serverSettings.SessionTimeout, err)
 		}
 	}
 

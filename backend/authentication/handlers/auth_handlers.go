@@ -124,7 +124,7 @@ func (ah *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Set session cookie
 	sessionTimeout, _ := session.ParseTimeout(ah.config.ServerSettings.SessionTimeout)
 	maxAge := int(sessionTimeout.Seconds())
-	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge)
+	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r)
 	http.SetCookie(w, cookie)
 
 	logging.Logger.WithFields(map[string]interface{}{
@@ -206,7 +206,7 @@ func (ah *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete session cookie
-	cookie := middleware.DeleteSessionCookie()
+	cookie := middleware.DeleteSessionCookie(r)
 	http.SetCookie(w, cookie)
 
 	// Send success response

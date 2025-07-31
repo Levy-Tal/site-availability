@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -589,4 +590,66 @@ sources:
 			t.Error("Expected validation error for config without locations")
 		}
 	})
+}
+
+func TestValidateSessionTimeout(t *testing.T) {
+	tests := []struct {
+		name           string
+		sessionTimeout string
+		shouldFail     bool
+		description    string
+	}{
+		// Valid durations
+		{"valid_hours", "12h", false, "standard hours format"},
+		{"valid_minutes", "30m", false, "standard minutes format"},
+		{"valid_seconds", "60s", false, "seconds should be accepted"},
+		{"valid_mixed", "1h30m", false, "mixed hours and minutes"},
+		{"valid_decimal", "1.5h", false, "decimal hours"},
+		{"valid_milliseconds", "500ms", false, "milliseconds"},
+		{"valid_nanoseconds", "1000ns", false, "nanoseconds"},
+		{"valid_microseconds", "1000μs", false, "microseconds"},
+		{"valid_complex", "2h30m45s", false, "complex duration"},
+
+		// Invalid durations
+		{"invalid_malformed_h", "abch", true, "malformed with h suffix"},
+		{"invalid_malformed_m", "xyz123m", true, "malformed with m suffix"},
+		{"invalid_no_unit", "123", true, "number without unit"},
+		{"invalid_empty", "", false, "empty string should be allowed"},
+		{"invalid_spaces", " 12h ", true, "duration with spaces"},
+		{"valid_negative", "-5h", false, "negative duration is valid in Go"},
+		{"invalid_text", "twelve hours", true, "text instead of number"},
+		{"invalid_mixed_bad", "1h2x", true, "mixed with invalid unit"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serverSettings := &ServerSettings{
+				SessionTimeout: tt.sessionTimeout,
+			}
+
+			err := validateAuthConfig(serverSettings)
+
+			if tt.shouldFail && err == nil {
+				t.Errorf("Expected validation to fail for %s (%s), but it passed",
+					tt.sessionTimeout, tt.description)
+			}
+
+			if !tt.shouldFail && err != nil {
+				t.Errorf("Expected validation to pass for %s (%s), but got error: %v",
+					tt.sessionTimeout, tt.description, err)
+			}
+
+			// For failing cases, ensure the error message is helpful
+			if tt.shouldFail && err != nil {
+				errorMsg := err.Error()
+				if !strings.Contains(errorMsg, "session_timeout") {
+					t.Errorf("Error message should mention 'session_timeout': %s", errorMsg)
+				}
+				if !strings.Contains(errorMsg, tt.sessionTimeout) {
+					t.Errorf("Error message should include the invalid value '%s': %s",
+						tt.sessionTimeout, errorMsg)
+				}
+			}
+		})
+	}
 }

@@ -150,27 +150,27 @@ func GetSessionFromContext(r *http.Request) (*session.Session, bool) {
 }
 
 // CreateSessionCookie creates a secure session cookie
-func CreateSessionCookie(sessionID string, maxAge int) *http.Cookie {
+func CreateSessionCookie(sessionID string, maxAge int, r *http.Request) *http.Cookie {
 	return &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
 		MaxAge:   maxAge,
 		Path:     "/",
 		HttpOnly: true,                 // Prevent XSS attacks
-		Secure:   false,                // Set to true in production with HTTPS
+		Secure:   r.TLS != nil,         // Secure flag based on TLS status
 		SameSite: http.SameSiteLaxMode, // CSRF protection
 	}
 }
 
 // DeleteSessionCookie creates a cookie that deletes the session
-func DeleteSessionCookie() *http.Cookie {
+func DeleteSessionCookie(r *http.Request) *http.Cookie {
 	return &http.Cookie{
 		Name:     "session_id",
 		Value:    "",
 		MaxAge:   -1,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   r.TLS != nil, // Secure flag based on TLS status
 		SameSite: http.SameSiteLaxMode,
 	}
 }
