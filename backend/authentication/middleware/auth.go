@@ -86,7 +86,7 @@ func (am *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 // isAuthRequired checks if authentication is required based on configuration
 func (am *AuthMiddleware) isAuthRequired() bool {
-	return am.config.ServerSettings.LocalAdmin.Enabled
+	return am.config.ServerSettings.LocalAdmin.Enabled || am.config.ServerSettings.OIDC.Enabled
 }
 
 // isExcludedPath checks if a path should be excluded from authentication
