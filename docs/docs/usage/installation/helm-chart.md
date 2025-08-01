@@ -32,6 +32,7 @@ configFile:
   content:
     server_settings:
       port: "8080"
+      host_url: "https://your-domain.com" # Required: Used for OIDC callback URLs
       sync_enable: false
     scraping:
       interval: "10s"

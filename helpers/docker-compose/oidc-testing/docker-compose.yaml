@@ -1,0 +1,78 @@
+services:
+  # Keycloak Identity Provider
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: keycloak-oidc
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
+    ports:
+      - "8090:8080" # Keycloak on port 8090 to avoid conflict
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak-init:/opt/keycloak/data/import:ro
+    command:
+      - start-dev
+      - --import-realm
+    networks:
+      - oidc-network
+
+  # PostgreSQL for Keycloak (optional, for persistence)
+  postgres:
+    image: postgres:15
+    container_name: keycloak-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - oidc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Site Availability Server
+  site-availability:
+    build:
+      context: ../../../
+      dockerfile: Dockerfile
+    container_name: site-availability-oidc
+    ports:
+      - "8080:8080" # Site Availability on standard port
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+    environment:
+      - CONFIG_FILE=/app/config/config.yaml
+      - CREDENTIALS_FILE=/app/config/credentials.yaml
+      - LOG_LEVEL=debug
+    extra_hosts:
+      - "localhost:host-gateway" # Allow container to access host's localhost
+    networks:
+      - oidc-network
+    depends_on:
+      - keycloak # Remove health check condition temporarily
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  oidc-network:
+    driver: bridge
+
+volumes:
+  keycloak_data:
+  postgres_data:

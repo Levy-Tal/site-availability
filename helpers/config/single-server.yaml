@@ -6,6 +6,11 @@ server_settings:
     region: "local"
     datacenter: "dev"
     team: "development"
+  local_admin:
+    enabled: true # Enable local admin authentication
+    username: "admin" # Admin username
+    password: "admin" # Admin password
+  session_timeout: "12h" # Session timeout (12 hours default)
 
 scraping:
   interval: "10s"

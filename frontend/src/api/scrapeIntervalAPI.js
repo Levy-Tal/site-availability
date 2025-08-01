@@ -1,6 +1,8 @@
 export const fetchScrapeInterval = async () => {
   try {
-    const response = await fetch("/api/scrape-interval");
+    const response = await fetch("/api/scrape-interval", {
+      credentials: "include",
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
