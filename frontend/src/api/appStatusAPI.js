@@ -28,7 +28,6 @@ export const fetchLocations = async (statusFilters = [], labelFilters = []) => {
       throw new Error("Received non-JSON response");
     }
     const data = await response.json();
-    // API returns a direct array of locations, not wrapped in an object
     return Array.isArray(data) ? data : data.locations || [];
   } catch (error) {
     console.error("Error fetching locations:", error);
@@ -72,7 +71,6 @@ export const fetchApps = async (
       throw new Error("Received non-JSON response");
     }
     const data = await response.json();
-    // API returns a direct array of apps, not wrapped in an object
     return Array.isArray(data) ? data : data.apps || [];
   } catch (error) {
     console.error("Error fetching apps:", error);

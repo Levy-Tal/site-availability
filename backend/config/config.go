@@ -128,6 +128,9 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	// Apply default values after validation
+	applyAuthDefaults(&config.ServerSettings)
+
 	return &config, nil
 }
 
@@ -232,6 +235,15 @@ func validateAuthConfig(serverSettings *ServerSettings) error {
 		if strings.TrimSpace(serverSettings.OIDC.Config.ClientSecret) == "" {
 			return fmt.Errorf("auth config error: OIDC clientSecret is required when OIDC is enabled")
 		}
+	}
+
+	return nil
+}
+
+// applyAuthDefaults sets default values for authentication configuration
+// This should be called after validation, during config loading
+func applyAuthDefaults(serverSettings *ServerSettings) {
+	if serverSettings.OIDC.Enabled {
 		if strings.TrimSpace(serverSettings.OIDC.Config.GroupScope) == "" {
 			serverSettings.OIDC.Config.GroupScope = "groups" // Default value
 		}
@@ -239,8 +251,6 @@ func validateAuthConfig(serverSettings *ServerSettings) error {
 			serverSettings.OIDC.Config.UserNameScope = "preferred_username" // Default value
 		}
 	}
-
-	return nil
 }
 
 func GetEnv(name, defaultValue string) string {
