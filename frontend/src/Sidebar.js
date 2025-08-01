@@ -33,6 +33,7 @@ const Sidebar = ({
   const sidebarRef = useRef(null);
   const keyDropdownRef = useRef(null);
   const valueDropdownRef = useRef(null);
+  const showKeySuggestionsRef = useRef(false);
   const [labelKeys, setLabelKeys] = useState([]);
   const [keyInput, setKeyInput] = useState("");
   const [valueInput, setValueInput] = useState("");
@@ -41,6 +42,35 @@ const Sidebar = ({
   const [valueSuggestions, setValueSuggestions] = useState([]);
   const [showKeySuggestions, setShowKeySuggestions] = useState(false);
   const [showValueSuggestions, setShowValueSuggestions] = useState(false);
+
+  // Update ref when state changes
+  useEffect(() => {
+    showKeySuggestionsRef.current = showKeySuggestions;
+  }, [showKeySuggestions]);
+
+  // Update key suggestions when selectedLabels changes
+  useEffect(() => {
+    if (labelKeys.length > 0) {
+      const selectedKeys = selectedLabels.map((label) => label.key);
+      const availableKeys = labelKeys.filter(
+        (key) => !selectedKeys.includes(key),
+      );
+
+      // Update suggestions if they're currently showing
+      if (showKeySuggestionsRef.current) {
+        setKeySuggestions(availableKeys);
+        setShowKeySuggestions(availableKeys.length > 0);
+      }
+
+      // If the currently selected key is no longer available, clear it
+      if (selectedKey && selectedKeys.includes(selectedKey)) {
+        setSelectedKey("");
+        setValueInput("");
+        setValueSuggestions([]);
+        setShowValueSuggestions(false);
+      }
+    }
+  }, [selectedLabels, labelKeys, selectedKey]);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -76,15 +106,24 @@ const Sidebar = ({
       setShowValueSuggestions(false);
     }
 
+    // Get already selected keys to exclude them from suggestions
+    const selectedKeys = selectedLabels.map((label) => label.key);
+
     if (value.length > 0) {
       const filteredKeys = labelKeys.filter(
-        (key) => key && key.toLowerCase().includes(value.toLowerCase()),
+        (key) =>
+          key &&
+          key.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedKeys.includes(key),
       );
       setKeySuggestions(filteredKeys);
       setShowKeySuggestions(filteredKeys.length > 0);
     } else {
-      setKeySuggestions(labelKeys);
-      setShowKeySuggestions(labelKeys.length > 0);
+      const availableKeys = labelKeys.filter(
+        (key) => !selectedKeys.includes(key),
+      );
+      setKeySuggestions(availableKeys);
+      setShowKeySuggestions(availableKeys.length > 0);
     }
   };
 
@@ -95,8 +134,13 @@ const Sidebar = ({
       if (labelKeys.length === 0) {
         await handleKeyInputFocus();
       } else {
-        setKeySuggestions(labelKeys);
-        setShowKeySuggestions(true);
+        // Get already selected keys to exclude them from suggestions
+        const selectedKeys = selectedLabels.map((label) => label.key);
+        const availableKeys = labelKeys.filter(
+          (key) => !selectedKeys.includes(key),
+        );
+        setKeySuggestions(availableKeys);
+        setShowKeySuggestions(availableKeys.length > 0);
       }
     }
   };
@@ -134,8 +178,13 @@ const Sidebar = ({
       const response = await fetchLabels();
       const keys = response.filter((key) => key && typeof key === "string");
       setLabelKeys(keys);
-      setKeySuggestions(keys);
-      setShowKeySuggestions(keys.length > 0);
+
+      // Get already selected keys to exclude them from suggestions
+      const selectedKeys = selectedLabels.map((label) => label.key);
+      const availableKeys = keys.filter((key) => !selectedKeys.includes(key));
+
+      setKeySuggestions(availableKeys);
+      setShowKeySuggestions(availableKeys.length > 0);
     } catch (error) {
       console.error("Error loading keys on focus:", error);
     }
