@@ -277,13 +277,14 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 		// Default redirect URL using configured host_url
 		redirectURL = ah.config.ServerSettings.HostURL + "/auth/oidc/callback"
 	} else {
-		// Validate the redirect URL
-		parsedURL, err := oidc.ParseRedirectURL(redirectURL)
+		// Validate the redirect URL against the trusted host
+		validatedURL, err := oidc.ValidateRedirectURL(redirectURL, ah.config.ServerSettings.HostURL)
 		if err != nil {
+			logging.Logger.WithError(err).Warn("Invalid redirect URL attempted")
 			ah.sendError(w, http.StatusBadRequest, "Invalid redirect URL")
 			return
 		}
-		redirectURL = parsedURL
+		redirectURL = validatedURL
 	}
 
 	// Generate authorization URL
