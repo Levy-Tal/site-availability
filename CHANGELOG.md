@@ -1,4 +1,22 @@
-# [2.4.0](https://github.com/Levy-Tal/site-availability/compare/v2.3.0...v2.4.0) (2025-08-01)
+## [2.4.1](https://github.com/Levy-Tal/site-availability/compare/v2.4.0...v2.4.1) (2025-07-28)
+
+### Bug Fixes
+
+- **sync:** fix locations and apps sync ([bc78f30](https://github.com/Levy-Tal/site-availability/commit/bc78f30969ced08bf88d0ce0871cb539352c3589))
+
+# [2.4.0](https://github.com/Levy-Tal/site-availability/compare/v2.3.1...v2.4.0) (2025-07-13)
+
+### Features
+
+- **localstorage:** save user filters on the ui ([3205fb5](https://github.com/Levy-Tal/site-availability/commit/3205fb5cf8a983ac78d55ae5b3e9d86b4ed4c34e))
+
+## [2.3.1](https://github.com/Levy-Tal/site-availability/compare/v2.3.0...v2.3.1) (2025-07-13)
+
+### Bug Fixes
+
+- **ui:** fix ui bugs ([1d66f59](https://github.com/Levy-Tal/site-availability/commit/1d66f59d60c61ac1cd078e5787ed6a4fb2d6458b))
+
+# [2.3.0](https://github.com/Levy-Tal/site-availability/compare/v2.2.0...v2.3.0) (2025-07-09)
 
 ### Security Fixes
 
