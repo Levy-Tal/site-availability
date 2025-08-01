@@ -149,28 +149,58 @@ func GetSessionFromContext(r *http.Request) (*session.Session, bool) {
 	return session, ok
 }
 
+// IsSecureRequest determines if the request is secure, accounting for reverse proxies
+func IsSecureRequest(r *http.Request, trustProxyHeaders bool) bool {
+	// Check if TLS is directly available (direct HTTPS connection)
+	if r.TLS != nil {
+		return true
+	}
+
+	// Only check proxy headers if explicitly configured to trust them
+	if !trustProxyHeaders {
+		return false
+	}
+
+	// Check for X-Forwarded-Proto header (set by reverse proxies)
+	if r.Header.Get("X-Forwarded-Proto") == "https" {
+		return true
+	}
+
+	// Check for X-Forwarded-SSL header (alternative header used by some proxies)
+	if r.Header.Get("X-Forwarded-SSL") == "on" {
+		return true
+	}
+
+	// Check for X-Forwarded-Port header (if set to 443)
+	if r.Header.Get("X-Forwarded-Port") == "443" {
+		return true
+	}
+
+	return false
+}
+
 // CreateSessionCookie creates a secure session cookie
-func CreateSessionCookie(sessionID string, maxAge int, r *http.Request) *http.Cookie {
+func CreateSessionCookie(sessionID string, maxAge int, r *http.Request, trustProxyHeaders bool) *http.Cookie {
 	return &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
 		MaxAge:   maxAge,
 		Path:     "/",
-		HttpOnly: true,                 // Prevent XSS attacks
-		Secure:   r.TLS != nil,         // Secure flag based on TLS status
-		SameSite: http.SameSiteLaxMode, // CSRF protection
+		HttpOnly: true,                                  // Prevent XSS attacks
+		Secure:   IsSecureRequest(r, trustProxyHeaders), // Secure flag based on actual request security
+		SameSite: http.SameSiteLaxMode,                  // CSRF protection
 	}
 }
 
 // DeleteSessionCookie creates a cookie that deletes the session
-func DeleteSessionCookie(r *http.Request) *http.Cookie {
+func DeleteSessionCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
 	return &http.Cookie{
 		Name:     "session_id",
 		Value:    "",
 		MaxAge:   -1,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil, // Secure flag based on TLS status
+		Secure:   IsSecureRequest(r, trustProxyHeaders), // Secure flag based on actual request security
 		SameSite: http.SameSiteLaxMode,
 	}
 }

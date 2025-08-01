@@ -124,7 +124,7 @@ func (ah *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Set session cookie
 	sessionTimeout, _ := session.ParseTimeout(ah.config.ServerSettings.SessionTimeout)
 	maxAge := int(sessionTimeout.Seconds())
-	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r)
+	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r, ah.config.ServerSettings.TrustProxyHeaders)
 	http.SetCookie(w, cookie)
 
 	logging.Logger.WithFields(map[string]interface{}{
@@ -206,7 +206,7 @@ func (ah *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete session cookie
-	cookie := middleware.DeleteSessionCookie(r)
+	cookie := middleware.DeleteSessionCookie(r, ah.config.ServerSettings.TrustProxyHeaders)
 	http.SetCookie(w, cookie)
 
 	// Send success response
@@ -299,7 +299,7 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 		Value:    state,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   middleware.IsSecureRequest(r, ah.config.ServerSettings.TrustProxyHeaders),
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   600, // 10 minutes
 	})
@@ -348,7 +348,7 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   middleware.IsSecureRequest(r, ah.config.ServerSettings.TrustProxyHeaders),
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1, // Delete cookie
 	})
@@ -372,7 +372,7 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 	// Set session cookie
 	sessionTimeout, _ := session.ParseTimeout(ah.config.ServerSettings.SessionTimeout)
 	maxAge := int(sessionTimeout.Seconds())
-	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r)
+	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r, ah.config.ServerSettings.TrustProxyHeaders)
 	http.SetCookie(w, cookie)
 
 	// Redirect to application or return success

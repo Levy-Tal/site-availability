@@ -53,6 +53,24 @@ host_url: "http://localhost:8080"
 host_url: "https://monitoring.company.com:8443"
 ```
 
+### Proxy Header Trust Configuration
+
+When running behind a reverse proxy (nginx, ingress controller, etc.), the `trust_proxy_headers` setting allows the application to properly detect HTTPS connections:
+
+```yaml
+server_settings:
+  port: "8080"
+  host_url: "https://myserver.com"
+  trust_proxy_headers: true # Only enable when behind a trusted reverse proxy
+```
+
+**Security Considerations**:
+
+- **Default**: `false` - Only trusts direct TLS connections (`r.TLS != nil`)
+- **When enabled**: Trusts `X-Forwarded-Proto`, `X-Forwarded-SSL`, and `X-Forwarded-Port` headers
+- **Only enable** when your application is behind a trusted reverse proxy that sets these headers
+- **Never enable** in environments where untrusted clients can directly reach your application
+
 ## Authentication
 
 Site Availability Monitor supports authentication to secure access to the monitoring interface.
@@ -335,6 +353,8 @@ When OIDC provider is down:
 4. **Redirect Mismatch**: Verify redirect URI in provider matches application
 5. **Missing host_url**: Ensure `host_url` is configured in `server_settings`
 6. **Invalid host_url format**: Must include scheme (http:// or https://) and host
+7. **OIDC Authentication Fails**: All session cookies use SameSite=Lax for cross-site compatibility
+8. **Cookies Not Secure Behind Proxy**: Enable `trust_proxy_headers: true` when behind a reverse proxy
 
 #### Error Messages
 
@@ -390,6 +410,7 @@ server_settings:
   port: "8080"
   host_url: "https://myserver.com" # Required: Used for OIDC callback URLs
   session_timeout: "12h"
+  trust_proxy_headers: true # Enable when behind a trusted reverse proxy
   local_admin:
     enabled: true
     username: "admin"

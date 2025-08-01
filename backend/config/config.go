@@ -22,16 +22,17 @@ type Config struct {
 }
 
 type ServerSettings struct {
-	Port           string                `yaml:"port"`
-	HostURL        string                `yaml:"host_url"`
-	CustomCAPath   string                `yaml:"custom_ca_path"`
-	SyncEnable     bool                  `yaml:"sync_enable"`
-	Token          string                `yaml:"token"`
-	Labels         map[string]string     `yaml:"labels,omitempty"`
-	SessionTimeout string                `yaml:"session_timeout,omitempty"`
-	LocalAdmin     LocalAdminConfig      `yaml:"local_admin,omitempty"`
-	Roles          map[string]RoleConfig `yaml:"roles,omitempty"`
-	OIDC           OIDCConfig            `yaml:"oidc,omitempty"`
+	Port              string                `yaml:"port"`
+	HostURL           string                `yaml:"host_url"`
+	CustomCAPath      string                `yaml:"custom_ca_path"`
+	SyncEnable        bool                  `yaml:"sync_enable"`
+	Token             string                `yaml:"token"`
+	Labels            map[string]string     `yaml:"labels,omitempty"`
+	SessionTimeout    string                `yaml:"session_timeout,omitempty"`
+	TrustProxyHeaders bool                  `yaml:"trust_proxy_headers,omitempty"`
+	LocalAdmin        LocalAdminConfig      `yaml:"local_admin,omitempty"`
+	Roles             map[string]RoleConfig `yaml:"roles,omitempty"`
+	OIDC              OIDCConfig            `yaml:"oidc,omitempty"`
 }
 
 type LocalAdminConfig struct {

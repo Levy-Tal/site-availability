@@ -29,7 +29,7 @@ func TestCreateSessionCookie_SecureFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cookie := CreateSessionCookie("test-session-id", 3600, tt.request)
+			cookie := CreateSessionCookie("test-session-id", 3600, tt.request, false)
 
 			if cookie.Secure != tt.expectedSecure {
 				t.Errorf("Expected Secure=%v for %s, but got Secure=%v",
@@ -83,7 +83,7 @@ func TestDeleteSessionCookie_SecureFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cookie := DeleteSessionCookie(tt.request)
+			cookie := DeleteSessionCookie(tt.request, false)
 
 			if cookie.Secure != tt.expectedSecure {
 				t.Errorf("Expected Secure=%v for %s, but got Secure=%v",
