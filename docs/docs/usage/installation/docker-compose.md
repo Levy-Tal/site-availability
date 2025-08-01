@@ -15,6 +15,7 @@ Before deploying, create the following minimal configuration files in your deplo
 ```yaml
 server_settings:
   port: 8080
+  host_url: "https://your-domain.com" # Required: Used for OIDC callback URLs
 
 locations:
   - name: New York

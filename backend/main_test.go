@@ -66,6 +66,7 @@ func TestConfigurationLoading(t *testing.T) {
 		configContent := fmt.Sprintf(`
 server_settings:
   port: "8080"
+  host_url: "https://test.example.com"
   sync_enable: true
   custom_ca_path: "%s"
 
@@ -187,6 +188,7 @@ server_settings:
 		configContent := `
 server_settings:
   port: "8080"
+  host_url: "https://test.example.com"
 
 locations:
   - name: "test location"
@@ -239,6 +241,7 @@ sources:
 		configContent := `
 server_settings:
   port: "8080"
+  host_url: "https://test.example.com"
 
 locations:
   - name: "test location"
@@ -307,6 +310,7 @@ func TestConfigurationErrors(t *testing.T) {
 		configContent := `
 server_settings:
   port: "8080"
+  host_url: "https://test.example.com"
 `
 		configPath := filepath.Join(tmpDir, "incomplete.yaml")
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -326,6 +330,7 @@ server_settings:
 		configContent := `
 server_settings:
   port: "8080"
+  host_url: "https://test.example.com"
 
 locations:
   - name: "invalid location"

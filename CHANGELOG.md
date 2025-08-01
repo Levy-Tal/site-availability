@@ -1,3 +1,26 @@
+# [2.4.0](https://github.com/Levy-Tal/site-availability/compare/v2.3.0...v2.4.0) (2025-08-01)
+
+### Security Fixes
+
+- **OIDC Callback URL Vulnerability**: Fixed Host header injection vulnerability in OIDC callback URL generation
+  - Added required `host_url` field to `server_settings` configuration
+  - OIDC callback URLs now use trusted configuration instead of unvalidated request headers
+  - Prevents potential authorization code theft through malicious redirects
+  - Ensures correct protocol (http/https) handling for OIDC authentication
+
+### Breaking Changes
+
+- **Configuration**: The `host_url` field is now required in `server_settings`
+  - Must include scheme (http:// or https://) and host
+  - Used to construct secure OIDC callback URLs
+  - Format: `https://myserver.com` or `http://localhost:8080`
+
+### Documentation
+
+- Updated all configuration examples to include the required `host_url` field
+- Added troubleshooting section for host_url configuration issues
+- Updated OIDC setup guides with new callback URL format
+
 # [2.3.0](https://github.com/Levy-Tal/site-availability/compare/v2.2.0...v2.3.0) (2025-07-09)
 
 ### Features

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ type Config struct {
 
 type ServerSettings struct {
 	Port           string                `yaml:"port"`
+	HostURL        string                `yaml:"host_url"`
 	CustomCAPath   string                `yaml:"custom_ca_path"`
 	SyncEnable     bool                  `yaml:"sync_enable"`
 	Token          string                `yaml:"token"`
@@ -160,6 +162,27 @@ func validateLabels(labels map[string]string, context string) error {
 }
 
 func validateConfig(config *Config) error {
+	// Validate host_url is provided
+	if strings.TrimSpace(config.ServerSettings.HostURL) == "" {
+		return fmt.Errorf("config validation error: host_url is required in server_settings")
+	}
+
+	// Validate host_url format
+	hostURL := strings.TrimSuffix(strings.TrimSpace(config.ServerSettings.HostURL), "/")
+	parsedURL, err := url.Parse(hostURL)
+	if err != nil {
+		return fmt.Errorf("config validation error: invalid host_url format %q: %w", config.ServerSettings.HostURL, err)
+	}
+	if parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return fmt.Errorf("config validation error: host_url must include scheme and host (e.g., https://example.com)")
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("config validation error: host_url scheme must be http or https, got %q", parsedURL.Scheme)
+	}
+
+	// Update the config with the trimmed URL
+	config.ServerSettings.HostURL = hostURL
+
 	if err := validateLabels(config.ServerSettings.Labels, "server settings"); err != nil {
 		return err
 	}

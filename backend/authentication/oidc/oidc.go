@@ -90,7 +90,7 @@ func (oa *OIDCAuthenticator) initProvider() error {
 	oauth2Config := &oauth2.Config{
 		ClientID:     oa.config.ServerSettings.OIDC.Config.ClientID,
 		ClientSecret: oa.config.ServerSettings.OIDC.Config.ClientSecret,
-		RedirectURL:  "http://localhost:8080/auth/oidc/callback", // Will be configured dynamically
+		RedirectURL:  oa.config.ServerSettings.HostURL + "/auth/oidc/callback",
 		Endpoint:     provider.Endpoint(),
 		Scopes:       []string{oidc.ScopeOpenID, oa.config.ServerSettings.OIDC.Config.GroupScope},
 	}

@@ -27,6 +27,7 @@ This file defines your monitoring setup, including locations, sources, and scrap
 ```yaml
 server_settings:
   port: 8080
+  host_url: "http://localhost:8080"  # Required: Used for OIDC callback URLs
   sync_enable: false
   labels:
     environment: "development"

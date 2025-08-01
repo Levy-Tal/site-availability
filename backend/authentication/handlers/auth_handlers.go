@@ -273,8 +273,8 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 	// Get the redirect URL from the request
 	redirectURL := r.URL.Query().Get("redirect_url")
 	if redirectURL == "" {
-		// Default redirect URL
-		redirectURL = "http://" + r.Host + "/auth/oidc/callback"
+		// Default redirect URL using configured host_url
+		redirectURL = ah.config.ServerSettings.HostURL + "/auth/oidc/callback"
 	} else {
 		// Validate the redirect URL
 		parsedURL, err := oidc.ParseRedirectURL(redirectURL)
@@ -370,15 +370,9 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Set session cookie
-	cookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionInfo.ID,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   r.TLS != nil,
-		SameSite: http.SameSiteStrictMode,
-		Expires:  sessionInfo.ExpiresAt,
-	}
+	sessionTimeout, _ := session.ParseTimeout(ah.config.ServerSettings.SessionTimeout)
+	maxAge := int(sessionTimeout.Seconds())
+	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r)
 	http.SetCookie(w, cookie)
 
 	// Redirect to application or return success

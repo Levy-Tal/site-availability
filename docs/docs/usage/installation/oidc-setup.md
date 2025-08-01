@@ -35,6 +35,8 @@ Site Availability supports OIDC authentication, which allows you to:
    https://your-domain.com/auth/oidc/callback  # Production
    ```
 
+   **Note**: The callback URL is automatically constructed as `{host_url}/auth/oidc/callback` where `host_url` is the value you configure in your `server_settings.host_url` field.
+
 3. **Enable required scopes**:
 
    - Go to Client Scopes
@@ -55,6 +57,8 @@ Site Availability supports OIDC authentication, which allows you to:
    - New registration
    - Name: `Site Availability`
    - Redirect URI: `https://your-domain.com/auth/oidc/callback`
+
+   **Note**: The callback URL is automatically constructed as `{host_url}/auth/oidc/callback` where `host_url` is the value you configure in your `server_settings.host_url` field.
 
 2. **Configure authentication**:
 
@@ -84,6 +88,8 @@ Site Availability supports OIDC authentication, which allows you to:
    - Allowed Callback URLs: `https://your-domain.com/auth/oidc/callback`
    - Allowed Web Origins: `https://your-domain.com`
 
+   **Note**: The callback URL is automatically constructed as `{host_url}/auth/oidc/callback` where `host_url` is the value you configure in your `server_settings.host_url` field.
+
 3. **Enable groups claim**:
    - Go to Rules or Actions
    - Add groups to ID token:
@@ -103,6 +109,7 @@ Create or update your `config.yaml`:
 ```yaml
 server_settings:
   port: "8080"
+  host_url: "https://your-domain.com"  # Required: Used for OIDC callback URLs
   session_timeout: 12h
 
   # Define application roles

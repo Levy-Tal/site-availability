@@ -13,13 +13,44 @@ The server configuration includes basic networking and operational settings.
 ```yaml
 server_settings:
   port: "8080"
+  host_url: "https://myserver.com" # Required: The public URL of your server
 ```
 
 ### Custom CA Certificates
 
 ```yaml
 server_settings:
+  port: "8080"
+  host_url: "https://myserver.com"
   custom_ca_path: "/path/to/custom/ca.crt"
+```
+
+### Host URL Configuration
+
+The `host_url` field is **required** and serves multiple important purposes:
+
+- **OIDC Callback URLs**: Used to construct secure callback URLs for OIDC authentication
+- **Security**: Prevents Host header injection attacks by using a trusted configuration value instead of request headers
+- **Protocol Handling**: Ensures the correct protocol (http/https) is used for all callback URLs
+
+**Format**: Must include the full URL with scheme and host:
+
+- ✅ `https://myserver.com`
+- ✅ `http://localhost:8080`
+- ❌ `myserver.com` (missing scheme)
+- ❌ `https://myserver.com/` (trailing slash will be automatically trimmed)
+
+**Examples**:
+
+```yaml
+# Production
+host_url: "https://monitoring.company.com"
+
+# Development
+host_url: "http://localhost:8080"
+
+# With custom port
+host_url: "https://monitoring.company.com:8443"
 ```
 
 ## Authentication
@@ -161,6 +192,8 @@ Configure OIDC in your `config.yaml`:
 
 ```yaml
 server_settings:
+  port: "8080"
+  host_url: "https://myserver.com" # Required: Used for OIDC callback URLs
   session_timeout: 12h
 
   # Define roles and their label permissions
@@ -215,7 +248,7 @@ server_settings:
 
 1. Create a new client in Keycloak
 2. Set client type to "OpenID Connect"
-3. Configure redirect URI: `http://your-domain/auth/oidc/callback`
+3. Configure redirect URI: `https://myserver.com/auth/oidc/callback` (uses your `host_url` setting)
 4. Enable "Client authentication"
 5. Add groups to the client scope
 
@@ -226,6 +259,8 @@ Ensure your OIDC provider includes:
 - `groups` claim in ID tokens (or configure `groupScope`)
 - `preferred_username` or similar claim (configure `userNameScope`)
 - Standard OpenID Connect discovery endpoint
+
+**Important**: The callback URL will be automatically constructed as `{host_url}/auth/oidc/callback`. Make sure to configure this exact URL in your OIDC provider.
 
 ### User and Group Mapping
 
@@ -288,6 +323,7 @@ When OIDC provider is down:
 - **Timeout Handling**: 10-second timeout for provider initialization
 - **Secure Cookies**: HttpOnly, Secure, and SameSite cookie attributes
 - **Graceful Degradation**: Automatic fallback to local auth when provider unavailable
+- **Host URL Protection**: Uses configured `host_url` instead of request headers to prevent Host header injection attacks
 
 ### Troubleshooting
 
@@ -297,12 +333,16 @@ When OIDC provider is down:
 2. **Invalid Client**: Verify clientID and clientSecret
 3. **Missing Claims**: Ensure groups and username scopes are configured
 4. **Redirect Mismatch**: Verify redirect URI in provider matches application
+5. **Missing host_url**: Ensure `host_url` is configured in `server_settings`
+6. **Invalid host_url format**: Must include scheme (http:// or https://) and host
 
 #### Error Messages
 
 - `OIDC provider unavailable`: Provider cannot be reached, local auth available
 - `Invalid state parameter`: Possible CSRF attack or session timeout
 - `Failed to extract username`: Username scope not configured properly
+- `config validation error: host_url is required`: Add `host_url` field to `server_settings`
+- `config validation error: host_url must include scheme and host`: Fix the URL format
 
 ### Security Considerations
 
@@ -348,6 +388,7 @@ server_settings:
 ```yaml
 server_settings:
   port: "8080"
+  host_url: "https://myserver.com" # Required: Used for OIDC callback URLs
   session_timeout: "12h"
   local_admin:
     enabled: true

@@ -198,7 +198,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "valid config",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 					Labels: map[string]string{
 						"env": "test",
 					},
@@ -226,7 +227,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "no locations",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{},
 				Sources: []Source{
@@ -245,7 +247,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "invalid latitude",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{
 					{
@@ -270,7 +273,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "invalid longitude",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{
 					{
@@ -295,7 +299,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "empty source name",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{
 					{
@@ -320,7 +325,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "duplicate source names",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{
 					{
@@ -352,7 +358,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "empty source type",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{
 					{
@@ -377,7 +384,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "invalid server labels",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 					Labels: map[string]string{
 						"key&": "value",
 					},
@@ -405,7 +413,8 @@ func TestValidateConfig(t *testing.T) {
 			name: "invalid source labels",
 			config: &Config{
 				ServerSettings: ServerSettings{
-					Port: "8080",
+					Port:    "8080",
+					HostURL: "https://example.com",
 				},
 				Locations: []Location{
 					{
@@ -499,6 +508,7 @@ func TestLoadConfig(t *testing.T) {
 	configContent := `
 server_settings:
   port: "8080"
+  host_url: "https://example.com"
   labels:
     env: "test"
 scraping:
@@ -868,7 +878,8 @@ func TestLoadConfig_AppliesDefaultsAfterValidation(t *testing.T) {
 	// Create a minimal valid config with OIDC enabled but empty scopes
 	configData := map[string]interface{}{
 		"server_settings": map[string]interface{}{
-			"port": "8080",
+			"port":     "8080",
+			"host_url": "https://example.com",
 			"oidc": map[string]interface{}{
 				"enabled": true,
 				"config": map[string]interface{}{

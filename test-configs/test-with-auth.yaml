@@ -1,5 +1,6 @@
 server_settings:
   port: "8080"
+  host_url: "http://localhost:8080"
   session_timeout: "1h" # Shorter timeout for testing
   local_admin:
     enabled: true
