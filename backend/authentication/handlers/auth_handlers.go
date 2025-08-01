@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"site-availability/authentication/local"
 	"site-availability/authentication/middleware"
@@ -375,15 +376,16 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r, ah.config.ServerSettings.TrustProxyHeaders)
 	http.SetCookie(w, cookie)
 
-	// Redirect to application or return success
 	redirectTo := r.URL.Query().Get("redirect_to")
 	if redirectTo == "" {
-		redirectTo = "/" // Default to home page
+		redirectTo = "/"
 	}
 
-	// For security, validate redirect_to URL
-	if parsedURL, err := url.Parse(redirectTo); err != nil || (parsedURL.Host != "" && parsedURL.Host != r.Host) {
-		redirectTo = "/" // Fallback to safe default
+	parsedURL, err := url.Parse(redirectTo)
+	if err != nil ||
+		parsedURL.IsAbs() || // Reject absolute URLs
+		strings.HasPrefix(parsedURL.Path, "//") {
+		redirectTo = "/"
 	}
 
 	http.Redirect(w, r, redirectTo, http.StatusFound)
