@@ -58,88 +58,180 @@ server_settings:
 
   # Keep local admin as fallback
   local_admin:
-    enabled: true
+    enabled: false
     username: admin
 
 # Sample data for testing
 locations:
-  - name: "US East"
-    latitude: 40.7128
-    longitude: -74.0060
-  - name: "EU West"
+  - name: "us-east-1"
+    latitude: 38.9586
+    longitude: -77.3570
+
+  - name: "us-east-2"
+    latitude: 40.4173
+    longitude: -82.9071
+
+  - name: "us-west-1"
+    latitude: 37.7749
+    longitude: -122.4194
+
+  - name: "us-west-2"
+    latitude: 45.5234
+    longitude: -122.6762
+
+  - name: "af-south-1"
+    latitude: -33.9249
+    longitude: 18.4241
+
+  - name: "ap-east-1"
+    latitude: 22.3193
+    longitude: 114.1694
+
+  - name: "ap-south-2"
+    latitude: 17.3850
+    longitude: 78.4867
+
+  - name: "ap-southeast-3"
+    latitude: -6.2088
+    longitude: 106.8456
+
+  - name: "ap-southeast-4"
+    latitude: -37.8136
+    longitude: 144.9631
+
+  - name: "ap-south-1"
+    latitude: 19.0760
+    longitude: 72.8777
+
+  - name: "ap-northeast-3"
+    latitude: 34.6937
+    longitude: 135.5023
+
+  - name: "ap-northeast-2"
+    latitude: 37.5665
+    longitude: 126.9780
+
+  - name: "ap-southeast-1"
+    latitude: 1.3521
+    longitude: 103.8198
+
+  - name: "ap-southeast-2"
+    latitude: -33.8688
+    longitude: 151.2093
+
+  - name: "ap-northeast-1"
+    latitude: 35.6895
+    longitude: 139.6917
+
+  - name: "ca-central-1"
+    latitude: 45.4215
+    longitude: -75.6995
+
+  - name: "eu-central-1"
+    latitude: 50.1109
+    longitude: 8.6821
+
+  - name: "eu-west-1"
+    latitude: 53.3498
+    longitude: -6.2603
+
+  - name: "eu-west-2"
     latitude: 51.5074
     longitude: -0.1278
+
+  - name: "eu-south-1"
+    latitude: 45.4642
+    longitude: 9.1900
+
+  - name: "eu-west-3"
+    latitude: 48.8566
+    longitude: 2.3522
+
+  - name: "eu-south-2"
+    latitude: 40.4168
+    longitude: -3.7038
+
+  - name: "eu-north-1"
+    latitude: 59.3293
+    longitude: 18.0686
+
+  - name: "il-central-1"
+    latitude: 32.0853
+    longitude: 34.7818
+
+  - name: "me-south-1"
+    latitude: 26.0667
+    longitude: 50.5577
+
+  - name: "me-central-1"
+    latitude: 24.4539
+    longitude: 54.3773
+
+  - name: "sa-east-1"
+    latitude: -23.5505
+    longitude: -46.6333
 
 sources:
   - name: frontend-app-prod
     type: http
-    labels:
-      team: frontend
-      env: production
-      region: us-east
+
     config:
       apps:
         - name: frontend-app
-          location: "US East"
+          location: "me-south-1"
           url: "https://httpbin.org/status/200"
+          labels:
+            team: frontend
+            env: production
+            region: us-east
 
-  - name: backend-api-prod
-    type: http
-    labels:
-      team: backend
-      env: production
-      region: us-east
-    config:
-      apps:
+        - name: backend-app
+          location: "me-central-1"
+          url: "https://google.com"
+          labels:
+            team: backend
+            env: production
+            app: app1
+
         - name: backend-api
-          location: "US East"
+          location: "us-east-1"
           url: "https://httpbin.org/status/200"
+          labels:
+            team: backend
+            env: production
+            region: us-east
 
-  - name: devops-monitoring
-    type: http
-    labels:
-      team: devops
-      region: us-east
-    config:
-      apps:
         - name: monitoring-dashboard
-          location: "US East"
+          location: "us-east-1"
           url: "https://httpbin.org/status/200"
+          labels:
+            team: observability
+            env: production
+            region: us-east
 
-  - name: qa-staging
-    type: http
-    labels:
-      env: staging
-      region: us-east
-    config:
-      apps:
         - name: staging-app
-          location: "US East"
+          location: "us-east-1"
           url: "https://httpbin.org/status/200"
+          labels:
+            team: frontend
+            env: staging
+            region: us-east
 
-  - name: eu-frontend
-    type: http
-    labels:
-      team: frontend
-      env: production
-      region: eu-west
-    config:
-      apps:
         - name: eu-frontend-app
-          location: "EU West"
+          location: "eu-west-2"
           url: "https://httpbin.org/status/200"
+          labels:
+            team: frontend
+            env: production
+            region: eu-west
 
-  - name: eu-backend
-    type: http
-    labels:
-      team: backend
-      env: production
-      region: eu-central
-    config:
-      apps:
         - name: eu-backend-api
-          location: "EU West"
+          location: "eu-west-2"
           url: "https://httpbin.org/status/200"
+          labels:
+            team: backend
+            env: production
+            region: eu-west
 
 scraping:
   interval: "300s"

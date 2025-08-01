@@ -1,4 +1,4 @@
-package authorization
+package rbac
 
 import (
 	"site-availability/authentication/session"

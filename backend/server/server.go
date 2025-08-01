@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"site-availability/authentication/handlers"
+	authHandlers "site-availability/authentication/handlers"
 	"site-availability/authentication/middleware"
 	"site-availability/authentication/session"
 	"site-availability/config"
@@ -23,7 +23,7 @@ type Server struct {
 	config          *config.Config
 	mux             *http.ServeMux
 	sessionManager  *session.Manager
-	authHandlers    *handlers.AuthHandlers
+	authHandlers    *authHandlers.AuthHandlers
 	authMiddleware  *middleware.AuthMiddleware
 	authzMiddleware *middleware.AuthzMiddleware
 }
@@ -64,7 +64,7 @@ func (s *Server) initAuthentication() {
 	s.sessionManager = session.NewManager(sessionTimeout)
 
 	// Initialize auth handlers
-	s.authHandlers, err = handlers.NewAuthHandlers(s.config, s.sessionManager)
+	s.authHandlers, err = authHandlers.NewAuthHandlers(s.config, s.sessionManager)
 	if err != nil {
 		logging.Logger.WithError(err).Fatal("Failed to initialize authentication handlers")
 	}

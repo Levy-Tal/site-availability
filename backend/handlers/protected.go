@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"site-availability/authentication/authorization"
 	"site-availability/authentication/middleware"
+	"site-availability/authentication/rbac"
 	"site-availability/config"
 	"site-availability/logging"
 )
@@ -126,7 +126,7 @@ func GetAppsWithAuthz(w http.ResponseWriter, r *http.Request, cfg *config.Config
 	// Apply authorization filters if user doesn't have full access
 	if hasPermissions && !userPermissions.HasFullAccess {
 		// Create authorizer to filter apps
-		authorizer := authorization.NewAuthorizer(cfg)
+		authorizer := rbac.NewAuthorizer(cfg)
 
 		var authorizedApps []AppStatus
 		for _, app := range apps {
@@ -178,7 +178,7 @@ func GetLocationsWithAuthz(w http.ResponseWriter, r *http.Request, cfg *config.C
 	var authorizedApps []AppStatus
 	if hasPermissions && !userPermissions.HasFullAccess {
 		// Create authorizer to filter apps
-		authorizer := authorization.NewAuthorizer(cfg)
+		authorizer := rbac.NewAuthorizer(cfg)
 
 		for _, app := range allApps {
 			if authorizer.CanAccessApp(userPermissions, app.Labels) {

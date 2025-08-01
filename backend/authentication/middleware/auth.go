@@ -36,8 +36,15 @@ func NewAuthMiddleware(cfg *config.Config, sessionManager *session.Manager) *Aut
 // RequireAuth is middleware that requires authentication for protected endpoints
 func (am *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.WithFields(map[string]interface{}{
+			"method": r.Method,
+			"path":   r.URL.Path,
+			"query":  r.URL.RawQuery,
+		}).Debug("RequireAuth middleware called")
+
 		// Check if authentication is required
 		if !am.isAuthRequired() {
+			logging.Logger.Debug("Authentication not required, allowing request")
 			// Authentication disabled, allow request
 			next.ServeHTTP(w, r)
 			return
@@ -45,9 +52,12 @@ func (am *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		// Check if this endpoint should be excluded from authentication
 		if am.isExcludedPath(r.URL.Path) {
+			logging.Logger.WithField("path", r.URL.Path).Debug("Path excluded from authentication, allowing request")
 			next.ServeHTTP(w, r)
 			return
 		}
+
+		logging.Logger.WithField("path", r.URL.Path).Debug("Path requires authentication, checking session")
 
 		// Extract session from cookie
 		sessionID, err := am.extractSessionFromCookie(r)
@@ -57,16 +67,27 @@ func (am *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		logging.Logger.WithField("session_id", "****").Debug("Session ID extracted from cookie")
+
 		// Validate session
 		sessionInfo, valid := am.sessionManager.ValidateSession(sessionID)
 		if !valid {
-			logging.Logger.Debug("Invalid or expired session")
+			logging.Logger.WithField("session_id", "****").Debug("Invalid or expired session")
 			am.sendUnauthorized(w, "Invalid or expired session")
 			return
 		}
 
+		logging.Logger.WithFields(map[string]interface{}{
+			"session_id": "****", // Mask session ID for security
+			"username":   sessionInfo.Username,
+			"is_admin":   sessionInfo.IsAdmin,
+			"roles":      sessionInfo.Roles,
+			"expires_at": sessionInfo.ExpiresAt,
+		}).Debug("Session validated successfully")
+
 		// Refresh session expiration
 		am.sessionManager.RefreshSession(sessionID)
+		logging.Logger.WithField("session_id", "****").Debug("Session refreshed")
 
 		// Add user and session info to request context
 		ctx := context.WithValue(r.Context(), UserContextKey, sessionInfo)
@@ -92,12 +113,14 @@ func (am *AuthMiddleware) isAuthRequired() bool {
 // isExcludedPath checks if a path should be excluded from authentication
 func (am *AuthMiddleware) isExcludedPath(path string) bool {
 	excludedPaths := []string{
-		"/",           // Login page
-		"/sync",       // B2B endpoint with HMAC auth
-		"/auth/login", // Login endpoint
-		"/healthz",    // Health check
-		"/readyz",     // Readiness check
-		"/metrics",    // Metrics endpoint
+		"/",                   // Login page
+		"/sync",               // B2B endpoint with HMAC auth
+		"/auth/login",         // Login endpoint
+		"/auth/oidc/login",    // OIDC login endpoint
+		"/auth/oidc/callback", // OIDC callback endpoint
+		"/healthz",            // Health check
+		"/readyz",             // Readiness check
+		"/metrics",            // Metrics endpoint
 	}
 
 	// Also exclude static files (anything not starting with /api or /auth)

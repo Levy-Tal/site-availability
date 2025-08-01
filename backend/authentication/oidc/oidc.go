@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"site-availability/config"
+	"site-availability/logging"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -144,59 +145,108 @@ func (oa *OIDCAuthenticator) GenerateAuthURL(redirectURL string) (string, string
 
 // HandleCallback processes the OAuth2 callback and exchanges code for tokens
 func (oa *OIDCAuthenticator) HandleCallback(ctx context.Context, code string) (*UserInfo, error) {
+	logging.Logger.WithField("code_length", len(code)).Debug("OIDC HandleCallback started (code masked)")
+
 	if !oa.IsEnabled() {
+		logging.Logger.Error("OIDC is not enabled")
 		return nil, fmt.Errorf("OIDC is not enabled")
 	}
 
 	// Initialize provider if needed
+	logging.Logger.Debug("Initializing OIDC provider if needed")
 	if err := oa.initProvider(); err != nil {
+		logging.Logger.WithError(err).Error("Failed to initialize OIDC provider")
 		return nil, fmt.Errorf("failed to initialize OIDC provider: %w", err)
 	}
 
 	// Exchange authorization code for tokens
+	logging.Logger.Debug("Exchanging authorization code for tokens")
 	token, err := oa.oauth2Config.Exchange(ctx, code)
 	if err != nil {
+		logging.Logger.WithError(err).Error("Failed to exchange code for token")
 		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
+
+	logging.Logger.Debug("Successfully exchanged code for token")
 
 	// Extract ID token
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
+		logging.Logger.Error("No id_token found in OAuth2 token")
 		return nil, fmt.Errorf("no id_token found in OAuth2 token")
 	}
 
+	logging.Logger.WithField("id_token_length", len(rawIDToken)).Debug("Extracted ID token from OAuth2 token (token masked)")
+
 	// Verify ID token
+	logging.Logger.Debug("Verifying ID token")
 	idToken, err := oa.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
+		logging.Logger.WithError(err).Error("Failed to verify ID token")
 		return nil, fmt.Errorf("failed to verify ID token: %w", err)
 	}
+
+	logging.Logger.Debug("ID token verification successful")
 
 	// Extract claims as a map to allow dynamic access based on config
 	var allClaims map[string]interface{}
 	if err := idToken.Claims(&allClaims); err != nil {
+		logging.Logger.WithError(err).Error("Failed to extract claims from ID token")
 		return nil, fmt.Errorf("failed to extract claims: %w", err)
 	}
 
+	logging.Logger.WithField("claims_count", len(allClaims)).Debug("Extracted claims from ID token")
+
 	// Get username from configured claim field
+	logging.Logger.WithField("userNameScope", oa.config.ServerSettings.OIDC.Config.UserNameScope).Debug("Extracting username from claims")
 	username := oa.extractUsername(allClaims)
 	if username == "" {
+		logging.Logger.WithFields(map[string]interface{}{
+			"userNameScope":    oa.config.ServerSettings.OIDC.Config.UserNameScope,
+			"available_claims": allClaims,
+		}).Error("Failed to extract username from token")
 		return nil, fmt.Errorf("failed to extract username from token: userNameScope='%s', claim value is empty or missing",
 			oa.config.ServerSettings.OIDC.Config.UserNameScope)
 	}
 
+	logging.Logger.WithField("username", username).Debug("Successfully extracted username from claims")
+
 	// Extract groups from configured claim field
+	logging.Logger.WithField("groupScope", oa.config.ServerSettings.OIDC.Config.GroupScope).Debug("Extracting groups from claims")
 	groups := oa.extractGroups(allClaims)
+	logging.Logger.WithField("groups", groups).Debug("Extracted groups from claims")
 
 	// Get user roles based on username and groups
+	logging.Logger.WithFields(map[string]interface{}{
+		"username": username,
+		"groups":   groups,
+	}).Debug("Getting user roles based on username and groups")
 	roles, isAdmin := oa.getUserRoles(username, groups)
 
-	return &UserInfo{
+	logging.Logger.WithFields(map[string]interface{}{
+		"username": username,
+		"groups":   groups,
+		"roles":    roles,
+		"is_admin": isAdmin,
+	}).Debug("User roles determined successfully")
+
+	userInfo := &UserInfo{
 		Username:   username,
 		IsAdmin:    isAdmin,
 		Roles:      roles,
 		Groups:     groups,
 		AuthMethod: "oidc",
-	}, nil
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"username":    userInfo.Username,
+		"is_admin":    userInfo.IsAdmin,
+		"roles":       userInfo.Roles,
+		"groups":      userInfo.Groups,
+		"auth_method": userInfo.AuthMethod,
+	}).Info("OIDC HandleCallback completed successfully")
+
+	return userInfo, nil
 }
 
 // extractUsername extracts the username from claims based on configuration
@@ -254,28 +304,45 @@ func (oa *OIDCAuthenticator) extractGroups(claims map[string]interface{}) []stri
 
 // getUserRoles maps username and groups to roles based on configuration
 func (oa *OIDCAuthenticator) getUserRoles(username string, groups []string) ([]string, bool) {
+	logging.Logger.WithFields(map[string]interface{}{
+		"username": username,
+		"groups":   groups,
+	}).Debug("getUserRoles called")
+
 	roleSet := make(map[string]bool)
 	isAdmin := false
 
 	// Check user-specific role mappings
 	if userRoles, exists := oa.config.ServerSettings.OIDC.Permissions.Users[username]; exists {
+		logging.Logger.WithFields(map[string]interface{}{
+			"username":   username,
+			"user_roles": userRoles,
+		}).Debug("Found user-specific role mappings")
 		for _, role := range userRoles {
 			roleSet[role] = true
 			if role == "admin" {
 				isAdmin = true
 			}
 		}
+	} else {
+		logging.Logger.WithField("username", username).Debug("No user-specific role mappings found")
 	}
 
 	// Check group-based role mappings
 	for _, group := range groups {
 		if groupRoles, exists := oa.config.ServerSettings.OIDC.Permissions.Groups[group]; exists {
+			logging.Logger.WithFields(map[string]interface{}{
+				"group":       group,
+				"group_roles": groupRoles,
+			}).Debug("Found group-based role mappings")
 			for _, role := range groupRoles {
 				roleSet[role] = true
 				if role == "admin" {
 					isAdmin = true
 				}
 			}
+		} else {
+			logging.Logger.WithField("group", group).Debug("No group-based role mappings found")
 		}
 	}
 
@@ -285,9 +352,17 @@ func (oa *OIDCAuthenticator) getUserRoles(username string, groups []string) ([]s
 		roles = append(roles, role)
 	}
 
+	logging.Logger.WithFields(map[string]interface{}{
+		"username": username,
+		"groups":   groups,
+		"roles":    roles,
+		"is_admin": isAdmin,
+	}).Debug("Final role assignment")
+
 	// If no roles assigned, return empty slice (user will have no permissions)
 	// This is expected behavior for users without explicit role assignments
 	if len(roles) == 0 {
+		logging.Logger.WithField("username", username).Warn("No roles assigned to user - user will have no permissions")
 		return []string{}, false
 	}
 

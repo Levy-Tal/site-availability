@@ -1,11 +1,10 @@
-package handlers
+package authhandlers
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"site-availability/authentication/local"
 	"site-availability/authentication/middleware"
@@ -115,6 +114,7 @@ func (ah *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		userInfo.IsAdmin,
 		userInfo.Roles,
 		userInfo.Groups,
+		"local", // Local admin authentication
 	)
 	if err != nil {
 		logging.Logger.WithError(err).Error("Failed to create session")
@@ -130,7 +130,7 @@ func (ah *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	logging.Logger.WithFields(map[string]interface{}{
 		"username":   userInfo.Username,
-		"session_id": sessionInfo.ID,
+		"session_id": "****", // Mask session ID for security
 	}).Info("User logged in successfully")
 
 	// Send success response
@@ -152,8 +152,8 @@ func (ah *AuthHandlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if authentication is enabled
-	if !ah.localAuth.IsEnabled() {
+	// Check if any authentication is enabled (local admin OR OIDC)
+	if !ah.localAuth.IsEnabled() && !ah.oidcAuth.IsEnabled() {
 		ah.sendError(w, http.StatusForbidden, "Authentication is disabled")
 		return
 	}
@@ -172,7 +172,7 @@ func (ah *AuthHandlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			Roles:      sessionInfo.Roles,
 			Groups:     sessionInfo.Groups,
 			IsAdmin:    sessionInfo.IsAdmin,
-			AuthMethod: "local", // For local admin authentication
+			AuthMethod: sessionInfo.AuthMethod, // Use the auth method stored in the session
 		},
 		Session: SessionInfo{
 			ExpiresAt: sessionInfo.ExpiresAt.Format("2006-01-02T15:04:05Z"),
@@ -202,7 +202,7 @@ func (ah *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	if sessionID != "" {
 		ah.sessionManager.DeleteSession(sessionID)
 		logging.Logger.WithFields(map[string]interface{}{
-			"session_id": sessionID,
+			"session_id": "****", // Mask session ID for security
 		}).Info("User logged out")
 	}
 
@@ -264,9 +264,16 @@ func (ah *AuthHandlers) HandleAuthConfig(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// HandleOIDCLogin initiates the OIDC authentication flow
+// HandleOIDCLogin processes OIDC login requests
 func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) {
+	logging.Logger.WithFields(map[string]interface{}{
+		"method": r.Method,
+		"path":   r.URL.Path,
+		"query":  r.URL.RawQuery,
+	}).Debug("OIDC login request received")
+
 	if !ah.oidcAuth.IsEnabled() {
+		logging.Logger.Error("OIDC authentication is not enabled")
 		ah.sendError(w, http.StatusBadRequest, "OIDC authentication is not enabled")
 		return
 	}
@@ -276,14 +283,17 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 	if redirectURL == "" {
 		// Default redirect URL using configured host_url
 		redirectURL = ah.config.ServerSettings.HostURL + "/auth/oidc/callback"
+		logging.Logger.WithField("redirect_url", redirectURL).Debug("Using default redirect URL")
 	} else {
 		// Validate the redirect URL
 		parsedURL, err := oidc.ParseRedirectURL(redirectURL)
 		if err != nil {
+			logging.Logger.WithError(err).WithField("redirect_url", redirectURL).Error("Invalid redirect URL")
 			ah.sendError(w, http.StatusBadRequest, "Invalid redirect URL")
 			return
 		}
 		redirectURL = parsedURL
+		logging.Logger.WithField("redirect_url", redirectURL).Debug("Using custom redirect URL")
 	}
 
 	// Generate authorization URL
@@ -293,6 +303,11 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 		ah.sendError(w, http.StatusInternalServerError, "Failed to initiate OIDC login")
 		return
 	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"auth_url": authURL,
+		"state":    state,
+	}).Debug("Generated OIDC authorization URL")
 
 	// Store state in session/cookie for validation (simplified approach)
 	http.SetCookie(w, &http.Cookie{
@@ -305,13 +320,21 @@ func (ah *AuthHandlers) HandleOIDCLogin(w http.ResponseWriter, r *http.Request) 
 		MaxAge:   600, // 10 minutes
 	})
 
+	logging.Logger.Debug("Redirecting to OIDC provider")
 	// Redirect to OIDC provider
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
 // HandleOIDCCallback handles the OIDC callback after authentication
 func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Request) {
+	logging.Logger.WithFields(map[string]interface{}{
+		"method": r.Method,
+		"path":   r.URL.Path,
+		"query":  r.URL.RawQuery,
+	}).Debug("OIDC callback request received")
+
 	if !ah.oidcAuth.IsEnabled() {
+		logging.Logger.Error("OIDC authentication is not enabled")
 		ah.sendError(w, http.StatusBadRequest, "OIDC authentication is not enabled")
 		return
 	}
@@ -331,17 +354,37 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 	// Get authorization code
 	code := r.URL.Query().Get("code")
 	if code == "" {
+		logging.Logger.Error("Missing authorization code in OIDC callback")
 		ah.sendError(w, http.StatusBadRequest, "Missing authorization code")
 		return
 	}
 
+	logging.Logger.WithField("code_length", len(code)).Debug("Received authorization code (masked)")
+
 	// Get and validate state
 	receivedState := r.URL.Query().Get("state")
 	stateCookie, err := r.Cookie("oidc_state")
-	if err != nil || !oidc.ValidateState(receivedState, stateCookie.Value) {
+	if err != nil {
+		logging.Logger.WithError(err).Error("Failed to get OIDC state cookie")
 		ah.sendError(w, http.StatusBadRequest, "Invalid state parameter")
 		return
 	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"received_state": "****", // Mask state for security
+		"cookie_state":   "****", // Mask state for security
+	}).Debug("Validating OIDC state parameter")
+
+	if !oidc.ValidateState(receivedState, stateCookie.Value) {
+		logging.Logger.WithFields(map[string]interface{}{
+			"received_state": "****", // Mask state for security
+			"cookie_state":   "****", // Mask state for security
+		}).Error("OIDC state validation failed")
+		ah.sendError(w, http.StatusBadRequest, "Invalid state parameter")
+		return
+	}
+
+	logging.Logger.Debug("OIDC state validation successful")
 
 	// Clear state cookie
 	http.SetCookie(w, &http.Cookie{
@@ -355,6 +398,7 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 	})
 
 	// Exchange code for user info
+	logging.Logger.Debug("Exchanging authorization code for user info")
 	userInfo, err := ah.oidcAuth.HandleCallback(r.Context(), code)
 	if err != nil {
 		logging.Logger.WithError(err).Error("OIDC callback failed")
@@ -362,13 +406,28 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	logging.Logger.WithFields(map[string]interface{}{
+		"username":    userInfo.Username,
+		"is_admin":    userInfo.IsAdmin,
+		"roles":       userInfo.Roles,
+		"groups":      userInfo.Groups,
+		"auth_method": userInfo.AuthMethod,
+	}).Debug("OIDC user info retrieved successfully")
+
 	// Create session
-	sessionInfo, err := ah.sessionManager.CreateSession(userInfo.Username, userInfo.IsAdmin, userInfo.Roles, userInfo.Groups)
+	logging.Logger.Debug("Creating session for OIDC user")
+	sessionInfo, err := ah.sessionManager.CreateSession(userInfo.Username, userInfo.IsAdmin, userInfo.Roles, userInfo.Groups, "oidc")
 	if err != nil {
 		logging.Logger.WithError(err).Error("Failed to create session for OIDC user")
 		ah.sendError(w, http.StatusInternalServerError, "Failed to create session")
 		return
 	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"session_id": "****", // Mask session ID for security
+		"username":   sessionInfo.Username,
+		"expires_at": sessionInfo.ExpiresAt,
+	}).Debug("Session created successfully for OIDC user")
 
 	// Set session cookie
 	sessionTimeout, _ := session.ParseTimeout(ah.config.ServerSettings.SessionTimeout)
@@ -376,17 +435,32 @@ func (ah *AuthHandlers) HandleOIDCCallback(w http.ResponseWriter, r *http.Reques
 	cookie := middleware.CreateSessionCookie(sessionInfo.ID, maxAge, r, ah.config.ServerSettings.TrustProxyHeaders)
 	http.SetCookie(w, cookie)
 
+	logging.Logger.WithFields(map[string]interface{}{
+		"session_id": "****", // Mask session ID for security
+		"max_age":    maxAge,
+		"secure":     cookie.Secure,
+	}).Debug("Session cookie set successfully")
+
+	// Redirect to application or return success
 	redirectTo := r.URL.Query().Get("redirect_to")
 	if redirectTo == "" {
-		redirectTo = "/"
+		redirectTo = "/" // Default to home page
+		logging.Logger.Debug("Using default redirect to home page")
+	} else {
+		logging.Logger.WithField("redirect_to", redirectTo).Debug("Using custom redirect URL")
 	}
 
-	parsedURL, err := url.Parse(redirectTo)
-	if err != nil ||
-		parsedURL.IsAbs() || // Reject absolute URLs
-		strings.HasPrefix(parsedURL.Path, "//") {
-		redirectTo = "/"
+	// For security, validate redirect_to URL
+	if parsedURL, err := url.Parse(redirectTo); err != nil || (parsedURL.Host != "" && parsedURL.Host != r.Host) {
+		logging.Logger.WithField("redirect_to", redirectTo).Warn("Invalid redirect_to URL, falling back to home page")
+		redirectTo = "/" // Fallback to safe default
 	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"final_redirect": redirectTo,
+		"username":       userInfo.Username,
+		"session_id":     "****", // Mask session ID for security
+	}).Info("OIDC authentication completed successfully, redirecting user")
 
 	http.Redirect(w, r, redirectTo, http.StatusFound)
 }

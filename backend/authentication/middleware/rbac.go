@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"site-availability/authentication/authorization"
+	"site-availability/authentication/rbac"
 	"site-availability/config"
 	"site-availability/logging"
 )
@@ -12,14 +12,14 @@ import (
 // AuthzMiddleware handles authorization for protected endpoints
 type AuthzMiddleware struct {
 	config     *config.Config
-	authorizer *authorization.Authorizer
+	authorizer *rbac.Authorizer
 }
 
 // NewAuthzMiddleware creates a new authorization middleware
 func NewAuthzMiddleware(cfg *config.Config) *AuthzMiddleware {
 	return &AuthzMiddleware{
 		config:     cfg,
-		authorizer: authorization.NewAuthorizer(cfg),
+		authorizer: rbac.NewAuthorizer(cfg),
 	}
 }
 
@@ -56,12 +56,12 @@ func (am *AuthzMiddleware) RequireAuthz(next http.HandlerFunc) http.HandlerFunc 
 }
 
 // GetPermissionsFromContext extracts user permissions from request context
-func GetPermissionsFromContext(r *http.Request) (authorization.UserPermissions, bool) {
-	permissions, ok := r.Context().Value(PermissionsContextKey).(authorization.UserPermissions)
+func GetPermissionsFromContext(r *http.Request) (rbac.UserPermissions, bool) {
+	permissions, ok := r.Context().Value(PermissionsContextKey).(rbac.UserPermissions)
 	return permissions, ok
 }
 
 // GetAuthorizerFromContext provides access to the authorizer for complex operations
-func (am *AuthzMiddleware) GetAuthorizer() *authorization.Authorizer {
+func (am *AuthzMiddleware) GetAuthorizer() *rbac.Authorizer {
 	return am.authorizer
 }
