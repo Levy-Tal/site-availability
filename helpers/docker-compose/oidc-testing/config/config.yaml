@@ -2,7 +2,9 @@ server_settings:
   port: "8080"
   host_url: "http://localhost:8080"
   session_timeout: 12h
-
+  local_admin:
+    enabled: true # Enable local admin authentication
+    username: "admin" # Admin username
   # Define roles and their label permissions for testing
   roles:
     frontend:
@@ -31,7 +33,7 @@ server_settings:
       issuer: "http://192.168.1.239:8090/realms/site-availability"
       clientID: "site-availability-client"
       groupScope: "groups"
-      userNameScope: "preferred_username"
+      userNameScope: "username"
     permissions:
       users:
         # Individual user permissions
@@ -55,11 +57,6 @@ server_settings:
         eu-team:
           - eu-west
           - eu-central
-
-  # Keep local admin as fallback
-  local_admin:
-    enabled: false
-    username: admin
 
 # Sample data for testing
 locations:

@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"site-availability/config"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // LocalAuthenticator handles local admin authentication
@@ -53,9 +51,13 @@ func (la *LocalAuthenticator) Authenticate(username, password string) error {
 		return fmt.Errorf("invalid credentials")
 	}
 
-	// Verify password
+	// Verify password with simple string comparison
+	// Note: The password is stored in the config file
+	// as the password (or hash) is already in memory. Security should come from:
+	// 1. File system permissions on the config file
+	// 2. Using proper secrets management (Kubernetes secrets, HashiCorp Vault, etc.)
 	configPassword := la.config.ServerSettings.LocalAdmin.Password
-	if err := verifyPassword(password, configPassword); err != nil {
+	if password != configPassword {
 		return fmt.Errorf("invalid credentials")
 	}
 
@@ -80,47 +82,4 @@ type UserInfo struct {
 	Roles      []string `json:"roles"`
 	Groups     []string `json:"groups"`
 	AuthMethod string   `json:"auth_method"`
-}
-
-// verifyPassword checks if the provided password matches the stored password
-// It handles both plaintext (for development) and bcrypt hashed passwords
-func verifyPassword(providedPassword, storedPassword string) error {
-	// Check if stored password is bcrypt hashed (starts with $2a$, $2b$, or $2y$)
-	if strings.HasPrefix(storedPassword, "$2a$") ||
-		strings.HasPrefix(storedPassword, "$2b$") ||
-		strings.HasPrefix(storedPassword, "$2y$") {
-		// Use bcrypt verification
-		return bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(providedPassword))
-	}
-
-	// For backwards compatibility and development, support plaintext comparison
-	// In production, passwords should always be hashed
-	if providedPassword == storedPassword {
-		return nil
-	}
-
-	return fmt.Errorf("password verification failed")
-}
-
-// HashPassword creates a bcrypt hash of the password
-func HashPassword(password string) (string, error) {
-	// Use bcrypt with cost 12 (good balance of security and performance)
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
-	if err != nil {
-		return "", fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	return string(hashedBytes), nil
-}
-
-// ValidatePasswordStrength performs basic password validation
-func ValidatePasswordStrength(password string) error {
-	if len(password) < 8 {
-		return fmt.Errorf("password must be at least 8 characters long")
-	}
-
-	// You can add more validation rules here if needed
-	// For now, keeping it simple as requested
-
-	return nil
 }

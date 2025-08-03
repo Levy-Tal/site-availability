@@ -78,7 +78,9 @@ func (oa *OIDCAuthenticator) initProvider() error {
 	if oa.config.ServerSettings.OIDC.Config.GroupScope == "" {
 		return fmt.Errorf("OIDC groupScope is required")
 	}
-
+	if oa.config.ServerSettings.OIDC.Config.UserNameScope == "" {
+		return fmt.Errorf("OIDC userNameScope is required")
+	}
 	ctx := context.Background()
 
 	// Initialize OIDC provider
@@ -93,7 +95,7 @@ func (oa *OIDCAuthenticator) initProvider() error {
 		ClientSecret: oa.config.ServerSettings.OIDC.Config.ClientSecret,
 		RedirectURL:  oa.config.ServerSettings.HostURL + "/auth/oidc/callback",
 		Endpoint:     provider.Endpoint(),
-		Scopes:       []string{oidc.ScopeOpenID, oa.config.ServerSettings.OIDC.Config.GroupScope},
+		Scopes:       []string{oidc.ScopeOpenID, oa.config.ServerSettings.OIDC.Config.GroupScope, oa.config.ServerSettings.OIDC.Config.UserNameScope},
 	}
 
 	// Configure ID token verifier
