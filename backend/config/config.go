@@ -33,6 +33,7 @@ type ServerSettings struct {
 	LocalAdmin        LocalAdminConfig      `yaml:"local_admin,omitempty"`
 	Roles             map[string]RoleConfig `yaml:"roles,omitempty"`
 	OIDC              OIDCConfig            `yaml:"oidc,omitempty"`
+	MetricsAuth       MetricsAuthConfig     `yaml:"metrics_auth,omitempty"`
 }
 
 type LocalAdminConfig struct {
@@ -87,6 +88,14 @@ type Source struct {
 	Type   string                 `yaml:"type"`
 	Labels map[string]string      `yaml:"labels,omitempty"`
 	Config map[string]interface{} `yaml:"config"`
+}
+
+type MetricsAuthConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Type     string `yaml:"type"` // "basic" or "bearer"
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
+	Token    string `yaml:"token,omitempty"`
 }
 
 func DecodeConfig[T any](cfg map[string]interface{}, sourceName string) (T, error) {
@@ -258,6 +267,29 @@ func validateAuthConfig(serverSettings *ServerSettings) error {
 		}
 		if strings.TrimSpace(serverSettings.OIDC.Config.ClientSecret) == "" {
 			return fmt.Errorf("auth config error: OIDC clientSecret is required when OIDC is enabled")
+		}
+	}
+
+	// Validate metrics auth configuration
+	if serverSettings.MetricsAuth.Enabled {
+		if strings.TrimSpace(serverSettings.MetricsAuth.Type) == "" {
+			return fmt.Errorf("auth config error: metrics auth type is required when metrics auth is enabled")
+		}
+
+		switch serverSettings.MetricsAuth.Type {
+		case "basic":
+			if strings.TrimSpace(serverSettings.MetricsAuth.Username) == "" {
+				return fmt.Errorf("auth config error: metrics auth username is required when using basic auth")
+			}
+			if strings.TrimSpace(serverSettings.MetricsAuth.Password) == "" {
+				return fmt.Errorf("auth config error: metrics auth password is required when using basic auth")
+			}
+		case "bearer":
+			if strings.TrimSpace(serverSettings.MetricsAuth.Token) == "" {
+				return fmt.Errorf("auth config error: metrics auth token is required when using bearer auth")
+			}
+		default:
+			return fmt.Errorf("auth config error: invalid metrics auth type %q, must be 'basic' or 'bearer'", serverSettings.MetricsAuth.Type)
 		}
 	}
 

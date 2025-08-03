@@ -1,3 +1,22 @@
+# [Unreleased]
+
+### Features
+
+- **Metrics Authentication**: Added authentication support for the `/metrics` endpoint
+  - Support for basic authentication (username/password)
+  - Support for bearer token authentication
+  - Configurable via `server_settings.metrics_auth` in config.yaml or credentials.yaml
+  - Default behavior remains unauthenticated (backward compatible)
+  - Proper HTTP 401 responses with WWW-Authenticate headers
+  - Comprehensive test coverage for all authentication scenarios
+
+### Documentation
+
+- Added comprehensive documentation for metrics authentication configuration
+- Updated Prometheus configuration examples with authentication
+- Added troubleshooting guide for metrics authentication issues
+- Updated server configuration documentation with new metrics_auth section
+
 ## [2.4.1](https://github.com/Levy-Tal/site-availability/compare/v2.4.0...v2.4.1) (2025-07-28)
 
 ### Bug Fixes

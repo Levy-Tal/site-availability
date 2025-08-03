@@ -20,12 +20,13 @@ import (
 
 // Server represents the web server instance
 type Server struct {
-	config          *config.Config
-	mux             *http.ServeMux
-	sessionManager  *session.Manager
-	authHandlers    *authHandlers.AuthHandlers
-	authMiddleware  *middleware.AuthMiddleware
-	authzMiddleware *middleware.AuthzMiddleware
+	config                *config.Config
+	mux                   *http.ServeMux
+	sessionManager        *session.Manager
+	authHandlers          *authHandlers.AuthHandlers
+	authMiddleware        *middleware.AuthMiddleware
+	authzMiddleware       *middleware.AuthzMiddleware
+	metricsAuthMiddleware *middleware.MetricsAuthMiddleware
 }
 
 // NewServer creates a new server instance
@@ -75,6 +76,9 @@ func (s *Server) initAuthentication() {
 	// Initialize authorization middleware
 	s.authzMiddleware = middleware.NewAuthzMiddleware(s.config)
 
+	// Initialize metrics auth middleware
+	s.metricsAuthMiddleware = middleware.NewMetricsAuthMiddleware(s.config)
+
 	logging.Logger.Info("Authentication and authorization components initialized")
 }
 
@@ -121,9 +125,9 @@ func (s *Server) setupRoutes() {
 		logging.Logger.Debug("Handling /readyz probe")
 		s.readinessProbe(w, r)
 	})
-	s.mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("/metrics", s.metricsAuthMiddleware.RequireMetricsAuth(func(w http.ResponseWriter, r *http.Request) {
 		metrics.SetupMetricsHandler().ServeHTTP(w, r)
-	})
+	}))
 
 	// Add sync endpoint if sync is enabled
 	if s.config.ServerSettings.SyncEnable {

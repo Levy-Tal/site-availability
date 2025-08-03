@@ -58,6 +58,7 @@ This project uses semantic versioning for releases. All commits should follow th
 - **Frontend**: A React-based web interface that displays application statuses on a world map.
 - **Backend**: A Go-based server that fetches application statuses from Prometheus and serves them via REST APIs.
 - **Prometheus Integration**: Collects metrics such as uptime, memory usage, and application availability.
+- **Metrics Authentication**: Secure the `/metrics` endpoint with basic auth or bearer token authentication.
 - **Helm Chart**: Deploys the application to Kubernetes with customizable configurations.
 - **Docker Support**: Easily build and run the application using Docker and Docker Compose.
 - **Grafana Dashboards**: Pre-configured dashboards for visualizing metrics.

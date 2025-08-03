@@ -114,6 +114,60 @@ scrape_configs:
         replacement: "production"
 ```
 
+### Metrics Authentication
+
+If you have enabled metrics authentication in your server configuration, you'll need to configure Prometheus with the appropriate credentials.
+
+#### Basic Authentication
+
+If you're using basic authentication:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["site-availability:8080"]
+    metrics_path: "/metrics"
+    basic_auth:
+      username: "prometheus"
+      password: "your-secure-password"
+```
+
+#### Bearer Token Authentication
+
+If you're using bearer token authentication:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["site-availability:8080"]
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials: "your-secret-token"
+```
+
+#### TLS Configuration
+
+For HTTPS endpoints, add TLS configuration:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["site-availability:8080"]
+    metrics_path: "/metrics"
+    scheme: "https"
+    tls_config:
+      ca_file: /etc/prometheus/certs/ca.crt
+      cert_file: /etc/prometheus/certs/client.crt
+      key_file: /etc/prometheus/certs/client.key
+    basic_auth:
+      username: "prometheus"
+      password: "your-secure-password"
+```
+
 ### Service Discovery
 
 For Kubernetes deployments:

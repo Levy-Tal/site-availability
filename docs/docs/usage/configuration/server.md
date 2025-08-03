@@ -371,6 +371,118 @@ When OIDC provider is down:
 - **Admin Access**: Admin users bypass all authorization checks
 - **Performance**: Authorization filtering is applied efficiently at the API level
 
+## Metrics Authentication
+
+The `/metrics` endpoint exposes Prometheus metrics and can be protected with authentication to prevent unauthorized access to monitoring data.
+
+### Configuration
+
+Configure metrics authentication in your `config.yaml` or `credentials.yaml`:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "basic" # or "bearer"
+    username: "prometheus"
+    password: "your-secure-password"
+```
+
+For bearer token authentication:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "bearer"
+    token: "your-secret-token"
+```
+
+### Authentication Types
+
+#### Basic Authentication
+
+Use username and password for metrics access:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "basic"
+    username: "prometheus"
+    password: "your-secure-password"
+```
+
+**Prometheus Configuration**:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["your-app:8080"]
+    metrics_path: "/metrics"
+    basic_auth:
+      username: "prometheus"
+      password: "your-secure-password"
+```
+
+#### Bearer Token Authentication
+
+Use a simple token for metrics access:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "bearer"
+    token: "your-secret-token"
+```
+
+**Prometheus Configuration**:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["your-app:8080"]
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials: "your-secret-token"
+```
+
+### Security Best Practices
+
+1. **Use Strong Credentials**: Choose strong passwords or tokens
+2. **Separate Credentials**: Use different credentials for metrics vs. user authentication
+3. **Network Security**: Consider IP-based restrictions for additional security
+4. **Credential Management**: Store sensitive credentials in `credentials.yaml` rather than `config.yaml`
+
+### Disabling Metrics Authentication
+
+To disable metrics authentication (default behavior):
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: false # or omit the entire metrics_auth section
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Prometheus Scraping Fails**: Verify credentials match between server and Prometheus configuration
+2. **401 Unauthorized**: Check that metrics authentication is properly configured
+3. **Basic Auth Not Working**: Ensure Prometheus is sending the correct Authorization header
+4. **Bearer Token Not Working**: Verify the token format and value
+
+#### Error Messages
+
+- `Metrics authentication failed`: Invalid credentials provided
+- `No Authorization header found`: Prometheus not sending authentication headers
+- `Invalid metrics auth type`: Configuration error in auth type
+
 #### Excluded Endpoints
 
 The following endpoints are **not** protected by authentication:
@@ -379,7 +491,7 @@ The following endpoints are **not** protected by authentication:
 - `/sync` - B2B endpoint (protected by HMAC authentication)
 - `/healthz` - Health check
 - `/readyz` - Readiness check
-- `/metrics` - Metrics endpoint
+- `/metrics` - Metrics endpoint (protected by metrics authentication when enabled)
 
 ## Sync Configuration
 
@@ -421,6 +533,11 @@ server_settings:
     backend:
       team: "backend"
       shared: "yes"
+  metrics_auth:
+    enabled: true
+    type: "basic"
+    username: "prometheus"
+    password: "your-secure-metrics-password"
   sync_enable: true
   token: "secure-sync-token"
   labels:

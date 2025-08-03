@@ -1,6 +1,7 @@
 server_settings:
   port: 8080
   sync_enable: false
+  host_url: http://localhost:8080
   labels:
     environment: "development"
     region: "local"
@@ -11,7 +12,11 @@ server_settings:
     username: "admin" # Admin username
     password: "admin" # Admin password
   session_timeout: "12h" # Session timeout (12 hours default)
-
+  metrics_auth:
+    enabled: true
+    type: "basic" # or "bearer"
+    username: "prometheus"
+    password: "prometheus-secret"
 scraping:
   interval: "10s"
   timeout: "1s"

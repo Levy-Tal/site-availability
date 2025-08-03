@@ -1,5 +1,5 @@
 services:
-  app:
+  single-server:
     build:
       context: ../../..
       dockerfile: Dockerfile
@@ -12,9 +12,9 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - prometheus
+      - prometheus-single-server
 
-  prometheus:
+  prometheus-single-server:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:

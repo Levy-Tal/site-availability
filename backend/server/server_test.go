@@ -510,3 +510,43 @@ func TestServerBehavior(t *testing.T) {
 		})
 	})
 }
+
+func TestServerInitializationWithMetricsAuth(t *testing.T) {
+	// Create a minimal config with metrics auth enabled
+	cfg := &config.Config{
+		ServerSettings: config.ServerSettings{
+			Port:    "8080",
+			HostURL: "http://localhost:8080",
+			MetricsAuth: config.MetricsAuthConfig{
+				Enabled:  true,
+				Type:     "basic",
+				Username: "prometheus",
+				Password: "secret",
+			},
+		},
+		Locations: []config.Location{
+			{
+				Name:      "Test",
+				Latitude:  0.0,
+				Longitude: 0.0,
+			},
+		},
+		Sources: []config.Source{},
+	}
+
+	// Create server instance
+	server := NewServer(cfg)
+
+	// This should not panic
+	if server == nil {
+		t.Fatal("Server should not be nil")
+	}
+
+	// Initialize authentication components
+	server.initAuthentication()
+
+	// Check that metrics auth middleware is initialized
+	if server.metricsAuthMiddleware == nil {
+		t.Fatal("Metrics auth middleware should be initialized")
+	}
+}
