@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"site-availability/authentication/session"
 	"site-availability/config"
@@ -46,13 +45,6 @@ func (am *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if !am.isAuthRequired() {
 			logging.Logger.Debug("Authentication not required, allowing request")
 			// Authentication disabled, allow request
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Check if this endpoint should be excluded from authentication
-		if am.isExcludedPath(r.URL.Path) {
-			logging.Logger.WithField("path", r.URL.Path).Debug("Path excluded from authentication, allowing request")
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -108,33 +100,6 @@ func (am *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 // isAuthRequired checks if authentication is required based on configuration
 func (am *AuthMiddleware) isAuthRequired() bool {
 	return am.config.ServerSettings.LocalAdmin.Enabled || am.config.ServerSettings.OIDC.Enabled
-}
-
-// isExcludedPath checks if a path should be excluded from authentication
-func (am *AuthMiddleware) isExcludedPath(path string) bool {
-	excludedPaths := []string{
-		"/",                   // Login page
-		"/sync",               // B2B endpoint with HMAC auth
-		"/auth/login",         // Login endpoint
-		"/auth/oidc/login",    // OIDC login endpoint
-		"/auth/oidc/callback", // OIDC callback endpoint
-		"/healthz",            // Health check
-		"/readyz",             // Readiness check
-		"/metrics",            // Metrics endpoint
-	}
-
-	// Also exclude static files (anything not starting with /api or /auth)
-	if !strings.HasPrefix(path, "/api") && !strings.HasPrefix(path, "/auth") {
-		return true
-	}
-
-	for _, excludedPath := range excludedPaths {
-		if path == excludedPath {
-			return true
-		}
-	}
-
-	return false
 }
 
 // extractSessionFromCookie extracts the session ID from the session cookie

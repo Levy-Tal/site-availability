@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"net/url"
 	"sync"
 
 	"site-availability/config"
@@ -383,59 +382,4 @@ func generateState() (string, error) {
 // ValidateState validates the state parameter (this would typically be stored in session/cache)
 func ValidateState(receivedState, expectedState string) bool {
 	return receivedState != "" && receivedState == expectedState
-}
-
-// ParseRedirectURL safely parses and validates redirect URLs
-func ParseRedirectURL(rawURL string) (string, error) {
-	if rawURL == "" {
-		return "", fmt.Errorf("redirect URL cannot be empty")
-	}
-
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return "", fmt.Errorf("invalid redirect URL: %w", err)
-	}
-
-	// Basic security check - only allow http/https
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return "", fmt.Errorf("invalid redirect URL scheme: %s", parsedURL.Scheme)
-	}
-
-	return parsedURL.String(), nil
-}
-
-// ValidateRedirectURL validates that a redirect URL is allowed for the given trusted host
-func ValidateRedirectURL(rawURL, trustedHostURL string) (string, error) {
-	if rawURL == "" {
-		return "", fmt.Errorf("redirect URL cannot be empty")
-	}
-
-	// Parse and validate the redirect URL
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return "", fmt.Errorf("invalid redirect URL: %w", err)
-	}
-
-	// Basic security check - only allow http/https
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return "", fmt.Errorf("invalid redirect URL scheme: %s", parsedURL.Scheme)
-	}
-
-	// Parse the trusted host URL
-	trustedURL, err := url.Parse(trustedHostURL)
-	if err != nil {
-		return "", fmt.Errorf("invalid trusted host URL: %w", err)
-	}
-
-	// Security validation - ensure the redirect URL is on the same host as the trusted host
-	if parsedURL.Host != trustedURL.Host {
-		return "", fmt.Errorf("redirect URL host %q does not match trusted host %q", parsedURL.Host, trustedURL.Host)
-	}
-
-	// Security validation - ensure the scheme matches (prevent downgrade attacks)
-	if parsedURL.Scheme != trustedURL.Scheme {
-		return "", fmt.Errorf("redirect URL scheme %q does not match trusted scheme %q", parsedURL.Scheme, trustedURL.Scheme)
-	}
-
-	return parsedURL.String(), nil
 }
