@@ -247,5 +247,18 @@ func getMockSourceAndSettings(sourceName string) (config.Source, config.ServerSe
 // Helper function to call UpdateAppStatus with mock parameters
 func updateAppStatusTest(sourceName string, statuses []handlers.AppStatus) {
 	source, serverSettings := getMockSourceAndSettings(sourceName)
-	handlers.UpdateAppStatus(sourceName, statuses, source, serverSettings)
+
+	// Ensure HostURL is set for validation
+	if serverSettings.HostURL == "" {
+		serverSettings.HostURL = "https://test-server.com"
+	}
+
+	// Ensure all test apps have OriginURL set (required for new validation)
+	for i := range statuses {
+		if statuses[i].OriginURL == "" {
+			statuses[i].OriginURL = "https://test-origin.com"
+		}
+	}
+
+	_ = handlers.UpdateAppStatus(sourceName, statuses, source, serverSettings)
 }

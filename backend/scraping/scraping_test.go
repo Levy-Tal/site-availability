@@ -59,6 +59,15 @@ func (m *MockScraper) Scrape(source config.Source, serverSettings config.ServerS
 	copy(results, m.results)
 	for i := range results {
 		results[i].Source = source.Name
+		// Set OriginURL based on source type - all non-site sources use host_url
+		if source.Type != "site" {
+			results[i].OriginURL = serverSettings.HostURL
+		}
+		// For site sources, preserve the original OriginURL if it exists
+		// If empty, set it to a test value to satisfy validation
+		if source.Type == "site" && results[i].OriginURL == "" {
+			results[i].OriginURL = "https://test-scraped-site.com"
+		}
 	}
 
 	// Add source to locations
@@ -379,6 +388,9 @@ func TestStart(t *testing.T) {
 				Timeout:     "5s",
 				MaxParallel: 2,
 			},
+			ServerSettings: config.ServerSettings{
+				HostURL: "https://test-server.com",
+			},
 			Sources: []config.Source{
 				{
 					Name: "test-source",
@@ -426,6 +438,9 @@ func TestStart(t *testing.T) {
 				Interval:    "100ms",
 				Timeout:     "5s",
 				MaxParallel: 1,
+			},
+			ServerSettings: config.ServerSettings{
+				HostURL: "https://test-server.com",
 			},
 			Sources: []config.Source{
 				{
@@ -503,6 +518,9 @@ func TestStart(t *testing.T) {
 				Timeout:     "1s",
 				MaxParallel: 5,
 			},
+			ServerSettings: config.ServerSettings{
+				HostURL: "https://test-server.com",
+			},
 			Sources: []config.Source{
 				{Name: "source1", Type: "prometheus", Config: map[string]interface{}{"url": "http://localhost:9090"}},
 				{Name: "source2", Type: "site", Config: map[string]interface{}{"url": "http://localhost:8080"}},
@@ -550,6 +568,9 @@ func TestStart(t *testing.T) {
 				Timeout:     "5s",
 				MaxParallel: 1,
 			},
+			ServerSettings: config.ServerSettings{
+				HostURL: "https://test-server.com",
+			},
 			Sources: []config.Source{
 				{Name: "tls-source", Type: "prometheus", Config: map[string]interface{}{"url": "http://localhost:9090"}},
 			},
@@ -573,6 +594,9 @@ func TestIntegration(t *testing.T) {
 
 		// 2. Initialize scrapers
 		cfg := &config.Config{
+			ServerSettings: config.ServerSettings{
+				HostURL: "https://test-server.com",
+			},
 			Sources: []config.Source{
 				{
 					Name: "integration-test",

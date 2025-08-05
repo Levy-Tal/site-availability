@@ -17,9 +17,8 @@ import (
 func setupTest() {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
-	appStatusCache = make(map[string]map[string]AppStatus)
+	appStatusCache = make(map[string]map[string]map[string]AppStatus)
 	locationCache = make(map[string][]Location)
-	seenApps = make(map[string]bool) // Reset deduplication map
 	labelManager = labels.NewLabelManager()
 }
 
@@ -44,7 +43,19 @@ func getMockSourceAndSettings(sourceName string) (config.Source, config.ServerSe
 // Helper function to call UpdateAppStatus with mock parameters
 func updateAppStatusTest(sourceName string, statuses []AppStatus) {
 	source, serverSettings := getMockSourceAndSettings(sourceName)
-	UpdateAppStatus(sourceName, statuses, source, serverSettings)
+	// Ensure HostURL is set for validation
+	if serverSettings.HostURL == "" {
+		serverSettings.HostURL = "https://test-server.com"
+	}
+
+	// Ensure all test apps have OriginURL set (required for new validation)
+	for i := range statuses {
+		if statuses[i].OriginURL == "" {
+			statuses[i].OriginURL = "https://test-origin.com"
+		}
+	}
+
+	_ = UpdateAppStatus(sourceName, statuses, source, serverSettings)
 }
 
 func TestAppStatusCache(t *testing.T) {
@@ -718,37 +729,41 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 	// Create test apps: some with version label, some without
 	testApps := []AppStatus{
 		{
-			Name:     "app-with-version",
-			Location: "test-location",
-			Status:   "up",
-			Source:   "test-source",
-			Labels:   map[string]string{"version": "v1.0", "environment": "prod"},
+			Name:      "app-with-version",
+			Location:  "test-location",
+			Status:    "up",
+			Source:    "test-source",
+			OriginURL: "https://test-origin.com",
+			Labels:    map[string]string{"version": "v1.0", "environment": "prod"},
 		},
 		{
-			Name:     "app-without-version",
-			Location: "test-location",
-			Status:   "up",
-			Source:   "test-source",
-			Labels:   map[string]string{"environment": "prod"}, // No version label
+			Name:      "app-without-version",
+			Location:  "test-location",
+			Status:    "up",
+			Source:    "test-source",
+			OriginURL: "https://test-origin.com",
+			Labels:    map[string]string{"environment": "prod"}, // No version label
 		},
 		{
-			Name:     "app-with-different-version",
-			Location: "test-location",
-			Status:   "up",
-			Source:   "test-source",
-			Labels:   map[string]string{"version": "v2.0", "environment": "prod"},
+			Name:      "app-with-different-version",
+			Location:  "test-location",
+			Status:    "up",
+			Source:    "test-source",
+			OriginURL: "https://test-origin.com",
+			Labels:    map[string]string{"version": "v2.0", "environment": "prod"},
 		},
 		{
-			Name:     "app-with-empty-version",
-			Location: "test-location",
-			Status:   "up",
-			Source:   "test-source",
-			Labels:   map[string]string{"version": "", "environment": "prod"}, // Empty version
+			Name:      "app-with-empty-version",
+			Location:  "test-location",
+			Status:    "up",
+			Source:    "test-source",
+			OriginURL: "https://test-origin.com",
+			Labels:    map[string]string{"version": "", "environment": "prod"}, // Empty version
 		},
 	}
 
 	// Update the cache with test apps
-	UpdateAppStatus("test-source", testApps, config.Source{}, config.ServerSettings{})
+	_ = UpdateAppStatus("test-source", testApps, config.Source{}, config.ServerSettings{HostURL: "https://test-server.com"})
 
 	t.Run("filter by version=v1.0 should only return apps with that exact label", func(t *testing.T) {
 		filters := map[string]string{
@@ -880,8 +895,8 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 	}
 
 	// Update the cache with test apps
-	UpdateAppStatus("prom1", []AppStatus{testApps[0]}, config.Source{}, config.ServerSettings{})
-	UpdateAppStatus("prom2", []AppStatus{testApps[1], testApps[2]}, config.Source{}, config.ServerSettings{})
+	_ = UpdateAppStatus("prom1", []AppStatus{testApps[0]}, config.Source{}, config.ServerSettings{HostURL: "https://test-server.com"})
+	_ = UpdateAppStatus("prom2", []AppStatus{testApps[1], testApps[2]}, config.Source{}, config.ServerSettings{HostURL: "https://test-server.com"})
 
 	t.Run("filter by location=Hadera and labels.version=v1.0 should only return app1", func(t *testing.T) {
 		filters := map[string]string{
@@ -930,5 +945,317 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 		// Should only return app1
 		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with version=v1.0")
 		assert.Equal(t, "app1", filteredApps[0].Name, "Should return only app1")
+	})
+}
+
+// TestCircularScrapingPrevention tests all the comprehensive scenarios we discussed
+func TestCircularScrapingPrevention(t *testing.T) {
+	// Server configuration
+	serverSettings := config.ServerSettings{
+		HostURL: "https://site-a.com",
+		Labels:  map[string]string{"server_env": "test"},
+	}
+
+	t.Run("UpdateAppStatus no longer filters apps - filtering moved to site scraper", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "app1", Location: "us-east", Status: "up", OriginURL: "https://site-a.com"},   // Should be kept (no filtering in UpdateAppStatus)
+			{Name: "app2", Location: "us-west", Status: "up", OriginURL: "https://external.com"}, // Should be kept
+		}
+
+		result := UpdateAppStatus("site-source", apps, config.Source{Type: "site"}, serverSettings)
+
+		assert.Equal(t, 2, result.AppsAdded, "Expected 2 apps added")
+		assert.Equal(t, 0, result.AppsSkipped, "Expected 0 apps skipped")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 2, "Expected 2 apps in cache")
+	})
+
+	t.Run("Rule 1: Non-site scrapers keep apps with own host_url", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "app1", Location: "us-east", Status: "up", OriginURL: "https://site-a.com"},   // Should be kept (not a site scraper)
+			{Name: "app2", Location: "us-west", Status: "up", OriginURL: "https://external.com"}, // Should be kept
+		}
+
+		result := UpdateAppStatus("prometheus-source", apps, config.Source{Type: "prometheus"}, serverSettings)
+
+		assert.Equal(t, 2, result.AppsAdded, "Expected 2 apps added")
+		assert.Equal(t, 0, result.AppsSkipped, "Expected 0 apps skipped")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 2, "Expected 2 apps in cache")
+	})
+
+	t.Run("All apps passed to UpdateAppStatus are kept (no filtering)", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "app1", Location: "us-east", Status: "up", OriginURL: "https://site-b.com"},   // Should be kept (no filtering in UpdateAppStatus)
+			{Name: "app2", Location: "us-west", Status: "up", OriginURL: "https://site-c.com"},   // Should be kept
+			{Name: "app3", Location: "us-west", Status: "up", OriginURL: "https://site-d.com"},   // Should be kept
+			{Name: "app4", Location: "us-west", Status: "up", OriginURL: "https://external.com"}, // Should be kept
+		}
+
+		result := UpdateAppStatus("site-source", apps, config.Source{}, serverSettings)
+
+		assert.Equal(t, 4, result.AppsAdded, "Expected 4 apps added")
+		assert.Equal(t, 0, result.AppsSkipped, "Expected 0 apps skipped")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 4, "Expected 4 apps in cache")
+	})
+
+	t.Run("Multi-path scenario: Same app from different sources creates separate entries", func(t *testing.T) {
+		setupTest()
+
+		// Apps from different sources with same name but different source
+		appsFromSiteB := []AppStatus{
+			{Name: "shared-app", Location: "us-east", Status: "up", OriginURL: "https://site-d.com", Source: "site-b"},
+		}
+		result1 := UpdateAppStatus("site-b-source", appsFromSiteB, config.Source{}, serverSettings)
+
+		// Same app name from different source
+		appsFromSiteC := []AppStatus{
+			{Name: "shared-app", Location: "us-east", Status: "down", OriginURL: "https://site-d.com", Source: "site-c"},
+		}
+		result2 := UpdateAppStatus("site-c-source", appsFromSiteC, config.Source{}, serverSettings)
+
+		// Both should be kept since they come from different sources
+		assert.Equal(t, 1, result1.AppsAdded, "Apps from site-b should be kept")
+		assert.Equal(t, 0, result1.AppsSkipped, "No apps should be skipped")
+		assert.Equal(t, 1, result2.AppsAdded, "Apps from site-c should be kept")
+		assert.Equal(t, 0, result2.AppsSkipped, "No apps should be skipped")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 2, "Both apps should be kept (different sources)")
+	})
+
+	t.Run("Site scraper preserves origin URLs from scraped apps", func(t *testing.T) {
+		setupTest()
+
+		// Simulate what Site A gets when scraping Site E (not directly scraped)
+		// Site E has apps from various origins
+		appsFromSiteE := []AppStatus{
+			{Name: "prom-app", Location: "us-east", Status: "up", OriginURL: "https://site-e.com", Source: "site-e"},    // From Site E's prometheus
+			{Name: "scraped-app", Location: "us-west", Status: "up", OriginURL: "https://site-f.com", Source: "site-e"}, // Site E scraped from Site F
+		}
+
+		// The site scraper should preserve these origin URLs
+		result := UpdateAppStatus("site-e-source", appsFromSiteE, config.Source{}, serverSettings)
+
+		assert.Equal(t, 2, result.AppsAdded, "Expected 2 apps added")
+		assert.Equal(t, 0, result.AppsSkipped, "Expected 0 apps skipped")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 2, "Expected 2 apps in cache")
+
+		originURLs := make(map[string]string)
+		for _, app := range cache {
+			originURLs[app.Name] = app.OriginURL
+		}
+
+		// Verify origin URLs are preserved
+		assert.Equal(t, "https://site-e.com", originURLs["prom-app"], "Prometheus app origin should be preserved")
+		assert.Equal(t, "https://site-f.com", originURLs["scraped-app"], "Scraped app origin should be preserved")
+	})
+
+	t.Run("Prometheus and HTTP scrapers use host_url as origin", func(t *testing.T) {
+		setupTest()
+
+		// Simulate prometheus scraper apps (these should have host_url as origin)
+		promApps := []AppStatus{
+			{Name: "prom-app1", Location: "us-east", Status: "up", OriginURL: "https://site-a.com", Source: "prometheus"},
+			{Name: "prom-app2", Location: "us-west", Status: "down", OriginURL: "https://site-a.com", Source: "prometheus"},
+		}
+
+		// Simulate HTTP scraper apps (these should also have host_url as origin)
+		httpApps := []AppStatus{
+			{Name: "http-app1", Location: "eu-west", Status: "up", OriginURL: "https://site-a.com", Source: "http"},
+		}
+
+		result1 := UpdateAppStatus("prometheus-source", promApps, config.Source{Type: "prometheus"}, serverSettings)
+		result2 := UpdateAppStatus("http-source", httpApps, config.Source{Type: "http"}, serverSettings)
+
+		// Prometheus and HTTP apps should be kept (self-loop prevention only applies to site scrapers)
+		assert.Equal(t, 2, result1.AppsAdded, "Prometheus apps should be kept")
+		assert.Equal(t, 0, result1.AppsSkipped, "No prometheus apps should be skipped")
+		assert.Equal(t, 1, result2.AppsAdded, "HTTP apps should be kept")
+		assert.Equal(t, 0, result2.AppsSkipped, "No HTTP apps should be skipped")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 3, "All apps should be kept")
+	})
+
+	t.Run("Prometheus apps are always kept in UpdateAppStatus", func(t *testing.T) {
+		setupTest()
+
+		// Use a different server with different host_url
+		differentServerSettings := config.ServerSettings{
+			HostURL: "https://different-site.com",
+			Labels:  map[string]string{"server_env": "test"},
+		}
+
+		// Simulate prometheus scraper apps with the different host_url
+		promApps := []AppStatus{
+			{Name: "prom-app1", Location: "us-east", Status: "up", OriginURL: "https://different-site.com", Source: "prometheus"},
+		}
+
+		result := UpdateAppStatus("prometheus-source", promApps, config.Source{}, differentServerSettings)
+
+		// All prometheus apps should be kept (no filtering in UpdateAppStatus)
+		assert.Equal(t, 1, result.AppsAdded, "App should be kept (no filtering in UpdateAppStatus)")
+		assert.Equal(t, 0, result.AppsSkipped, "No apps should be skipped")
+	})
+
+	t.Run("Complex scenario: All apps passed to UpdateAppStatus are kept", func(t *testing.T) {
+		setupTest()
+
+		// Step 1: Apps from Site B
+		appsFromSiteB := []AppStatus{
+			{Name: "site-b-own-app", Location: "us-east", Status: "up", OriginURL: "https://site-b.com", Source: "site-b"},
+			{Name: "shared-from-d", Location: "us-west", Status: "up", OriginURL: "https://site-d.com", Source: "site-b"},
+		}
+		result1 := UpdateAppStatus("site-b-source", appsFromSiteB, config.Source{}, serverSettings)
+
+		// Step 2: Apps from Site C
+		appsFromSiteC := []AppStatus{
+			{Name: "site-c-own-app", Location: "eu-west", Status: "down", OriginURL: "https://site-c.com", Source: "site-c"},
+			{Name: "shared-from-d", Location: "us-west", Status: "down", OriginURL: "https://site-d.com", Source: "site-c"}, // Same app, different status
+			{Name: "another-from-d", Location: "asia", Status: "up", OriginURL: "https://site-d.com", Source: "site-c"},
+		}
+		result2 := UpdateAppStatus("site-c-source", appsFromSiteC, config.Source{}, serverSettings)
+
+		// All apps should be kept (no filtering in UpdateAppStatus)
+		assert.Equal(t, 2, result1.AppsAdded, "Site B apps should be kept")
+		assert.Equal(t, 0, result1.AppsSkipped, "No Site B apps should be skipped")
+		assert.Equal(t, 3, result2.AppsAdded, "Site C apps should be kept")
+		assert.Equal(t, 0, result2.AppsSkipped, "No Site C apps should be skipped")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 5, "All apps should be kept")
+	})
+
+	t.Run("Valid scenario: Site A scrapes Site E (not directly scraped)", func(t *testing.T) {
+		setupTest()
+
+		// Site A scrapes Site E (which is NOT in directScrapedSites)
+		appsFromSiteE := []AppStatus{
+			{Name: "site-e-app", Location: "us-east", Status: "up", OriginURL: "https://site-e.com", Source: "site-e"},
+			{Name: "e-scraped-from-f", Location: "us-west", Status: "down", OriginURL: "https://site-f.com", Source: "site-e"},
+		}
+
+		result := UpdateAppStatus("site-e-source", appsFromSiteE, config.Source{}, serverSettings)
+
+		assert.Equal(t, 2, result.AppsAdded, "Expected 2 apps added")
+		assert.Equal(t, 0, result.AppsSkipped, "Expected 0 apps skipped")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 2, "Expected 2 apps in cache")
+
+		// Verify origin URLs are preserved
+		origins := make(map[string]string)
+		for _, app := range cache {
+			origins[app.Name] = app.OriginURL
+		}
+
+		assert.Equal(t, "https://site-e.com", origins["site-e-app"], "Site E app origin should be preserved")
+		assert.Equal(t, "https://site-f.com", origins["e-scraped-from-f"], "Site F app origin should be preserved")
+	})
+
+	t.Run("Edge case: Apps with empty origin URL should be rejected", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "no-origin-app", Location: "us-east", Status: "up", OriginURL: "", Source: "legacy"},
+			{Name: "nil-origin-app", Location: "us-west", Status: "down", Source: "legacy"},                                    // No OriginURL field
+			{Name: "valid-app", Location: "us-central", Status: "up", OriginURL: "https://valid-origin.com", Source: "legacy"}, // Valid app
+		}
+
+		result := UpdateAppStatus("legacy-source", apps, config.Source{}, serverSettings)
+
+		assert.Equal(t, 1, result.AppsAdded, "Expected 1 app added (only the valid one)")
+		assert.Equal(t, 2, result.AppsSkipped, "Expected 2 apps skipped (empty OriginURL)")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 1, "Expected 1 app in cache (only valid one)")
+		assert.Equal(t, "valid-app", cache[0].Name, "Only the valid app should be in cache")
+	})
+
+	t.Run("Input validation: Invalid server settings", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "test-app", Location: "us-east", Status: "up", OriginURL: "https://test.com", Source: "test"},
+		}
+
+		// Test empty source name
+		result1 := UpdateAppStatus("", apps, config.Source{}, serverSettings)
+		assert.NotNil(t, result1.Error, "Expected error for empty source name")
+		assert.Equal(t, 0, result1.AppsAdded, "No apps should be added with invalid input")
+
+		// Test empty host URL
+		invalidServerSettings := config.ServerSettings{HostURL: ""}
+		result2 := UpdateAppStatus("test-source", apps, config.Source{}, invalidServerSettings)
+		assert.NotNil(t, result2.Error, "Expected error for empty host URL")
+		assert.Equal(t, 0, result2.AppsAdded, "No apps should be added with invalid input")
+	})
+
+	t.Run("Input validation: Invalid app data", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "", Location: "us-east", Status: "up", OriginURL: "https://test.com", Source: "test"},                    // Empty name
+			{Name: "valid-app", Location: "", Status: "up", OriginURL: "https://test.com", Source: "test"},                  // Empty location
+			{Name: "invalid-status", Location: "us-east", Status: "unknown", OriginURL: "https://test.com", Source: "test"}, // Invalid status
+			{Name: "valid-app2", Location: "us-west", Status: "down", OriginURL: "https://test.com", Source: "test"},        // Valid app
+		}
+
+		result := UpdateAppStatus("test-source", apps, config.Source{}, serverSettings)
+
+		assert.Equal(t, 2, result.AppsAdded, "Expected 2 valid apps added") // invalid-status gets corrected to unavailable
+		assert.Equal(t, 2, result.AppsSkipped, "Expected 2 apps skipped for validation issues")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		cache := GetAppStatusCache()
+		assert.Len(t, cache, 2, "Expected 2 apps in cache")
+
+		// Verify the invalid status was corrected
+		for _, app := range cache {
+			if app.Name == "invalid-status" {
+				assert.Equal(t, "unavailable", app.Status, "Invalid status should be corrected to unavailable")
+			}
+		}
+	})
+
+	t.Run("Performance metrics tracking", func(t *testing.T) {
+		setupTest()
+
+		apps := []AppStatus{
+			{Name: "test-app", Location: "us-east", Status: "up", OriginURL: "https://external.com", Source: "test"},
+		}
+
+		// Get initial metrics
+		initialMetrics := GetUpdateMetrics()
+		initialUpdates := initialMetrics["total_updates"].(int64)
+		initialAdded := initialMetrics["total_apps_added"].(int64)
+
+		result := UpdateAppStatus("test-source", apps, config.Source{}, serverSettings)
+
+		assert.Equal(t, 1, result.AppsAdded, "Expected 1 app added")
+		assert.Nil(t, result.Error, "Expected no error")
+
+		// Check updated metrics
+		newMetrics := GetUpdateMetrics()
+		assert.Equal(t, initialUpdates+1, newMetrics["total_updates"].(int64), "Total updates should increment")
+		assert.Equal(t, initialAdded+1, newMetrics["total_apps_added"].(int64), "Total apps added should increment")
 	})
 }

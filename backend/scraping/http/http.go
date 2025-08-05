@@ -309,7 +309,7 @@ func (h *HTTPScraper) Scrape(source config.Source, serverSettings config.ServerS
 				Location:  app.Location,
 				Status:    status,
 				Source:    source.Name,
-				OriginURL: app.URL,
+				OriginURL: serverSettings.HostURL, // Use host URL as origin for deduplication
 				Labels:    app.Labels,
 			}
 			mu.Unlock()

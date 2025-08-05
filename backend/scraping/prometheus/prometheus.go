@@ -141,8 +141,8 @@ func (p *PrometheusScraper) Scrape(source config.Source, serverSettings config.S
 				Location:  app.Location,
 				Status:    status,
 				Source:    source.Name,
-				OriginURL: promCfg.URL, // Set origin URL for deduplication
-				Labels:    app.Labels,  // App labels only - source/server labels added in UpdateAppStatus
+				OriginURL: serverSettings.HostURL, // Use host URL as origin for deduplication
+				Labels:    app.Labels,             // App labels only - source/server labels added in UpdateAppStatus
 			}
 			mu.Unlock()
 		}(i, app)
