@@ -411,7 +411,7 @@ circle {
 
 .sidebar__filter-count {
   margin-left: auto;
-  background-color: rgba(45, 55, 72, 0.8);
+  background-color: #4d4d4d;
   color: #f1f5f9;
   padding: 2px 8px;
   border-radius: 12px;
@@ -475,7 +475,7 @@ circle {
 }
 
 .sidebar__label-input--disabled {
-  background-color: #2d2d2d;
+  background-color: #4d4d4d;
   color: #a0aec0;
   cursor: not-allowed;
   border-color: #f1f5f9;
