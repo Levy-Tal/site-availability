@@ -610,3 +610,119 @@ func TestHandleCallback(t *testing.T) {
 		assert.Contains(t, err.Error(), "OIDC issuer is required")
 	})
 }
+
+func TestCreateTLSConfigFromCA(t *testing.T) {
+	// Initialize logger for tests
+	err := logging.Init()
+	require.NoError(t, err)
+
+	t.Run("empty CA path returns nil", func(t *testing.T) {
+		tlsConfig, err := createTLSConfigFromCA("")
+		require.NoError(t, err)
+		assert.Nil(t, tlsConfig)
+	})
+
+	t.Run("non-existent CA file logs error but continues", func(t *testing.T) {
+		tlsConfig, err := createTLSConfigFromCA("/non/existent/path.crt")
+		require.NoError(t, err)
+		// Should return empty TLS config when no valid certificates are loaded
+		assert.NotNil(t, tlsConfig)
+		assert.NotNil(t, tlsConfig.RootCAs)
+	})
+}
+
+func TestGetContextWithCustomHTTPClient(t *testing.T) {
+	// Initialize logger for tests
+	err := logging.Init()
+	require.NoError(t, err)
+
+	t.Run("HTTP issuer returns original context", func(t *testing.T) {
+		cfg := &config.Config{
+			ServerSettings: config.ServerSettings{
+				CustomCAPath: "/path/to/ca.crt",
+				OIDC: config.OIDCConfig{
+					Enabled: true,
+					Config: config.OIDCProviderConfig{
+						Issuer: "http://example.com",
+					},
+				},
+			},
+		}
+
+		authenticator, err := NewOIDCAuthenticator(cfg)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		newCtx := authenticator.getContextWithCustomHTTPClient(ctx)
+		// Should return the same context since issuer is HTTP, not HTTPS
+		assert.Equal(t, ctx, newCtx)
+	})
+
+	t.Run("HTTPS issuer without custom CA path returns original context", func(t *testing.T) {
+		cfg := &config.Config{
+			ServerSettings: config.ServerSettings{
+				CustomCAPath: "", // No custom CA path
+				OIDC: config.OIDCConfig{
+					Enabled: true,
+					Config: config.OIDCProviderConfig{
+						Issuer: "https://example.com",
+					},
+				},
+			},
+		}
+
+		authenticator, err := NewOIDCAuthenticator(cfg)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		newCtx := authenticator.getContextWithCustomHTTPClient(ctx)
+		// Should return the same context since no custom CA path is configured
+		assert.Equal(t, ctx, newCtx)
+	})
+
+	t.Run("HTTPS issuer with custom CA path returns context with custom client", func(t *testing.T) {
+		cfg := &config.Config{
+			ServerSettings: config.ServerSettings{
+				CustomCAPath: "/path/to/ca.crt",
+				OIDC: config.OIDCConfig{
+					Enabled: true,
+					Config: config.OIDCProviderConfig{
+						Issuer: "https://example.com",
+					},
+				},
+			},
+		}
+
+		authenticator, err := NewOIDCAuthenticator(cfg)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		newCtx := authenticator.getContextWithCustomHTTPClient(ctx)
+		// Should return a different context with custom HTTP client
+		// We can't easily test the exact client without implementing the interface,
+		// but we can at least verify the context is different
+		assert.NotEqual(t, ctx, newCtx)
+	})
+
+	t.Run("invalid issuer URL returns original context", func(t *testing.T) {
+		cfg := &config.Config{
+			ServerSettings: config.ServerSettings{
+				CustomCAPath: "/path/to/ca.crt",
+				OIDC: config.OIDCConfig{
+					Enabled: true,
+					Config: config.OIDCProviderConfig{
+						Issuer: "invalid-url", // Invalid URL
+					},
+				},
+			},
+		}
+
+		authenticator, err := NewOIDCAuthenticator(cfg)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		newCtx := authenticator.getContextWithCustomHTTPClient(ctx)
+		// Should return the same context since URL parsing fails
+		assert.Equal(t, ctx, newCtx)
+	})
+}

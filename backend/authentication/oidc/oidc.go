@@ -3,8 +3,14 @@ package oidc
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"sync"
 
 	"site-availability/config"
@@ -81,6 +87,21 @@ func (oa *OIDCAuthenticator) initProvider() error {
 		return fmt.Errorf("OIDC userNameScope is required")
 	}
 	ctx := context.Background()
+
+	// Get context with custom HTTP client if needed for HTTPS issuer with custom CA
+	ctx = oa.getContextWithCustomHTTPClient(ctx)
+
+	// Log if custom CA is being used
+	issuerURL, err := url.Parse(oa.config.ServerSettings.OIDC.Config.Issuer)
+	if err != nil {
+		return fmt.Errorf("failed to parse OIDC issuer URL: %w", err)
+	}
+	if issuerURL.Scheme == "https" && oa.config.ServerSettings.CustomCAPath != "" {
+		logging.Logger.WithFields(map[string]interface{}{
+			"issuer":         oa.config.ServerSettings.OIDC.Config.Issuer,
+			"custom_ca_path": oa.config.ServerSettings.CustomCAPath,
+		}).Info("Using custom CA certificates for OIDC provider")
+	}
 
 	// Initialize OIDC provider
 	provider, err := oidc.NewProvider(ctx, oa.config.ServerSettings.OIDC.Config.Issuer)
@@ -162,7 +183,9 @@ func (oa *OIDCAuthenticator) HandleCallback(ctx context.Context, code string) (*
 
 	// Exchange authorization code for tokens
 	logging.Logger.Debug("Exchanging authorization code for tokens")
-	token, err := oa.oauth2Config.Exchange(ctx, code)
+	// Use custom HTTP client context for token exchange if needed
+	exchangeCtx := oa.getContextWithCustomHTTPClient(ctx)
+	token, err := oa.oauth2Config.Exchange(exchangeCtx, code)
 	if err != nil {
 		logging.Logger.WithError(err).Error("Failed to exchange code for token")
 		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
@@ -382,4 +405,70 @@ func generateState() (string, error) {
 // ValidateState validates the state parameter (this would typically be stored in session/cache)
 func ValidateState(receivedState, expectedState string) bool {
 	return receivedState != "" && receivedState == expectedState
+}
+
+// getContextWithCustomHTTPClient returns a context with custom HTTP client if HTTPS issuer and custom CA path are configured
+func (oa *OIDCAuthenticator) getContextWithCustomHTTPClient(baseCtx context.Context) context.Context {
+	// Check if issuer is HTTPS and custom CA path is configured
+	issuerURL, err := url.Parse(oa.config.ServerSettings.OIDC.Config.Issuer)
+	if err != nil {
+		logging.Logger.WithError(err).Error("Failed to parse OIDC issuer URL")
+		return baseCtx
+	}
+
+	// If issuer is HTTPS and custom CA path exists, create custom HTTP client
+	if issuerURL.Scheme == "https" && oa.config.ServerSettings.CustomCAPath != "" {
+		tlsConfig, err := createTLSConfigFromCA(oa.config.ServerSettings.CustomCAPath)
+		if err != nil {
+			logging.Logger.WithError(err).Error("Failed to create TLS config for OIDC")
+			return baseCtx
+		}
+
+		if tlsConfig != nil {
+			// Create custom HTTP client with TLS config
+			httpClient := &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: tlsConfig,
+				},
+			}
+
+			// Use custom HTTP client
+			return oidc.ClientContext(baseCtx, httpClient)
+		}
+	}
+
+	return baseCtx
+}
+
+// createTLSConfigFromCA creates a TLS config with custom CA certificates
+func createTLSConfigFromCA(caPath string) (*tls.Config, error) {
+	if caPath == "" {
+		return nil, nil
+	}
+
+	caCertPool := x509.NewCertPool()
+	paths := strings.Split(caPath, ":")
+
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+
+		certData, err := os.ReadFile(path)
+		if err != nil {
+			logging.Logger.WithError(err).WithField("path", path).Error("Failed to read CA certificate for OIDC")
+			continue
+		}
+
+		if ok := caCertPool.AppendCertsFromPEM(certData); !ok {
+			logging.Logger.WithField("path", path).Error("Failed to append CA certificate for OIDC")
+			continue
+		}
+	}
+
+	return &tls.Config{
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: false,
+	}, nil
 }
