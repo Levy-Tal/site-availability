@@ -8,6 +8,7 @@ import (
 	"site-availability/authentication/hmac"
 	"site-availability/config"
 	"site-availability/handlers"
+	"site-availability/labels"
 	"site-availability/logging"
 	"testing"
 	"time"
@@ -538,10 +539,10 @@ func TestSiteScraper_Scrape(t *testing.T) {
 				Status:    "up",
 				Source:    "original-remote-source",
 				OriginURL: "http://test-origin.com", // Will be overridden
-				Labels: map[string]string{
-					"remote_version": "v2.1.0",
-					"remote_tier":    "backend",
-					"common_label":   "remote_value", // Highest priority
+				Labels: []labels.Label{
+					{Key: "remote_version", Value: "v2.1.0"},
+					{Key: "remote_tier", Value: "backend"},
+					{Key: "common_label", Value: "remote_value"}, // Highest priority
 				},
 			},
 		}
@@ -588,14 +589,23 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		assert.Equal(t, "labeled-site", app.Source) // Source name is overridden by scraper
 
 		// Verify label merging with correct priority (Remote App > Source > Server)
-		expectedLabels := map[string]string{
-			// Only remote app labels should be present (merging happens in UpdateAppStatus)
-			"remote_version": "v2.1.0",
-			"remote_tier":    "backend",
-			"common_label":   "remote_value",
-		}
-
-		assert.Equal(t, expectedLabels, app.Labels)
+		// Only remote app labels should be present (merging happens in UpdateAppStatus)
 		assert.Len(t, app.Labels, 3) // Only remote app labels
+
+		// Check specific labels
+		var remoteVersion, remoteTier, commonLabel string
+		for _, label := range app.Labels {
+			switch label.Key {
+			case "remote_version":
+				remoteVersion = label.Value
+			case "remote_tier":
+				remoteTier = label.Value
+			case "common_label":
+				commonLabel = label.Value
+			}
+		}
+		assert.Equal(t, "v2.1.0", remoteVersion)
+		assert.Equal(t, "backend", remoteTier)
+		assert.Equal(t, "remote_value", commonLabel)
 	})
 }

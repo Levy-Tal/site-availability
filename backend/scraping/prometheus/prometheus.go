@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"site-availability/config"
 	"site-availability/handlers"
+	"site-availability/labels"
 	"site-availability/logging"
 	"sync"
 	"time"
@@ -135,6 +136,12 @@ func (p *PrometheusScraper) Scrape(source config.Source, serverSettings config.S
 				}
 			}
 
+			// Convert map[string]string labels to []Label format
+			var appLabels []labels.Label
+			for key, value := range app.Labels {
+				appLabels = append(appLabels, labels.Label{Key: key, Value: value})
+			}
+
 			mu.Lock()
 			results[i] = handlers.AppStatus{
 				Name:      app.Name,
@@ -142,7 +149,7 @@ func (p *PrometheusScraper) Scrape(source config.Source, serverSettings config.S
 				Status:    status,
 				Source:    source.Name,
 				OriginURL: serverSettings.HostURL, // Use host URL as origin for deduplication
-				Labels:    app.Labels,             // App labels only - source/server labels added in UpdateAppStatus
+				Labels:    appLabels,              // App labels only - source/server labels added in UpdateAppStatus
 			}
 			mu.Unlock()
 		}(i, app)

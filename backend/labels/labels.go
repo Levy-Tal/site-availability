@@ -6,6 +6,12 @@ import (
 	"sync"
 )
 
+// Label represents a key-value pair label
+type Label struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 // AppInfo represents the minimal app information needed for label management
 // This avoids circular imports with the handlers package
 type AppInfo struct {
@@ -14,7 +20,7 @@ type AppInfo struct {
 	Status    string
 	Source    string
 	OriginURL string
-	Labels    map[string]string
+	Labels    []Label
 }
 
 // getUniqueID creates a unique identifier for an app by combining source and name
@@ -44,10 +50,36 @@ func NewLabelManager() *LabelManager {
 	}
 }
 
+// LabelsMapToSlice converts a map[string]string to []Label
+func LabelsMapToSlice(labelsMap map[string]string) []Label {
+	if labelsMap == nil {
+		return nil
+	}
+
+	labels := make([]Label, 0, len(labelsMap))
+	for key, value := range labelsMap {
+		labels = append(labels, Label{Key: key, Value: value})
+	}
+	return labels
+}
+
+// LabelsSliceToMap converts []Label to map[string]string
+func LabelsSliceToMap(labels []Label) map[string]string {
+	if labels == nil {
+		return nil
+	}
+
+	labelsMap := make(map[string]string, len(labels))
+	for _, label := range labels {
+		labelsMap[label.Key] = label.Value
+	}
+	return labelsMap
+}
+
 // MergeLabels combines labels from server, source, and app levels.
 // Priority order: App labels (highest) > Source labels > Server labels (lowest)
-// Returns a new map with all merged labels
-func MergeLabels(serverLabels, sourceLabels, appLabels map[string]string) map[string]string {
+// Returns a new slice with all merged labels
+func MergeLabels(serverLabels, sourceLabels, appLabels map[string]string) []Label {
 	// Calculate total capacity for efficient allocation
 	totalSize := len(serverLabels) + len(sourceLabels) + len(appLabels)
 	merged := make(map[string]string, totalSize)
@@ -76,7 +108,7 @@ func MergeLabels(serverLabels, sourceLabels, appLabels map[string]string) map[st
 		"merged_labels": len(merged),
 	}).Debug("Merged labels from all levels")
 
-	return merged
+	return LabelsMapToSlice(merged)
 }
 
 // UpdateAppLabels updates the internal field-to-app mapping for fast queries.
@@ -111,9 +143,9 @@ func (lm *LabelManager) UpdateAppLabels(apps []AppInfo) {
 		}
 
 		// Index user labels with "labels." prefix (e.g., ?labels.env=prod)
-		for labelKey, labelValue := range app.Labels {
-			if labelValue != "" { // Only index non-empty values
-				lm.indexField("labels."+labelKey, labelValue, uniqueID)
+		for _, label := range app.Labels {
+			if label.Value != "" { // Only index non-empty values
+				lm.indexField("labels."+label.Key, label.Value, uniqueID)
 			}
 		}
 	}

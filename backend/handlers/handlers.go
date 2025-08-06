@@ -49,12 +49,12 @@ func normalizeOriginURL(originURL string) string {
 }
 
 type AppStatus struct {
-	Name      string            `json:"name"`
-	Location  string            `json:"location"`
-	Status    string            `json:"status"`
-	Source    string            `json:"source"`
-	OriginURL string            `json:"origin_url,omitempty"` // URL where app originally came from
-	Labels    map[string]string `json:"labels,omitempty"`     // App labels (merged from app + source + server)
+	Name      string         `json:"name"`
+	Location  string         `json:"location"`
+	Status    string         `json:"status"`
+	Source    string         `json:"source"`
+	OriginURL string         `json:"origin_url,omitempty"` // URL where app originally came from
+	Labels    []labels.Label `json:"labels,omitempty"`     // App labels (merged from app + source + server)
 }
 
 type StatusResponse struct {
@@ -296,10 +296,13 @@ func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.S
 
 		// Merge labels with error handling
 		if app.Labels == nil {
-			app.Labels = make(map[string]string)
+			app.Labels = []labels.Label{}
 		}
 
-		mergedLabels := labels.MergeLabels(serverSettings.Labels, source.Labels, app.Labels)
+		// Convert current app labels to map for merging
+		appLabelsMap := labels.LabelsSliceToMap(app.Labels)
+
+		mergedLabels := labels.MergeLabels(serverSettings.Labels, source.Labels, appLabelsMap)
 		if mergedLabels == nil {
 			logging.Logger.WithFields(map[string]interface{}{
 				"app":    app.Name,

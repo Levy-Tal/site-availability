@@ -126,7 +126,9 @@ export const AppStatusPanel = ({
     // Group apps if a label is selected
     if (selectedGroupLabel) {
       const grouped = filtered.reduce((acc, app) => {
-        const labelValue = app.labels?.[selectedGroupLabel] || "No Label";
+        // Find the label in the array format
+        const label = app.labels?.find((l) => l.key === selectedGroupLabel);
+        const labelValue = label?.value || "No Label";
         if (!acc[labelValue]) {
           acc[labelValue] = [];
         }

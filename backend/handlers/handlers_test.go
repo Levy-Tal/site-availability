@@ -601,11 +601,11 @@ func TestFilterAppsByLabels(t *testing.T) {
 			Status:    "up",
 			Source:    "test",
 			OriginURL: "http://test-origin.com",
-			Labels: map[string]string{
-				"env":     "production",
-				"tier":    "backend",
-				"team":    "platform",
-				"version": "v1.0.0",
+			Labels: []labels.Label{
+				{Key: "env", Value: "production"},
+				{Key: "tier", Value: "backend"},
+				{Key: "team", Value: "platform"},
+				{Key: "version", Value: "v1.0.0"},
 			},
 		},
 		{
@@ -614,11 +614,11 @@ func TestFilterAppsByLabels(t *testing.T) {
 			Status:    "down",
 			Source:    "test",
 			OriginURL: "http://test-origin.com",
-			Labels: map[string]string{
-				"env":     "staging",
-				"tier":    "frontend",
-				"team":    "platform",
-				"version": "v1.1.0",
+			Labels: []labels.Label{
+				{Key: "env", Value: "staging"},
+				{Key: "tier", Value: "frontend"},
+				{Key: "team", Value: "platform"},
+				{Key: "version", Value: "v1.1.0"},
 			},
 		},
 		{
@@ -627,11 +627,11 @@ func TestFilterAppsByLabels(t *testing.T) {
 			Status:    "up",
 			Source:    "test",
 			OriginURL: "http://test-origin.com",
-			Labels: map[string]string{
-				"env":     "production",
-				"tier":    "frontend",
-				"team":    "security",
-				"version": "v2.0.0",
+			Labels: []labels.Label{
+				{Key: "env", Value: "production"},
+				{Key: "tier", Value: "frontend"},
+				{Key: "team", Value: "security"},
+				{Key: "version", Value: "v2.0.0"},
 			},
 		},
 		{
@@ -640,7 +640,7 @@ func TestFilterAppsByLabels(t *testing.T) {
 			Status:    "unavailable",
 			Source:    "test",
 			OriginURL: "http://test-origin.com",
-			Labels:    map[string]string{}, // No labels
+			Labels:    []labels.Label{}, // No labels
 		},
 	}
 
@@ -734,7 +734,7 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 			Status:    "up",
 			Source:    "test-source",
 			OriginURL: "https://test-origin.com",
-			Labels:    map[string]string{"version": "v1.0", "environment": "prod"},
+			Labels:    []labels.Label{{Key: "version", Value: "v1.0"}, {Key: "environment", Value: "prod"}},
 		},
 		{
 			Name:      "app-without-version",
@@ -742,7 +742,7 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 			Status:    "up",
 			Source:    "test-source",
 			OriginURL: "https://test-origin.com",
-			Labels:    map[string]string{"environment": "prod"}, // No version label
+			Labels:    []labels.Label{{Key: "environment", Value: "prod"}}, // No version label
 		},
 		{
 			Name:      "app-with-different-version",
@@ -750,7 +750,7 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 			Status:    "up",
 			Source:    "test-source",
 			OriginURL: "https://test-origin.com",
-			Labels:    map[string]string{"version": "v2.0", "environment": "prod"},
+			Labels:    []labels.Label{{Key: "version", Value: "v2.0"}, {Key: "environment", Value: "prod"}},
 		},
 		{
 			Name:      "app-with-empty-version",
@@ -758,7 +758,7 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 			Status:    "up",
 			Source:    "test-source",
 			OriginURL: "https://test-origin.com",
-			Labels:    map[string]string{"version": "", "environment": "prod"}, // Empty version
+			Labels:    []labels.Label{{Key: "version", Value: ""}, {Key: "environment", Value: "prod"}}, // Empty version
 		},
 	}
 
@@ -778,7 +778,8 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 		assert.Equal(t, "app-with-version", filteredApps[0].Name, "Should return the app with version=v1.0")
 
 		// Verify it has the correct label
-		assert.Equal(t, "v1.0", filteredApps[0].Labels["version"], "Returned app should have version=v1.0")
+		versionLabel := filteredApps[0].Labels[0]
+		assert.Equal(t, "v1.0", versionLabel.Value, "Returned app should have version=v1.0")
 	})
 
 	t.Run("filter by version=v2.0 should only return apps with that exact label", func(t *testing.T) {
@@ -816,7 +817,15 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 
 		// Check that none of the returned apps are missing the version label
 		for _, app := range filteredApps {
-			version, hasVersion := app.Labels["version"]
+			var version string
+			var hasVersion bool
+			for _, label := range app.Labels {
+				if label.Key == "version" {
+					version = label.Value
+					hasVersion = true
+					break
+				}
+			}
 			assert.True(t, hasVersion, "App %s should have version label when filtering by version", app.Name)
 			assert.NotEmpty(t, version, "App %s should have non-empty version label", app.Name)
 			assert.Equal(t, "v1.0", version, "App %s should have version=v1.0", app.Name)
@@ -835,18 +844,18 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 			Status:    "unavailable",
 			Source:    "prom1",
 			OriginURL: "http://prometheus:9090",
-			Labels: map[string]string{
-				"app_type":    "web-service",
-				"criticality": "low",
-				"datacenter":  "dev",
-				"environment": "development",
-				"importance":  "low",
-				"owner":       "dev-team",
-				"region":      "local",
-				"service":     "dev-monitoring",
-				"team":        "development",
-				"tier":        "backend",
-				"version":     "v1.0", // HAS version label
+			Labels: []labels.Label{
+				{Key: "app_type", Value: "web-service"},
+				{Key: "criticality", Value: "low"},
+				{Key: "datacenter", Value: "dev"},
+				{Key: "environment", Value: "development"},
+				{Key: "importance", Value: "low"},
+				{Key: "owner", Value: "dev-team"},
+				{Key: "region", Value: "local"},
+				{Key: "service", Value: "dev-monitoring"},
+				{Key: "team", Value: "development"},
+				{Key: "tier", Value: "backend"},
+				{Key: "version", Value: "v1.0"}, // HAS version label
 			},
 		},
 		{
@@ -855,18 +864,18 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 			Status:    "unavailable",
 			Source:    "prom2",
 			OriginURL: "http://prometheus2:9090",
-			Labels: map[string]string{
-				"app_type":    "web-service",
-				"beta":        "true",
-				"criticality": "low",
-				"datacenter":  "dev",
-				"environment": "development",
-				"importance":  "low",
-				"owner":       "dev-team",
-				"region":      "local",
-				"service":     "secondary-monitoring",
-				"team":        "development",
-				"tier":        "testing",
+			Labels: []labels.Label{
+				{Key: "app_type", Value: "web-service"},
+				{Key: "beta", Value: "true"},
+				{Key: "criticality", Value: "low"},
+				{Key: "datacenter", Value: "dev"},
+				{Key: "environment", Value: "development"},
+				{Key: "importance", Value: "low"},
+				{Key: "owner", Value: "dev-team"},
+				{Key: "region", Value: "local"},
+				{Key: "service", Value: "secondary-monitoring"},
+				{Key: "team", Value: "development"},
+				{Key: "tier", Value: "testing"},
 				// NO version label
 			},
 		},
@@ -876,19 +885,19 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 			Status:    "unavailable",
 			Source:    "prom2",
 			OriginURL: "http://prometheus2:9090",
-			Labels: map[string]string{
-				"app_type":    "test-service",
-				"beta":        "true",
-				"criticality": "low",
-				"datacenter":  "dev",
-				"environment": "development",
-				"importance":  "low",
-				"inverted":    "true",
-				"owner":       "qa-team",
-				"region":      "local",
-				"service":     "secondary-monitoring",
-				"team":        "development",
-				"tier":        "testing",
+			Labels: []labels.Label{
+				{Key: "app_type", Value: "test-service"},
+				{Key: "beta", Value: "true"},
+				{Key: "criticality", Value: "low"},
+				{Key: "datacenter", Value: "dev"},
+				{Key: "environment", Value: "development"},
+				{Key: "important", Value: "low"},
+				{Key: "inverted", Value: "true"},
+				{Key: "owner", Value: "qa-team"},
+				{Key: "region", Value: "local"},
+				{Key: "service", Value: "secondary-monitoring"},
+				{Key: "team", Value: "development"},
+				{Key: "tier", Value: "testing"},
 				// NO version label
 			},
 		},
@@ -913,11 +922,26 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 
 		// Verify the returned app has the correct labels
 		assert.Equal(t, "Hadera", filteredApps[0].Location, "Returned app should have location=Hadera")
-		assert.Equal(t, "v1.0", filteredApps[0].Labels["version"], "Returned app should have version=v1.0")
+
+		// Find version label
+		var version string
+		for _, label := range filteredApps[0].Labels {
+			if label.Key == "version" {
+				version = label.Value
+				break
+			}
+		}
+		assert.Equal(t, "v1.0", version, "Returned app should have version=v1.0")
 
 		// Verify apps without version label are NOT returned
 		for _, app := range filteredApps {
-			_, hasVersion := app.Labels["version"]
+			var hasVersion bool
+			for _, label := range app.Labels {
+				if label.Key == "version" {
+					hasVersion = true
+					break
+				}
+			}
 			assert.True(t, hasVersion, "App %s should have version label when filtering by version", app.Name)
 		}
 	})

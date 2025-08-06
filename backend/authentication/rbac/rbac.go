@@ -3,6 +3,7 @@ package rbac
 import (
 	"site-availability/authentication/session"
 	"site-availability/config"
+	"site-availability/labels"
 )
 
 // Authorizer handles role-based access control
@@ -152,7 +153,7 @@ func (a *Authorizer) BuildLabelFilters(userPermissions UserPermissions) map[stri
 }
 
 // CanAccessApp checks if user can access an app based on its labels
-func (a *Authorizer) CanAccessApp(userPermissions UserPermissions, appLabels map[string]string) bool {
+func (a *Authorizer) CanAccessApp(userPermissions UserPermissions, appLabels []labels.Label) bool {
 	// Admin can access everything
 	if userPermissions.HasFullAccess {
 		return true
@@ -164,8 +165,8 @@ func (a *Authorizer) CanAccessApp(userPermissions UserPermissions, appLabels map
 	}
 
 	// Check if user has permission for at least one label on this app
-	for labelKey, labelValue := range appLabels {
-		if a.CanAccessLabel(userPermissions, labelKey, labelValue) {
+	for _, label := range appLabels {
+		if a.CanAccessLabel(userPermissions, label.Key, label.Value) {
 			return true
 		}
 	}
