@@ -21,6 +21,7 @@ const Sidebar = ({
   selectedLabels,
   docsTitle,
   user,
+  locations,
 }) => {
   useEffect(() => {
     const savedLabelFilters = userPreferences.loadLabelFilters();
@@ -47,6 +48,24 @@ const Sidebar = ({
   useEffect(() => {
     showKeySuggestionsRef.current = showKeySuggestions;
   }, [showKeySuggestions]);
+
+  // Calculate total counts from all locations
+  const calculateTotalCounts = () => {
+    if (!locations || locations.length === 0) {
+      return { up: 0, down: 0, unavailable: 0 };
+    }
+
+    return locations.reduce(
+      (totals, location) => ({
+        up: totals.up + (location.up || 0),
+        down: totals.down + (location.down || 0),
+        unavailable: totals.unavailable + (location.unavailable || 0),
+      }),
+      { up: 0, down: 0, unavailable: 0 },
+    );
+  };
+
+  const totalCounts = calculateTotalCounts();
 
   // Update key suggestions when selectedLabels changes
   useEffect(() => {
@@ -330,6 +349,9 @@ const Sidebar = ({
                   <span className="sidebar__checkbox"></span>
                   <span className="sidebar__status-circle sidebar__status-circle--up"></span>
                   Up
+                  <span className="sidebar__filter-count">
+                    {totalCounts.up}
+                  </span>
                 </label>
                 <label className="sidebar__filter-option">
                   <input
@@ -341,6 +363,9 @@ const Sidebar = ({
                   <span className="sidebar__checkbox"></span>
                   <span className="sidebar__status-circle sidebar__status-circle--down"></span>
                   Down
+                  <span className="sidebar__filter-count">
+                    {totalCounts.down}
+                  </span>
                 </label>
                 <label className="sidebar__filter-option">
                   <input
@@ -352,6 +377,9 @@ const Sidebar = ({
                   <span className="sidebar__checkbox"></span>
                   <span className="sidebar__status-circle sidebar__status-circle--unavailable"></span>
                   Unavailable
+                  <span className="sidebar__filter-count">
+                    {totalCounts.unavailable}
+                  </span>
                 </label>
               </div>
             </div>

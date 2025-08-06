@@ -188,6 +188,7 @@ function OriginalApp({ user, onUserInfoClick }) {
         selectedLabels={labelFilters}
         docsTitle={docsInfo.docs_title || "Documentation"}
         user={user}
+        locations={locations}
       />
       <MapComponent locations={locations} onSiteClick={handleSiteClick} />
       {isPanelOpen && selectedSite && (

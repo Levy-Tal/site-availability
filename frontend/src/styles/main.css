@@ -409,6 +409,18 @@ circle {
   color: #2d2d2d;
 }
 
+.sidebar__filter-count {
+  margin-left: auto;
+  background-color: rgba(45, 55, 72, 0.8);
+  color: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
 .sidebar__status-circle {
   width: 12px;
   height: 12px;

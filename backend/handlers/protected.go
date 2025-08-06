@@ -207,15 +207,23 @@ func GetLocationsWithAuthz(w http.ResponseWriter, r *http.Request, cfg *config.C
 	// Get all locations but calculate status based on filtered apps only
 	locations := GetLocationsWithStatus()
 
-	// Recalculate status for each location based on filtered apps
+	// Recalculate status and counts for each location based on filtered apps
 	for i := range locations {
 		locations[i].Status = calculateLocationStatus(locations[i].Name, filteredApps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(locations[i].Name, filteredApps)
+		locations[i].Up = upCount
+		locations[i].Down = downCount
+		locations[i].Unavailable = unavailableCount
 	}
 
 	// Add server's own locations from config with status calculated from filtered apps
 	serverLocations := convertToHandlersLocation(cfg.Locations)
 	for i := range serverLocations {
 		serverLocations[i].Status = calculateLocationStatus(serverLocations[i].Name, filteredApps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(serverLocations[i].Name, filteredApps)
+		serverLocations[i].Up = upCount
+		serverLocations[i].Down = downCount
+		serverLocations[i].Unavailable = unavailableCount
 	}
 	locations = append(locations, serverLocations...)
 

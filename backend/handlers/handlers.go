@@ -63,11 +63,14 @@ type StatusResponse struct {
 }
 
 type Location struct {
-	Name      string  `yaml:"name" json:"name"`
-	Latitude  float64 `yaml:"latitude" json:"latitude"`
-	Longitude float64 `yaml:"longitude" json:"longitude"`
-	Source    string  `json:"source"`
-	Status    *string `json:"status"` // "up", "down", "unavailable", or nil for no apps
+	Name        string  `yaml:"name" json:"name"`
+	Latitude    float64 `yaml:"latitude" json:"latitude"`
+	Longitude   float64 `yaml:"longitude" json:"longitude"`
+	Source      string  `json:"source"`
+	Status      *string `json:"status"`      // "up", "down", "unavailable", or nil for no apps
+	Up          int     `json:"up"`          // Number of apps that are up
+	Down        int     `json:"down"`        // Number of apps that are down
+	Unavailable int     `json:"unavailable"` // Number of apps that are unavailable
 }
 
 // FilterParams represents both system field and label filters
@@ -433,6 +436,32 @@ func updateLabelManager() {
 	}).Debug("Updated label manager with system fields and labels")
 }
 
+// calculateLocationStatusCounts calculates the status counts for a location based on its apps
+// Returns: up count, down count, unavailable count
+func calculateLocationStatusCounts(locationName string, apps []AppStatus) (int, int, int) {
+	upCount := 0
+	downCount := 0
+	unavailableCount := 0
+
+	for _, app := range apps {
+		if app.Location == locationName {
+			switch app.Status {
+			case "up":
+				upCount++
+			case "down":
+				downCount++
+			case "unavailable":
+				unavailableCount++
+			default:
+				// Unknown status treated as unavailable
+				unavailableCount++
+			}
+		}
+	}
+
+	return upCount, downCount, unavailableCount
+}
+
 // calculateLocationStatus calculates the status of a location based on its apps
 // Returns: "up" if all apps are up, "down" if any app is down, "unavailable" if any app is unavailable but none down, nil if no apps
 func calculateLocationStatus(locationName string, apps []AppStatus) *string {
@@ -494,14 +523,18 @@ func GetLocationsWithStatus() []Location {
 	// Get all locations from cache
 	for _, sourceLocations := range locationCache {
 		for _, location := range sourceLocations {
-			// Calculate status for this location
+			// Calculate status and counts for this location
 			status := calculateLocationStatus(location.Name, apps)
+			upCount, downCount, unavailableCount := calculateLocationStatusCounts(location.Name, apps)
 			locationWithStatus := Location{
-				Name:      location.Name,
-				Latitude:  location.Latitude,
-				Longitude: location.Longitude,
-				Source:    location.Source,
-				Status:    status,
+				Name:        location.Name,
+				Latitude:    location.Latitude,
+				Longitude:   location.Longitude,
+				Source:      location.Source,
+				Status:      status,
+				Up:          upCount,
+				Down:        downCount,
+				Unavailable: unavailableCount,
 			}
 			locations = append(locations, locationWithStatus)
 		}
@@ -524,15 +557,19 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 			"longitude": loc.Longitude,
 		}).Debug("Processing location")
 
-		// Calculate status for this location
+		// Calculate status and counts for this location
 		status := calculateLocationStatus(loc.Name, apps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(loc.Name, apps)
 
 		locations = append(locations, Location{
-			Name:      loc.Name,
-			Latitude:  loc.Latitude,
-			Longitude: loc.Longitude,
-			Source:    "", // Empty source indicates this server's locations
-			Status:    status,
+			Name:        loc.Name,
+			Latitude:    loc.Latitude,
+			Longitude:   loc.Longitude,
+			Source:      "", // Empty source indicates this server's locations
+			Status:      status,
+			Up:          upCount,
+			Down:        downCount,
+			Unavailable: unavailableCount,
 		})
 	}
 	return locations
@@ -949,15 +986,23 @@ func GetLocations(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	// Get all locations but calculate status based on filtered apps only
 	locations := GetLocationsWithStatus()
 
-	// Recalculate status for each location based on filtered apps
+	// Recalculate status and counts for each location based on filtered apps
 	for i := range locations {
 		locations[i].Status = calculateLocationStatus(locations[i].Name, filteredApps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(locations[i].Name, filteredApps)
+		locations[i].Up = upCount
+		locations[i].Down = downCount
+		locations[i].Unavailable = unavailableCount
 	}
 
 	// Add server's own locations from config with status calculated from filtered apps
 	serverLocations := convertToHandlersLocation(cfg.Locations)
 	for i := range serverLocations {
 		serverLocations[i].Status = calculateLocationStatus(serverLocations[i].Name, filteredApps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(serverLocations[i].Name, filteredApps)
+		serverLocations[i].Up = upCount
+		serverLocations[i].Down = downCount
+		serverLocations[i].Unavailable = unavailableCount
 	}
 	locations = append(locations, serverLocations...)
 

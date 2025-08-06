@@ -312,10 +312,16 @@ func TestConvertToHandlersLocation(t *testing.T) {
 		assert.Equal(t, "loc1", locations[0].Name)
 		assert.Equal(t, 31.782904, locations[0].Latitude)
 		assert.Equal(t, 35.214774, locations[0].Longitude)
+		assert.Equal(t, 0, locations[0].Up)
+		assert.Equal(t, 0, locations[0].Down)
+		assert.Equal(t, 0, locations[0].Unavailable)
 
 		assert.Equal(t, "loc2", locations[1].Name)
 		assert.Equal(t, 32.0853, locations[1].Latitude)
 		assert.Equal(t, 34.7818, locations[1].Longitude)
+		assert.Equal(t, 0, locations[1].Up)
+		assert.Equal(t, 0, locations[1].Down)
+		assert.Equal(t, 0, locations[1].Unavailable)
 	})
 
 	t.Run("convert empty slice", func(t *testing.T) {
