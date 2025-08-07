@@ -1,21 +1,3 @@
-# Values for server-a deployment
-# This configuration mirrors config-a.yaml for local Kubernetes testing
-
-replicaCount: 1
-
-image:
-  repository: levytal/site-availability
-  pullPolicy: IfNotPresent
-  tag: "latest"
-
-# Name overrides to create unique resources
-nameOverride: "server-a"
-fullnameOverride: "site-availability-server-a"
-
-# Environment variables for the exporter container
-env:
-  CONFIG_FILE: /app/config.yaml
-
 # Configuration file content for server-a
 configFile:
   enabled: true
@@ -34,11 +16,6 @@ configFile:
         username: "admin"
         password: "admin"
       session_timeout: "12h"
-      metrics_auth:
-        enabled: true
-        type: "basic"
-        username: "prometheus"
-        password: "prometheus-secret"
 
     scraping:
       interval: "10s"
@@ -119,87 +96,3 @@ configFile:
                 app_type: "web-service"
                 importance: "medium"
                 owner: "frontend-team"
-
-# Service settings
-service:
-  type: ClusterIP
-  port: 8080
-
-# Ingress for local access
-ingress:
-  enabled: true
-  className: ""
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-  hosts:
-    - host: server-a.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
-
-# Resource requests and limits
-resources:
-  limits:
-    memory: 256Mi
-    ephemeral-storage: 100Mi
-    cpu: 500m
-  requests:
-    cpu: 100m
-    memory: 128Mi
-    ephemeral-storage: 50Mi
-
-# ServiceMonitor for Prometheus scraping
-serviceMonitor:
-  enabled: true
-  scrapeInterval: 10s
-  additionalLabels:
-    release: prometheus-server-a
-
-# Prometheus rules
-prometheusRules:
-  enabled: true
-  # Individual rule enable/disable settings
-  rules:
-    appDown: true
-    appUnavailable: true
-    noMetricsReceived: true
-    siteSyncFailure: true
-    siteSyncHighLatency: true
-    siteSyncDown: true
-  # Alert filtering for AppDown rule
-  appDownAlert:
-    # Filter apps by label (e.g., env=prod, team=backend)
-    # Leave empty to alert for all apps
-    filterLabel: ""
-    filterValue: ""
-
-# Grafana dashboards
-grafanaDashboards:
-  enabled: true
-
-# Pod Disruption Budget settings
-podDisruptionBudget:
-  enabled: false
-  minAvailable: 1
-  maxUnavailable: 1
-
-# Pod annotations
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8080"
-  prometheus.io/path: "/metrics"
-
-# Security context
-podSecurityContext:
-  fsGroup: 10001
-
-securityContext:
-  capabilities:
-    drop:
-      - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  runAsUser: 10001
-  runAsGroup: 10001
-  allowPrivilegeEscalation: false

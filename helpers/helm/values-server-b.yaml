@@ -124,6 +124,18 @@ serviceMonitor:
   scrapeInterval: 10s
   additionalLabels:
     release: prometheus-server-b
+  # Authentication settings for ServiceMonitor
+  auth:
+    enabled: false
+    type: "basic" # "basic" or "bearer"
+    # Secret reference for authentication
+    secret:
+      name: ""
+      # For basic auth from secret
+      usernameKey: "username"
+      passwordKey: "password"
+      # For bearer token from secret
+      tokenKey: "token"
 
 # Prometheus rules
 prometheusRules:

@@ -55,7 +55,7 @@ release:  ## Run semantic release to determine next version
 
 deploy-app: ## deploy the chart
 	@kubectl config use-context kind-site-availability
-	@helm upgrade --install site-availability $(HELM_CHART_PATH)
+	@helm upgrade --install site-availability -f helpers/helm/values-server-a.yaml $(HELM_CHART_PATH)
 
 deploy-kube-prometheus-stack: ## deploy the chart kube-prometheus-stack
 	@kubectl config use-context kind-site-availability
