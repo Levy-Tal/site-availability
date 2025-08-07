@@ -1,3 +1,4 @@
+{{- if .Values.prometheusRules.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -9,15 +10,29 @@ spec:
   groups:
   - name: site-availability
     rules:
+    {{- if .Values.prometheusRules.rules.appDown }}
+    {{- if and .Values.prometheusRules.appDownAlert.filterLabel .Values.prometheusRules.appDownAlert.filterValue }}
     - alert: AppDown
-      expr: avg(site_availability_status) by (app, location) == 0
+      expr: avg(site_availability_status{ {{ .Values.prometheusRules.appDownAlert.filterLabel }}="{{ .Values.prometheusRules.appDownAlert.filterValue }}" }) by (name, location) == 0
       for: 1m
       labels:
         severity: critical
       annotations:
         summary: "App down"
-        description: "The app {{ "{{" }} $labels.app }} is down in location {{ "{{" }} $labels.location }}."
+        description: "The app {{ "{{" }} $labels.name }} is down in location {{ "{{" }} $labels.location }}."
+    {{- else }}
+    - alert: AppDown
+      expr: avg(site_availability_status) by (name, location) == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "App down"
+        description: "The app {{ "{{" }} $labels.name }} is down in location {{ "{{" }} $labels.location }}."
+    {{- end }}
+    {{- end }}
 
+    {{- if .Values.prometheusRules.rules.appUnavailable }}
     - alert: AppUnavailable
       expr: sum(site_availability_apps_unavailable) by (location) > 0
       for: 1m
@@ -26,7 +41,9 @@ spec:
       annotations:
         summary: "App unavailable"
         description: "One or more apps are unavailable in location {{ "{{" }} $labels.location }}."
+    {{- end }}
 
+    {{- if .Values.prometheusRules.rules.noMetricsReceived }}
     - alert: NoMetricsReceived
       expr: absent(site_availability_total_apps) == 1
       for: 5m
@@ -35,7 +52,9 @@ spec:
       annotations:
         summary: "Site availability - No metrics received"
         description: "No site availability metrics received from the exporter in the last 5 minutes."
+    {{- end }}
 
+    {{- if .Values.prometheusRules.rules.siteSyncFailure }}
     - alert: SiteSyncFailure
       expr: site_availability_sync_failures_total > 0
       for: 5m
@@ -44,7 +63,9 @@ spec:
       annotations:
         summary: "Site sync failure"
         description: "Site sync has failed in the last 5 minutes."
+    {{- end }}
 
+    {{- if .Values.prometheusRules.rules.siteSyncHighLatency }}
     - alert: SiteSyncHighLatency
       expr: rate(site_availability_sync_latency_seconds_sum[5m]) / rate(site_availability_sync_latency_seconds_count[5m]) > 1
       for: 5m
@@ -53,7 +74,9 @@ spec:
       annotations:
         summary: "High site sync latency"
         description: "Site sync operations are taking longer than 1 second on average."
+    {{- end }}
 
+    {{- if .Values.prometheusRules.rules.siteSyncDown }}
     - alert: SiteSyncDown
       expr: site_availability_sync_status{status="down"} == 1
       for: 5m
@@ -62,3 +85,5 @@ spec:
       annotations:
         summary: "Site sync down"
         description: "Site sync is down for site {{ "{{" }} $labels.site }}."
+    {{- end }}
+{{- end }}

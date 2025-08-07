@@ -140,10 +140,10 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum_over_time(avg (site_availability_status{}) by (app)[$__range:1m]) / count_over_time(avg (site_availability_status{}) by (app)[$__range:1m]) * 100)",
+          "expr": "(sum_over_time(avg (site_availability_status{$filter_label_key=~\"$filter_label_value\"}) by (name)[$__range:1m]) / count_over_time(avg (site_availability_status{$filter_label_key=~\"$filter_label_value\"}) by (name)[$__range:1m]) * 100)",
           "format": "time_series",
           "instant": false,
-          "legendFormat": "{{app}}",
+          "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
         }
@@ -1498,6 +1498,80 @@
         },
         "refresh": 1,
         "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "query_result(group by(__name__)({__name__=~\"site_availability_status\"}))",
+        "includeAll": true,
+        "label": "Filter Label Key",
+        "name": "filter_label_key",
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all",
+            "selected": true
+          },
+          {
+            "text": "env",
+            "value": "env",
+            "selected": false
+          },
+          {
+            "text": "team",
+            "value": "team",
+            "selected": false
+          },
+          {
+            "text": "region",
+            "value": "region",
+            "selected": false
+          },
+          {
+            "text": "app",
+            "value": "app",
+            "selected": false
+          }
+        ],
+        "query": "env,team,region,app",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "custom"
+      },
+      {
+        "allValue": "",
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(site_availability_status, $filter_label_key)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Filter Label Value",
+        "multi": true,
+        "name": "filter_label_value",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(site_availability_status, $filter_label_key)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }

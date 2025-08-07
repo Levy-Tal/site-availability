@@ -23,11 +23,22 @@ configFile:
     server_settings:
       port: 8080
       sync_enable: true
+      host_url: http://server-a.local
       labels:
         environment: "production"
         region: "israel"
         datacenter: "main"
         team: "platform"
+      local_admin:
+        enabled: true
+        username: "admin"
+        password: "admin"
+      session_timeout: "12h"
+      metrics_auth:
+        enabled: true
+        type: "basic"
+        username: "prometheus"
+        password: "prometheus-secret"
 
     scraping:
       interval: "10s"
@@ -58,55 +69,56 @@ configFile:
     sources:
       - name: prom1
         type: prometheus
-        url: http://prometheus-server-a:9090
         labels:
           service: "core-monitoring"
           tier: "backend"
           criticality: "high"
-        apps:
-          - name: a-app1
-            location: Hadera
-            metric: up{instance="app:8080", job="app"}
-            labels:
-              app_type: "web-service"
-              importance: "critical"
-              owner: "backend-team"
-          - name: a-app2
-            location: Jerusalem
-            metric: up{instance="localhost:9090", job="prometheus"}
-            labels:
-              app_type: "monitoring"
-              importance: "critical"
-              owner: "sre-team"
-          - name: app3
-            location: Beer Sheva
-            metric: up{instance="localhost:9090", job="prometheus"}
-            labels:
-              app_type: "monitoring"
-              importance: "high"
-              owner: "sre-team"
-          - name: a-app4
-            location: Beer Sheva
-            metric: up{instance="app:8080", job="app"}
-            labels:
-              app_type: "web-service"
-              importance: "medium"
-              owner: "backend-team"
-          - name: a-app5
-            location: Netanya
-            metric: 1 - up{instance="localhost:9090", job="prometheus"}
-            labels:
-              app_type: "test-service"
-              importance: "low"
-              owner: "qa-team"
-              inverted: "true"
-          - name: a-app6
-            location: Beer Sheva
-            metric: up{instance="app:8080", job="app"}
-            labels:
-              app_type: "web-service"
-              importance: "medium"
-              owner: "frontend-team"
+        config:
+          url: http://prometheus-server-a:9090
+          apps:
+            - name: a-app1
+              location: Hadera
+              metric: up{instance="app:8080", job="app"}
+              labels:
+                app_type: "web-service"
+                importance: "critical"
+                owner: "backend-team"
+            - name: a-app2
+              location: Jerusalem
+              metric: up{instance="localhost:9090", job="prometheus"}
+              labels:
+                app_type: "monitoring"
+                importance: "critical"
+                owner: "sre-team"
+            - name: app3
+              location: Beer Sheva
+              metric: up{instance="localhost:9090", job="prometheus"}
+              labels:
+                app_type: "monitoring"
+                importance: "high"
+                owner: "sre-team"
+            - name: a-app4
+              location: Beer Sheva
+              metric: up{instance="app:8080", job="app"}
+              labels:
+                app_type: "web-service"
+                importance: "medium"
+                owner: "backend-team"
+            - name: a-app5
+              location: Netanya
+              metric: 1 - up{instance="localhost:9090", job="prometheus"}
+              labels:
+                app_type: "test-service"
+                importance: "low"
+                owner: "qa-team"
+                inverted: "true"
+            - name: a-app6
+              location: Beer Sheva
+              metric: up{instance="app:8080", job="app"}
+              labels:
+                app_type: "web-service"
+                importance: "medium"
+                owner: "frontend-team"
 
 # Service settings
 service:
@@ -147,10 +159,30 @@ serviceMonitor:
 # Prometheus rules
 prometheusRules:
   enabled: true
+  # Individual rule enable/disable settings
+  rules:
+    appDown: true
+    appUnavailable: true
+    noMetricsReceived: true
+    siteSyncFailure: true
+    siteSyncHighLatency: true
+    siteSyncDown: true
+  # Alert filtering for AppDown rule
+  appDownAlert:
+    # Filter apps by label (e.g., env=prod, team=backend)
+    # Leave empty to alert for all apps
+    filterLabel: ""
+    filterValue: ""
 
 # Grafana dashboards
 grafanaDashboards:
   enabled: true
+
+# Pod Disruption Budget settings
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: 1
 
 # Pod annotations
 podAnnotations:
