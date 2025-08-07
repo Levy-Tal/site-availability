@@ -16,6 +16,21 @@ spec:
       path: /metrics
       interval: {{ .Values.serviceMonitor.scrapeInterval | default "10s" }}
       scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeOut | default "10s" }}
+      {{- if .Values.serviceMonitor.auth.enabled }}
+      {{- if eq .Values.serviceMonitor.auth.type "basic" }}
+      basicAuth:
+        username:
+          name: {{ .Values.serviceMonitor.auth.secret.name }}
+          key: {{ .Values.serviceMonitor.auth.secret.usernameKey }}
+        password:
+          name: {{ .Values.serviceMonitor.auth.secret.name }}
+          key: {{ .Values.serviceMonitor.auth.secret.passwordKey }}
+      {{- else if eq .Values.serviceMonitor.auth.type "bearer" }}
+      bearerTokenSecret:
+        name: {{ .Values.serviceMonitor.auth.secret.name }}
+        key: {{ .Values.serviceMonitor.auth.secret.tokenKey }}
+      {{- end }}
+      {{- end }}
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}
