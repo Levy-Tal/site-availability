@@ -1,3 +1,42 @@
+# [3.0.0](https://github.com/Levy-Tal/site-availability/compare/v2.4.1...v3.0.0) (2025-08-07)
+
+
+### Bug Fixes
+
+* **metrics:** add app lables to metrics ([fe1fa51](https://github.com/Levy-Tal/site-availability/commit/fe1fa519463ab47778983f21dd78c863bf753922))
+* **oidc:** bug when local user was disabled ([c636d7a](https://github.com/Levy-Tal/site-availability/commit/c636d7aa92601fe84707482004685e8dbbd0f965))
+* **oidc:** bug when local user was disabled ([df0a259](https://github.com/Levy-Tal/site-availability/commit/df0a2590926994203c7185b8da85bd177f9e6fb4))
+* **oidc:** bugs ([3f08ad6](https://github.com/Levy-Tal/site-availability/commit/3f08ad6bffbe80919579bab2a473abc3fa2adf66))
+* **proxy:** trust proxy headers ([477c92b](https://github.com/Levy-Tal/site-availability/commit/477c92b6f8889b013f052619c68833aaaa8b43e3))
+* **proxy:** trust proxy headers ([7b8cf6d](https://github.com/Levy-Tal/site-availability/commit/7b8cf6d1b7472c4195a1ac19050c4c3bdd95279e))
+* **proxy:** trust proxy headers ([272b38e](https://github.com/Levy-Tal/site-availability/commit/272b38e8596a072d2595ebd57944a0bbe523702e))
+* Refactor Sidebar.js to properly handle key suggestions and selected labels ([fb46a41](https://github.com/Levy-Tal/site-availability/commit/fb46a41103898df7f22e239b4cfb7af608b9b663))
+* **security:** bugs ([91fbe48](https://github.com/Levy-Tal/site-availability/commit/91fbe481780bac9c859ff4a67bf94b89e1bfac80))
+* **security:** fix bug ([55f692a](https://github.com/Levy-Tal/site-availability/commit/55f692a88eed33a78a867e5c3c26605c901fab7d))
+* **simple:** bugs ([f1a4378](https://github.com/Levy-Tal/site-availability/commit/f1a43780e81094546826ffcd68c6443c4c4c309f))
+* **style:** colors ([eca7f54](https://github.com/Levy-Tal/site-availability/commit/eca7f540ae584562ce268d3518b2a6a52457b470))
+* **test:** failed tests ([dfc4184](https://github.com/Levy-Tal/site-availability/commit/dfc41843f73f17d259ba8a527222ed86c033bd3a))
+
+
+### Code Refactoring
+
+* **lables:** change lables from struct to map ([b3b4d95](https://github.com/Levy-Tal/site-availability/commit/b3b4d955f7b23904300f53f6a16dd24db15aa367))
+
+
+### Features
+
+* **helm:** add improvments to the chart ([02cc2ef](https://github.com/Levy-Tal/site-availability/commit/02cc2efaf9b11835ee11eed239d672845768e256))
+* **login:** add admin-local login rc1 ([606f25d](https://github.com/Levy-Tal/site-availability/commit/606f25d5f347f49ed1ddd5a6fc0cfb9b98e32440))
+* **login:** add oidc login rc3 ([555d6e6](https://github.com/Levy-Tal/site-availability/commit/555d6e66f99a02be724087bc885ff590765dc7f7))
+* **login:** add oidc login- working rc4 ([cdf70e9](https://github.com/Levy-Tal/site-availability/commit/cdf70e928f9ca497eb09c3a1c3d67e9b1794e09b))
+* **metrics:** add auth login ([dd1a723](https://github.com/Levy-Tal/site-availability/commit/dd1a7235091b37a53b499097325d3c2712d3c6ce))
+* **status:** add numbers nextto checkbox ([236a9a3](https://github.com/Levy-Tal/site-availability/commit/236a9a3455ed454c4bdf50be1e2b01f537e3ab82))
+
+
+### BREAKING CHANGES
+
+* **lables:** schema change
+
 # [Unreleased]
 
 ### Features

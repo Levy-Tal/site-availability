@@ -1,6 +1,6 @@
 {
   "name": "site-availability",
-  "version": "2.4.1",
+  "version": "3.0.0",
   "license": "Apache-2.0",
   "description": "React app for monitoring app status on world map",
   "main": "src/index.js",
