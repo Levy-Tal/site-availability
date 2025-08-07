@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"site-availability/authentication/hmac"
 	"site-availability/config"
 	"site-availability/handlers"
@@ -19,6 +20,8 @@ import (
 
 // setupSiteTest initializes logging for tests
 func setupSiteTest() {
+	// Set log level to panic to suppress error logs during tests
+	os.Setenv("LOG_LEVEL", "panic")
 	_ = logging.Init()
 }
 

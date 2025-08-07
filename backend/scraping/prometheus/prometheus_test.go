@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"site-availability/config"
 	"site-availability/logging"
 	"testing"
@@ -16,6 +17,8 @@ import (
 
 // setupPrometheusTest initializes logging for tests
 func setupPrometheusTest() {
+	// Set log level to panic to suppress error logs during tests
+	os.Setenv("LOG_LEVEL", "panic")
 	_ = logging.Init()
 }
 

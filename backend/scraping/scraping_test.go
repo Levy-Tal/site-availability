@@ -19,6 +19,8 @@ import (
 
 // setupScrapingTest initializes logging and cleans up global state
 func setupScrapingTest() {
+	// Set log level to panic to suppress error logs during tests
+	os.Setenv("LOG_LEVEL", "panic")
 	_ = logging.Init()
 
 	// Reset global state

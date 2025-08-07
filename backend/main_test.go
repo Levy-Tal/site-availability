@@ -40,6 +40,8 @@ func setupMainTest() {
 
 func TestMain(m *testing.M) {
 	// Setup test environment
+	// Set log level to panic to suppress error logs during tests
+	os.Setenv("LOG_LEVEL", "panic")
 	if err := logging.Init(); err != nil {
 		panic(err)
 	}
