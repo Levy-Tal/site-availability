@@ -15,9 +15,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Environment variables for the exporter container
-env:
-  CONFIG_FILE: /app/config.yaml
+# Environment variables
+env: {}
+#  CONFIG_FILE: /app/config.yaml
 
 # Credentials configuration
 credentials:
