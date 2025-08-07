@@ -784,8 +784,15 @@ func TestFilterAppsBySpecificLabel_ShouldNotReturnAppsWithoutLabel(t *testing.T)
 		assert.Equal(t, "app-with-version", filteredApps[0].Name, "Should return the app with version=v1.0")
 
 		// Verify it has the correct label
-		versionLabel := filteredApps[0].Labels[0]
-		assert.Equal(t, "v1.0", versionLabel.Value, "Returned app should have version=v1.0")
+		var found bool
+		for _, label := range filteredApps[0].Labels {
+			if label.Key == "version" {
+				assert.Equal(t, "v1.0", label.Value, "Returned app should have version=v1.0")
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Returned app should have a version label")
 	})
 
 	t.Run("filter by version=v2.0 should only return apps with that exact label", func(t *testing.T) {
