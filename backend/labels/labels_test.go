@@ -29,19 +29,22 @@ func TestMergeLabels(t *testing.T) {
 
 		merged := MergeLabels(serverLabels, sourceLabels, appLabels)
 
+		// Convert merged labels to map for easier testing
+		mergedMap := LabelsSliceToMap(merged)
+
 		// Check all labels are present
-		assert.Equal(t, "production", merged["environment"]) // From server
-		assert.Equal(t, "serverA", merged["server"])         // From server
-		assert.Equal(t, "prom1", merged["instance"])         // From source
-		assert.Equal(t, "x86", merged["arc"])                // From source
-		assert.Equal(t, "prod", merged["cluster"])           // From app
-		assert.Equal(t, "pvc0213", merged["network"])        // From app
+		assert.Equal(t, "production", mergedMap["environment"]) // From server
+		assert.Equal(t, "serverA", mergedMap["server"])         // From server
+		assert.Equal(t, "prom1", mergedMap["instance"])         // From source
+		assert.Equal(t, "x86", mergedMap["arc"])                // From source
+		assert.Equal(t, "prod", mergedMap["cluster"])           // From app
+		assert.Equal(t, "pvc0213", mergedMap["network"])        // From app
 
 		// Check priority order: app > source > server
-		assert.Equal(t, "app-value", merged["common"]) // App should win
+		assert.Equal(t, "app-value", mergedMap["common"]) // App should win
 
 		// Total should be 7 unique keys: environment, server, common, instance, arc, cluster, network
-		assert.Len(t, merged, 7)
+		assert.Len(t, mergedMap, 7)
 	})
 
 	t.Run("merge with nil/empty labels", func(t *testing.T) {
@@ -51,13 +54,15 @@ func TestMergeLabels(t *testing.T) {
 
 		// Test with nil source and app labels
 		merged := MergeLabels(serverLabels, nil, nil)
-		assert.Equal(t, "test", merged["server"])
-		assert.Len(t, merged, 1)
+		mergedMap := LabelsSliceToMap(merged)
+		assert.Equal(t, "test", mergedMap["server"])
+		assert.Len(t, mergedMap, 1)
 
 		// Test with empty maps
 		merged = MergeLabels(serverLabels, map[string]string{}, map[string]string{})
-		assert.Equal(t, "test", merged["server"])
-		assert.Len(t, merged, 1)
+		mergedMap = LabelsSliceToMap(merged)
+		assert.Equal(t, "test", mergedMap["server"])
+		assert.Len(t, mergedMap, 1)
 	})
 
 	t.Run("merge all empty", func(t *testing.T) {
@@ -83,28 +88,28 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app1",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "production",
-					"cluster":     "east",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "production"},
+					{Key: "cluster", Value: "east"},
 				},
 			},
 			{
 				Name:   "app2",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "staging",
-					"cluster":     "west",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "staging"},
+					{Key: "cluster", Value: "west"},
 				},
 			},
 			{
 				Name:   "app3",
 				Source: "prom2",
-				Labels: map[string]string{
-					"team":        "backend",
-					"environment": "production",
-					"cluster":     "east",
+				Labels: []Label{
+					{Key: "team", Value: "backend"},
+					{Key: "environment", Value: "production"},
+					{Key: "cluster", Value: "east"},
 				},
 			},
 		}
@@ -141,28 +146,28 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app1",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "production",
-					"cluster":     "east",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "production"},
+					{Key: "cluster", Value: "east"},
 				},
 			},
 			{
 				Name:   "app2",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "staging",
-					"cluster":     "east",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "staging"},
+					{Key: "cluster", Value: "east"},
 				},
 			},
 			{
 				Name:   "app3",
 				Source: "prom2",
-				Labels: map[string]string{
-					"team":        "backend",
-					"environment": "production",
-					"cluster":     "east",
+				Labels: []Label{
+					{Key: "team", Value: "backend"},
+					{Key: "environment", Value: "production"},
+					{Key: "cluster", Value: "east"},
 				},
 			},
 		}
@@ -206,18 +211,18 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app1",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "production",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "production"},
 				},
 			},
 			{
 				Name:   "app2",
 				Source: "prom2",
-				Labels: map[string]string{
-					"team":        "backend",
-					"environment": "staging",
-					"cluster":     "east",
+				Labels: []Label{
+					{Key: "team", Value: "backend"},
+					{Key: "environment", Value: "staging"},
+					{Key: "cluster", Value: "east"},
 				},
 			},
 		}
@@ -258,17 +263,17 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app1",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "production",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "production"},
 				},
 			},
 			{
 				Name:   "app2",
 				Source: "prom2",
-				Labels: map[string]string{
-					"team":        "platform", // Same value as app1
-					"environment": "staging",
+				Labels: []Label{
+					{Key: "team", Value: "platform"}, // Same value as app1
+					{Key: "environment", Value: "staging"},
 				},
 			},
 		}
@@ -285,8 +290,8 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app1",
 				Source: "prom1",
-				Labels: map[string]string{
-					"team": "platform",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
 				},
 			},
 		}
@@ -315,7 +320,7 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app2",
 				Source: "prom2",
-				Labels: map[string]string{}, // Empty map
+				Labels: []Label{}, // Empty slice
 			},
 		}
 
@@ -336,25 +341,25 @@ func TestLabelManager(t *testing.T) {
 			{
 				Name:   "app1", // Same name
 				Source: "prom1",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "production",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "production"},
 				},
 			},
 			{
 				Name:   "app1", // Same name, different source
 				Source: "prom2",
-				Labels: map[string]string{
-					"team":        "backend",
-					"environment": "staging",
+				Labels: []Label{
+					{Key: "team", Value: "backend"},
+					{Key: "environment", Value: "staging"},
 				},
 			},
 			{
 				Name:   "app1", // Same name, different source and labels
 				Source: "site",
-				Labels: map[string]string{
-					"team":        "platform",
-					"environment": "development",
+				Labels: []Label{
+					{Key: "team", Value: "platform"},
+					{Key: "environment", Value: "development"},
 				},
 			},
 		}
@@ -462,10 +467,10 @@ func BenchmarkLabelManagerLookup(b *testing.B) {
 		apps[i] = AppInfo{
 			Name:   fmt.Sprintf("app%d", i),
 			Source: fmt.Sprintf("prom%d", i%5), // 5 different sources
-			Labels: map[string]string{
-				"team":        fmt.Sprintf("team%d", i%10),   // 10 different teams
-				"environment": fmt.Sprintf("env%d", i%3),     // 3 different environments
-				"cluster":     fmt.Sprintf("cluster%d", i%5), // 5 different clusters
+			Labels: []Label{
+				{Key: "team", Value: fmt.Sprintf("team%d", i%10)},      // 10 different teams
+				{Key: "environment", Value: fmt.Sprintf("env%d", i%3)}, // 3 different environments
+				{Key: "cluster", Value: fmt.Sprintf("cluster%d", i%5)}, // 5 different clusters
 			},
 		}
 	}

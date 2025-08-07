@@ -15,9 +15,8 @@ The application exposes metrics at `/metrics` in Prometheus format.
 #### Application Metrics
 
 ```prometheus
-# Application availability status
-site_availability_up{app="frontend",location="New York"} 1
-site_availability_up{app="backend",location="London"} 0
+# Application availability status with dynamic labels
+site_availability_status{name="backend-app",location="me-central-1",source="frontend-app-prod",origin_url="http://localhost:8080",app="app1",env="production",team="backend"} 0
 
 # Scrape duration in seconds
 site_availability_scrape_duration_seconds{target="frontend"} 0.142
@@ -29,6 +28,31 @@ site_availability_scrape_requests_total{target="backend",status="error"} 3
 # Last successful scrape timestamp
 site_availability_last_scrape_timestamp{target="frontend"} 1638360000
 ```
+
+##### Dynamic Labels
+
+The `site_availability_status` metric includes dynamic labels from multiple sources:
+
+**System Labels (Always Present)**:
+
+- `name`: Application name
+- `location`: Geographic location
+- `source`: Data source name
+- `origin_url`: Original URL where the app data came from
+
+**User-Defined Labels**:
+
+- Any labels defined at the server, source, or application level
+- Examples: `env`, `team`, `app`, `version`, etc.
+
+**Label Precedence**:
+System labels always take precedence over user-defined labels. If a user defines a label with the same name as a system label, the system label value will be used in the metrics and the user label will be ignored.
+
+For example:
+
+- If an app has a user label `name="my-custom-name"`, it will be overwritten by the system `name` field (the actual application name)
+- If an app has a user label `location="user-location"`, it will be overwritten by the system `location` field
+- User labels like `env`, `team`, `app` are preserved since they don't conflict with system labels
 
 #### HTTP Metrics
 
@@ -112,6 +136,60 @@ scrape_configs:
         replacement: "site-availability"
       - target_label: "environment"
         replacement: "production"
+```
+
+### Metrics Authentication
+
+If you have enabled metrics authentication in your server configuration, you'll need to configure Prometheus with the appropriate credentials.
+
+#### Basic Authentication
+
+If you're using basic authentication:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["site-availability:8080"]
+    metrics_path: "/metrics"
+    basic_auth:
+      username: "prometheus"
+      password: "your-secure-password"
+```
+
+#### Bearer Token Authentication
+
+If you're using bearer token authentication:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["site-availability:8080"]
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials: "your-secret-token"
+```
+
+#### TLS Configuration
+
+For HTTPS endpoints, add TLS configuration:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["site-availability:8080"]
+    metrics_path: "/metrics"
+    scheme: "https"
+    tls_config:
+      ca_file: /etc/prometheus/certs/ca.crt
+      cert_file: /etc/prometheus/certs/client.crt
+      key_file: /etc/prometheus/certs/client.key
+    basic_auth:
+      username: "prometheus"
+      password: "your-secure-password"
 ```
 
 ### Service Discovery

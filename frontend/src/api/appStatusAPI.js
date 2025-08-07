@@ -17,7 +17,9 @@ export const fetchLocations = async (statusFilters = [], labelFilters = []) => {
       ? `/api/locations?${queryString}`
       : "/api/locations";
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      credentials: "include",
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -26,7 +28,7 @@ export const fetchLocations = async (statusFilters = [], labelFilters = []) => {
       throw new Error("Received non-JSON response");
     }
     const data = await response.json();
-    return data.locations || [];
+    return Array.isArray(data) ? data : data.locations || [];
   } catch (error) {
     console.error("Error fetching locations:", error);
     return [];
@@ -58,7 +60,9 @@ export const fetchApps = async (
     const queryString = params.toString();
     const url = queryString ? `/api/apps?${queryString}` : "/api/apps";
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      credentials: "include",
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -67,7 +71,7 @@ export const fetchApps = async (
       throw new Error("Received non-JSON response");
     }
     const data = await response.json();
-    return data.apps || [];
+    return Array.isArray(data) ? data : data.apps || [];
   } catch (error) {
     console.error("Error fetching apps:", error);
     return [];
@@ -77,7 +81,9 @@ export const fetchApps = async (
 export const fetchLabels = async (key = null) => {
   try {
     const url = key ? `/api/labels?${encodeURIComponent(key)}` : "/api/labels";
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      credentials: "include",
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }

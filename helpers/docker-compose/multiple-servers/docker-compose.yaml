@@ -29,7 +29,7 @@ services:
       - ../../config/config-b.yaml:/app/config.yaml
       - ../../config/credentials-b.yaml:/app/credentials.yaml
     ports:
-      - "8081:8080"
+      - "8090:8090"
     depends_on:
       - prometheus-b
       - server-a

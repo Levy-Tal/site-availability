@@ -4,70 +4,543 @@ sidebar_position: 1
 
 # Server Configuration
 
-Site Availability loads its configuration by merging two files: `config.yaml` and `credentials.yaml`. All configuration options can be placed in either file, and the server will merge them at startup. This allows you to keep sensitive data (like tokens or secrets) in `credentials.yaml` and the rest in `config.yaml`.
+## Basic Settings
 
-## Server Settings (`server_settings`)
+The server configuration includes basic networking and operational settings.
 
-The `server_settings` section controls core server behavior:
+### Port Configuration
 
 ```yaml
 server_settings:
-  port: 8080 # Port for the HTTP server (string or int)
-  sync_enable: false # Enable/disable /sync endpoint (bool)
-  custom_ca_path: "" # Path to custom CA certificates (string, optional)
-  token: "" # Optional global API token for authentication (string)
-  labels: # Optional key-value labels for this server (map)
+  port: "8080"
+  host_url: "https://myserver.com" # Required: The public URL of your server
+```
+
+### Custom CA Certificates
+
+```yaml
+server_settings:
+  port: "8080"
+  host_url: "https://myserver.com"
+  custom_ca_path: "/path/to/custom/ca.crt"
+```
+
+### Host URL Configuration
+
+The `host_url` field is **required** and serves multiple important purposes:
+
+- **OIDC Callback URLs**: Used to construct secure callback URLs for OIDC authentication
+- **Security**: Prevents Host header injection attacks by using a trusted configuration value instead of request headers
+- **Protocol Handling**: Ensures the correct protocol (http/https) is used for all callback URLs
+
+**Format**: Must include the full URL with scheme and host:
+
+- ✅ `https://myserver.com`
+- ✅ `http://localhost:8080`
+- ❌ `myserver.com` (missing scheme)
+- ❌ `https://myserver.com/` (trailing slash will be automatically trimmed)
+
+**Examples**:
+
+```yaml
+# Production
+host_url: "https://monitoring.company.com"
+
+# Development
+host_url: "http://localhost:8080"
+
+# With custom port
+host_url: "https://monitoring.company.com:8443"
+```
+
+### Proxy Header Trust Configuration
+
+When running behind a reverse proxy (nginx, ingress controller, etc.), the `trust_proxy_headers` setting allows the application to properly detect HTTPS connections:
+
+```yaml
+server_settings:
+  port: "8080"
+  host_url: "https://myserver.com"
+  trust_proxy_headers: true # Only enable when behind a trusted reverse proxy
+```
+
+**Security Considerations**:
+
+- **Default**: `false` - Only trusts direct TLS connections (`r.TLS != nil`)
+- **When enabled**: Trusts `X-Forwarded-Proto`, `X-Forwarded-SSL`, and `X-Forwarded-Port` headers
+- **Only enable** when your application is behind a trusted reverse proxy that sets these headers
+- **Never enable** in environments where untrusted clients can directly reach your application
+
+## Authentication
+
+Site Availability Monitor supports authentication to secure access to the monitoring interface.
+
+### Local Admin Authentication
+
+Enable local admin authentication to require login before accessing the dashboard:
+
+```yaml
+server_settings:
+  session_timeout: "12h" # Session duration (default: 12h)
+  local_admin:
+    enabled: true # Enable authentication
+    username: "admin" # Admin username
+```
+
+**Credentials file** (`credentials.yaml`):
+
+```yaml
+server_settings:
+  local_admin:
+    password: "your-secure-password"
+```
+
+#### Security Features
+
+- **Secure Sessions**: Cryptographically secure session IDs with configurable timeout
+- **Password Security**: Supports both plaintext (development) and bcrypt hashed passwords
+- **Protected Endpoints**: All `/api/*` endpoints require authentication when enabled
+- **Session Cookies**: HttpOnly cookies with CSRF protection
+
+#### Password Security Best Practices
+
+For production environments, use bcrypt hashed passwords:
+
+1. **Generate a bcrypt hash**:
+
+   ```bash
+   # Using htpasswd (if available)
+   echo "your-password" | htpasswd -bnBC 12 "" | tr -d ':\n'
+
+   # Or use online bcrypt generators with cost factor 12
+   ```
+
+2. **Use the hash in credentials.yaml**:
+   ```yaml
+   server_settings:
+     local_admin:
+       password: "$2b$12$rDKx8UXp3F8P7xYV9oGzTeBN6K8aHVWHZxXzGQQJ8E1QXh8l2F9Da"
+   ```
+
+## Authorization
+
+### Role-Based Access Control
+
+When authentication is enabled, you can configure role-based authorization to control which labels and apps users can access.
+
+#### Admin Role
+
+The local admin user automatically has the **admin** role with full access to all labels and apps.
+
+#### Custom Roles
+
+Define custom roles in the configuration to control label access:
+
+```yaml
+server_settings:
+  roles:
+    # Frontend team role - can see frontend apps
+    frontend:
+      team: "frontend"
+      env: "production"
+
+    # Backend team role - can see backend and shared apps
+    backend:
+      team: "backend"
+      shared: "yes"
+
+    # DevOps role - can see multiple environments
+    devops:
     env: "production"
     region: "us-east"
+
+    # QA role - can see staging environment
+    qa:
+      env: "staging"
 ```
 
-**Options:**
+#### How Authorization Works
 
-- **port**: The port the HTTP server listens on (default: 8080).
-- **sync_enable**: Enables the `/sync` endpoint for distributed sync (default: false).
-- **custom_ca_path**: Path to a custom CA bundle for outbound HTTPS requests (optional).
-- **token**: Optional global API token for authenticating requests (optional).
-- **labels**: Optional map of key-value labels applied to all apps on this server (used for filtering, grouping, or authorization).
+1. **Label Filtering**: Users can only see labels they have permission for
+2. **App Filtering**: Users can only see apps that have at least one label they're authorized for
+3. **Location Filtering**: Users only see locations that contain authorized apps
 
-## Locations
+#### API Behavior with Authorization
 
-The `locations` section defines the monitored geographic locations:
+When a user makes API requests:
+
+- **`/api/labels`**: Returns only label keys the user has access to
+- **`/api/labels?team`**: Returns only values for the "team" label that the user can see
+- **`/api/apps`**: Returns only apps with labels the user is authorized for
+- **`/api/locations`**: Returns only locations containing authorized apps
+
+#### Example Scenarios
+
+**Frontend Team User** (role: `frontend`):
+
+- Can see: `team=frontend` and `env=production` labels
+- Apps visible: Only apps with `team=frontend` OR `env=production`
+- Labels endpoint returns: `["team", "env"]`
+- Apps endpoint returns: Apps matching their label permissions
+
+**Admin User**:
+
+- Can see: All labels and apps
+- No filtering applied
+- Full access to all monitoring data
+
+#### Multi-Role Support
+
+Users can have multiple roles. The system combines permissions from all roles:
 
 ```yaml
-locations:
-  - name: "New York"
-    latitude: 40.712776
-    longitude: -74.005974
-  - name: "San Francisco"
-    latitude: 37.774929
-    longitude: -122.419418
+# If a user has both "frontend" and "qa" roles, they can see:
+# - team=frontend (from frontend role)
+# - env=production (from frontend role)
+# - env=staging (from qa role)
 ```
 
-**Each location must include:**
+## OIDC Authentication
 
-- **name**: Unique name for the location.
-- **latitude**: Latitude in decimal degrees (between -90 and 90).
-- **longitude**: Longitude in decimal degrees (between -180 and 180).
+Site Availability supports OpenID Connect (OIDC) authentication for integration with enterprise identity providers like Keycloak, Auth0, Azure AD, and others.
 
-At least one location is required. All monitored apps must reference a valid location by name.
+### Configuration
 
-## Configuration Merging
-
-- The server merges `config.yaml` and `credentials.yaml` into a single configuration at startup.
-- Any option can be placed in either file; values in `credentials.yaml` override those in `config.yaml` if both are present.
-- This allows you to keep secrets and sensitive data out of your main config.
-
-## Example Minimal Configuration
+Configure OIDC in your `config.yaml`:
 
 ```yaml
 server_settings:
-  port: 8080
-  sync_enable: false
+  port: "8080"
+  host_url: "https://myserver.com" # Required: Used for OIDC callback URLs
+  session_timeout: 12h
 
-locations:
-  - name: "New York"
-    latitude: 40.712776
-    longitude: -74.005974
+  # Define roles and their label permissions
+  roles:
+    frontend:
+      team: frontend
+      env: production
+    backend:
+      team: backend
+    admin: {} # Empty means full access
+
+  # OIDC Configuration
+  oidc:
+    enabled: true
+    config:
+      name: "Keycloak" # Display name for the provider
+      issuer: "https://keycloak.example.com/realms/master"
+      clientID: "site-availability"
+      groupScope: "groups" # Claim name for user groups
+      userNameScope: "preferred_username" # Claim name for username
+    permissions:
+      users:
+        # Map specific users to roles
+        john.doe:
+          - frontend
+          - backend
+        admin.user:
+          - admin
+      groups:
+        # Map OIDC groups to roles
+        developers:
+          - frontend
+          - backend
+        devops:
+          - admin
+        qa-team:
+          - qa
 ```
 
-For more details on other configuration sections (sources, etc.), see the related documentation pages.
+Add the client secret in your `credentials.yaml`:
+
+```yaml
+server_settings:
+  oidc:
+    config:
+      clientSecret: "your-oidc-client-secret"
+```
+
+### OIDC Provider Setup
+
+#### Keycloak Example
+
+1. Create a new client in Keycloak
+2. Set client type to "OpenID Connect"
+3. Configure redirect URI: `https://myserver.com/auth/oidc/callback` (uses your `host_url` setting)
+4. Enable "Client authentication"
+5. Add groups to the client scope
+
+#### Generic OIDC Provider
+
+Ensure your OIDC provider includes:
+
+- `groups` claim in ID tokens (or configure `groupScope`)
+- `preferred_username` or similar claim (configure `userNameScope`)
+- Standard OpenID Connect discovery endpoint
+
+**Important**: The callback URL will be automatically constructed as `{host_url}/auth/oidc/callback`. Make sure to configure this exact URL in your OIDC provider.
+
+### User and Group Mapping
+
+#### User-Based Mapping
+
+Map individual users to roles:
+
+```yaml
+permissions:
+  users:
+    alice@example.com:
+      - frontend
+      - qa
+    bob@example.com:
+      - admin
+```
+
+#### Group-Based Mapping
+
+Map OIDC groups to application roles:
+
+```yaml
+permissions:
+  groups:
+    frontend-team:
+      - frontend
+    backend-team:
+      - backend
+    devops-team:
+      - admin
+```
+
+### Fallback Mechanism
+
+If the OIDC provider is unavailable, you can configure local admin as a fallback:
+
+```yaml
+server_settings:
+  # OIDC configuration (primary)
+  oidc:
+    enabled: true
+    # ... oidc config ...
+
+  # Local admin fallback
+  local_admin:
+    enabled: true
+    username: admin
+```
+
+When OIDC provider is down:
+
+- Users will see a warning message
+- Local admin authentication remains available
+- Server continues to operate normally
+
+### OIDC Security Features
+
+- **State Parameter**: CSRF protection using cryptographically secure state
+- **Token Validation**: Full JWT signature verification
+- **Timeout Handling**: 10-second timeout for provider initialization
+- **Secure Cookies**: HttpOnly, Secure, and SameSite cookie attributes
+- **Graceful Degradation**: Automatic fallback to local auth when provider unavailable
+- **Host URL Protection**: Uses configured `host_url` instead of request headers to prevent Host header injection attacks
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Provider Unreachable**: Check issuer URL and network connectivity
+2. **Invalid Client**: Verify clientID and clientSecret
+3. **Missing Claims**: Ensure groups and username scopes are configured
+4. **Redirect Mismatch**: Verify redirect URI in provider matches application
+5. **Missing host_url**: Ensure `host_url` is configured in `server_settings`
+6. **Invalid host_url format**: Must include scheme (http:// or https://) and host
+7. **OIDC Authentication Fails**: All session cookies use SameSite=Lax for cross-site compatibility
+8. **Cookies Not Secure Behind Proxy**: Enable `trust_proxy_headers: true` when behind a reverse proxy
+
+#### Error Messages
+
+- `OIDC provider unavailable`: Provider cannot be reached, local auth available
+- `Invalid state parameter`: Possible CSRF attack or session timeout
+- `Failed to extract username`: Username scope not configured properly
+- `config validation error: host_url is required`: Add `host_url` field to `server_settings`
+- `config validation error: host_url must include scheme and host`: Fix the URL format
+
+### Security Considerations
+
+- **Principle of Least Privilege**: Only grant access to labels users need
+- **Label Design**: Design your labeling strategy with authorization in mind
+- **Admin Access**: Admin users bypass all authorization checks
+- **Performance**: Authorization filtering is applied efficiently at the API level
+
+## Metrics Authentication
+
+The `/metrics` endpoint exposes Prometheus metrics and can be protected with authentication to prevent unauthorized access to monitoring data.
+
+### Configuration
+
+Configure metrics authentication in your `config.yaml` or `credentials.yaml`:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "basic" # or "bearer"
+    username: "prometheus"
+    password: "your-secure-password"
+```
+
+For bearer token authentication:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "bearer"
+    token: "your-secret-token"
+```
+
+### Authentication Types
+
+#### Basic Authentication
+
+Use username and password for metrics access:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "basic"
+    username: "prometheus"
+    password: "your-secure-password"
+```
+
+**Prometheus Configuration**:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["your-app:8080"]
+    metrics_path: "/metrics"
+    basic_auth:
+      username: "prometheus"
+      password: "your-secure-password"
+```
+
+#### Bearer Token Authentication
+
+Use a simple token for metrics access:
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: true
+    type: "bearer"
+    token: "your-secret-token"
+```
+
+**Prometheus Configuration**:
+
+```yaml
+scrape_configs:
+  - job_name: "site-availability"
+    static_configs:
+      - targets: ["your-app:8080"]
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials: "your-secret-token"
+```
+
+### Security Best Practices
+
+1. **Use Strong Credentials**: Choose strong passwords or tokens
+2. **Separate Credentials**: Use different credentials for metrics vs. user authentication
+3. **Network Security**: Consider IP-based restrictions for additional security
+4. **Credential Management**: Store sensitive credentials in `credentials.yaml` rather than `config.yaml`
+
+### Disabling Metrics Authentication
+
+To disable metrics authentication (default behavior):
+
+```yaml
+server_settings:
+  metrics_auth:
+    enabled: false # or omit the entire metrics_auth section
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Prometheus Scraping Fails**: Verify credentials match between server and Prometheus configuration
+2. **401 Unauthorized**: Check that metrics authentication is properly configured
+3. **Basic Auth Not Working**: Ensure Prometheus is sending the correct Authorization header
+4. **Bearer Token Not Working**: Verify the token format and value
+
+#### Error Messages
+
+- `Metrics authentication failed`: Invalid credentials provided
+- `No Authorization header found`: Prometheus not sending authentication headers
+- `Invalid metrics auth type`: Configuration error in auth type
+
+#### Excluded Endpoints
+
+The following endpoints are **not** protected by authentication:
+
+- `/` - Login page and static files
+- `/sync` - B2B endpoint (protected by HMAC authentication)
+- `/healthz` - Health check
+- `/readyz` - Readiness check
+- `/metrics` - Metrics endpoint (protected by metrics authentication when enabled)
+
+## Sync Configuration
+
+Configure server-to-server synchronization:
+
+```yaml
+server_settings:
+  sync_enable: true
+  token: "your-hmac-token"
+```
+
+## Labels
+
+Add custom labels to identify this server instance:
+
+```yaml
+server_settings:
+  labels:
+    environment: "production"
+    region: "us-east-1"
+    cluster: "main"
+```
+
+## Complete Example
+
+```yaml
+server_settings:
+  port: "8080"
+  host_url: "https://myserver.com" # Required: Used for OIDC callback URLs
+  session_timeout: "12h"
+  trust_proxy_headers: true # Enable when behind a trusted reverse proxy
+  local_admin:
+    enabled: true
+    username: "admin"
+  roles:
+    frontend:
+      team: "frontend"
+      env: "production"
+    backend:
+      team: "backend"
+      shared: "yes"
+  metrics_auth:
+    enabled: true
+    type: "basic"
+    username: "prometheus"
+    password: "your-secure-metrics-password"
+  sync_enable: true
+  token: "secure-sync-token"
+  labels:
+    environment: "production"
+    region: "us-east-1"
+```

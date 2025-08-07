@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"site-availability/logging"
 	"site-availability/yaml"
@@ -20,11 +22,48 @@ type Config struct {
 }
 
 type ServerSettings struct {
-	Port         string            `yaml:"port"`
-	CustomCAPath string            `yaml:"custom_ca_path"`
-	SyncEnable   bool              `yaml:"sync_enable"`
-	Token        string            `yaml:"token"`
-	Labels       map[string]string `yaml:"labels,omitempty"`
+	Port              string                `yaml:"port"`
+	HostURL           string                `yaml:"host_url"`
+	CustomCAPath      string                `yaml:"custom_ca_path"`
+	SyncEnable        bool                  `yaml:"sync_enable"`
+	Token             string                `yaml:"token"`
+	Labels            map[string]string     `yaml:"labels,omitempty"`
+	SessionTimeout    string                `yaml:"session_timeout,omitempty"`
+	TrustProxyHeaders bool                  `yaml:"trust_proxy_headers,omitempty"`
+	LocalAdmin        LocalAdminConfig      `yaml:"local_admin,omitempty"`
+	Roles             map[string]RoleConfig `yaml:"roles,omitempty"`
+	OIDC              OIDCConfig            `yaml:"oidc,omitempty"`
+	MetricsAuth       MetricsAuthConfig     `yaml:"metrics_auth,omitempty"`
+}
+
+type LocalAdminConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
+}
+
+type RoleConfig struct {
+	Labels map[string]string `yaml:",inline"`
+}
+
+type OIDCConfig struct {
+	Enabled     bool               `yaml:"enabled"`
+	Config      OIDCProviderConfig `yaml:"config,omitempty"`
+	Permissions OIDCPermissions    `yaml:"permissions,omitempty"`
+}
+
+type OIDCProviderConfig struct {
+	Name          string `yaml:"name,omitempty"`
+	Issuer        string `yaml:"issuer,omitempty"`
+	ClientID      string `yaml:"clientID,omitempty"`
+	ClientSecret  string `yaml:"clientSecret,omitempty"`
+	GroupScope    string `yaml:"groupScope,omitempty"`
+	UserNameScope string `yaml:"userNameScope,omitempty"`
+}
+
+type OIDCPermissions struct {
+	Users  map[string][]string `yaml:"users,omitempty"`
+	Groups map[string][]string `yaml:"groups,omitempty"`
 }
 
 type ScrapingSettings struct {
@@ -49,6 +88,14 @@ type Source struct {
 	Type   string                 `yaml:"type"`
 	Labels map[string]string      `yaml:"labels,omitempty"`
 	Config map[string]interface{} `yaml:"config"`
+}
+
+type MetricsAuthConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Type     string `yaml:"type"` // "basic" or "bearer"
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
+	Token    string `yaml:"token,omitempty"`
 }
 
 func DecodeConfig[T any](cfg map[string]interface{}, sourceName string) (T, error) {
@@ -93,6 +140,9 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	// Apply default values after validation
+	applyAuthDefaults(&config.ServerSettings)
+
 	return &config, nil
 }
 
@@ -122,7 +172,33 @@ func validateLabels(labels map[string]string, context string) error {
 }
 
 func validateConfig(config *Config) error {
+	// Validate host_url is provided
+	if strings.TrimSpace(config.ServerSettings.HostURL) == "" {
+		return fmt.Errorf("config validation error: host_url is required in server_settings")
+	}
+
+	// Validate host_url format
+	hostURL := strings.TrimSuffix(strings.TrimSpace(config.ServerSettings.HostURL), "/")
+	parsedURL, err := url.Parse(hostURL)
+	if err != nil {
+		return fmt.Errorf("config validation error: invalid host_url format %q: %w", config.ServerSettings.HostURL, err)
+	}
+	if parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return fmt.Errorf("config validation error: host_url must include scheme and host (e.g., https://example.com)")
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("config validation error: host_url scheme must be http or https, got %q", parsedURL.Scheme)
+	}
+
+	// Update the config with the trimmed URL
+	config.ServerSettings.HostURL = hostURL
+
 	if err := validateLabels(config.ServerSettings.Labels, "server settings"); err != nil {
+		return err
+	}
+
+	// Validate authentication configuration
+	if err := validateAuthConfig(&config.ServerSettings); err != nil {
 		return err
 	}
 
@@ -160,6 +236,77 @@ func validateConfig(config *Config) error {
 	}
 
 	return nil
+}
+
+func validateAuthConfig(serverSettings *ServerSettings) error {
+	// If local admin is enabled, validate configuration
+	if serverSettings.LocalAdmin.Enabled {
+		if strings.TrimSpace(serverSettings.LocalAdmin.Username) == "" {
+			return fmt.Errorf("auth config error: local admin username is required when local admin is enabled")
+		}
+		if strings.TrimSpace(serverSettings.LocalAdmin.Password) == "" {
+			return fmt.Errorf("auth config error: local admin password is required when local admin is enabled")
+		}
+	}
+
+	// Validate session timeout format if provided
+	if serverSettings.SessionTimeout != "" {
+		if _, err := time.ParseDuration(serverSettings.SessionTimeout); err != nil {
+			return fmt.Errorf("auth config error: invalid session_timeout format %q: %w (valid examples: '12h', '30m', '90s', '1h30m')",
+				serverSettings.SessionTimeout, err)
+		}
+	}
+
+	// If OIDC is enabled, validate configuration
+	if serverSettings.OIDC.Enabled {
+		if strings.TrimSpace(serverSettings.OIDC.Config.Issuer) == "" {
+			return fmt.Errorf("auth config error: OIDC issuer is required when OIDC is enabled")
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.ClientID) == "" {
+			return fmt.Errorf("auth config error: OIDC clientID is required when OIDC is enabled")
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.ClientSecret) == "" {
+			return fmt.Errorf("auth config error: OIDC clientSecret is required when OIDC is enabled")
+		}
+	}
+
+	// Validate metrics auth configuration
+	if serverSettings.MetricsAuth.Enabled {
+		if strings.TrimSpace(serverSettings.MetricsAuth.Type) == "" {
+			return fmt.Errorf("auth config error: metrics auth type is required when metrics auth is enabled")
+		}
+
+		switch serverSettings.MetricsAuth.Type {
+		case "basic":
+			if strings.TrimSpace(serverSettings.MetricsAuth.Username) == "" {
+				return fmt.Errorf("auth config error: metrics auth username is required when using basic auth")
+			}
+			if strings.TrimSpace(serverSettings.MetricsAuth.Password) == "" {
+				return fmt.Errorf("auth config error: metrics auth password is required when using basic auth")
+			}
+		case "bearer":
+			if strings.TrimSpace(serverSettings.MetricsAuth.Token) == "" {
+				return fmt.Errorf("auth config error: metrics auth token is required when using bearer auth")
+			}
+		default:
+			return fmt.Errorf("auth config error: invalid metrics auth type %q, must be 'basic' or 'bearer'", serverSettings.MetricsAuth.Type)
+		}
+	}
+
+	return nil
+}
+
+// applyAuthDefaults sets default values for authentication configuration
+// This should be called after validation, during config loading
+func applyAuthDefaults(serverSettings *ServerSettings) {
+	if serverSettings.OIDC.Enabled {
+		if strings.TrimSpace(serverSettings.OIDC.Config.GroupScope) == "" {
+			serverSettings.OIDC.Config.GroupScope = "groups" // Default value
+		}
+		if strings.TrimSpace(serverSettings.OIDC.Config.UserNameScope) == "" {
+			serverSettings.OIDC.Config.UserNameScope = "preferred_username" // Default value
+		}
+	}
 }
 
 func GetEnv(name, defaultValue string) string {

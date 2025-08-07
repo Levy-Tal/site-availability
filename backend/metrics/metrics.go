@@ -10,13 +10,8 @@ import (
 
 var (
 	// Per location/app status metrics
-	siteAvailabilityStatus = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "site_availability_status",
-			Help: "Site availability status by app and location (1=up, 0=down)",
-		},
-		[]string{"app", "location", "source"},
-	)
+	// Note: This will be recreated dynamically in SetupMetricsHandler to support dynamic labels
+	siteAvailabilityStatus *prometheus.GaugeVec
 
 	// Per location aggregated metrics
 	siteAvailabilityApps = prometheus.NewGaugeVec(
@@ -113,13 +108,147 @@ var (
 func SetupMetricsHandler() http.Handler {
 	appStatuses := handlers.GetAppStatusCache()
 
-	// Reset all metrics
-	siteAvailabilityStatus.Reset()
+	// Step 1: Collect all unique label keys across all apps
+	labelKeys := collectUniqueLabels(appStatuses)
+
+	// Step 2: Create the dynamic metric with all collected label keys
+	createDynamicMetric(labelKeys)
+
+	// Step 3: Reset all metrics
+	if siteAvailabilityStatus != nil {
+		siteAvailabilityStatus.Reset()
+	}
 	siteAvailabilityApps.Reset()
 	siteAvailabilityAppsUp.Reset()
 	siteAvailabilityAppsDown.Reset()
 	siteAvailabilityAppsUnavailable.Reset()
 
+	// Step 4: Set values for each app with its specific labels
+	for _, appStatus := range appStatuses {
+		// Build label values for this app
+		labelValues := buildLabelValues(appStatus, labelKeys)
+
+		// Set the status value
+		statusValue := 0.0
+		if appStatus.Status == "up" {
+			statusValue = 1.0
+		}
+
+		if siteAvailabilityStatus != nil {
+			siteAvailabilityStatus.WithLabelValues(labelValues...).Set(statusValue)
+		}
+	}
+
+	// Step 5: Update aggregated metrics (unchanged logic)
+	updateAggregatedMetrics(appStatuses)
+
+	return promhttp.Handler()
+}
+
+// collectUniqueLabels collects all unique label keys from all apps
+func collectUniqueLabels(appStatuses []handlers.AppStatus) []string {
+	labelKeysSet := make(map[string]bool)
+
+	// Always include system labels in a specific order
+	labelKeysSet["name"] = true
+	labelKeysSet["location"] = true
+	labelKeysSet["source"] = true
+	labelKeysSet["origin_url"] = true
+
+	// Add all app-specific labels (from all apps)
+	for _, appStatus := range appStatuses {
+		for _, label := range appStatus.Labels {
+			if label.Value != "" { // Only include labels with non-empty values
+				labelKeysSet[label.Key] = true
+			}
+		}
+	}
+
+	// Convert to sorted slice for consistent ordering
+	labelKeys := make([]string, 0, len(labelKeysSet))
+
+	// Add system labels first in specific order
+	labelKeys = append(labelKeys, "name", "location", "source", "origin_url")
+
+	// Add app-specific labels alphabetically
+	var appLabels []string
+	for key := range labelKeysSet {
+		if key != "name" && key != "location" && key != "source" && key != "origin_url" {
+			appLabels = append(appLabels, key)
+		}
+	}
+
+	// Sort app labels alphabetically for consistency
+	for i := 0; i < len(appLabels); i++ {
+		for j := i + 1; j < len(appLabels); j++ {
+			if appLabels[i] > appLabels[j] {
+				appLabels[i], appLabels[j] = appLabels[j], appLabels[i]
+			}
+		}
+	}
+
+	labelKeys = append(labelKeys, appLabels...)
+	return labelKeys
+}
+
+// createDynamicMetric creates and registers the siteAvailabilityStatus metric with dynamic labels
+func createDynamicMetric(labelKeys []string) {
+	// Unregister existing metric if it exists
+	if siteAvailabilityStatus != nil {
+		prometheus.DefaultRegisterer.Unregister(siteAvailabilityStatus)
+	}
+
+	// Create new metric with dynamic labels
+	siteAvailabilityStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "site_availability_status",
+			Help: "Site availability status by app and location (1=up, 0=down)",
+		},
+		labelKeys,
+	)
+
+	// Register the new metric
+	prometheus.MustRegister(siteAvailabilityStatus)
+}
+
+// buildLabelValues builds the label values array for a given app
+func buildLabelValues(appStatus handlers.AppStatus, labelKeys []string) []string {
+	labelValues := make([]string, len(labelKeys))
+
+	// Create a map for quick lookup of app labels
+	appLabelsMap := make(map[string]string)
+	for _, label := range appStatus.Labels {
+		if label.Value != "" {
+			appLabelsMap[label.Key] = label.Value
+		}
+	}
+
+	// Fill in the values for each label key
+	for i, key := range labelKeys {
+		switch key {
+		case "name":
+			labelValues[i] = appStatus.Name
+		case "location":
+			labelValues[i] = appStatus.Location
+		case "source":
+			labelValues[i] = appStatus.Source
+		case "origin_url":
+			labelValues[i] = appStatus.OriginURL
+		default:
+			// For app-specific labels, use the value if it exists, otherwise empty string
+			if value, exists := appLabelsMap[key]; exists {
+				labelValues[i] = value
+			} else {
+				labelValues[i] = ""
+			}
+		}
+	}
+
+	return labelValues
+}
+
+// updateAggregatedMetrics updates the aggregated metrics (location stats, totals)
+func updateAggregatedMetrics(appStatuses []handlers.AppStatus) {
 	// Track totals across all locations
 	totalApps := 0
 	totalUp := 0
@@ -139,7 +268,6 @@ func SetupMetricsHandler() http.Handler {
 	})
 
 	for _, appStatus := range appStatuses {
-		app := appStatus.Name
 		location := appStatus.Location
 		source := appStatus.Source
 		status := appStatus.Status
@@ -156,15 +284,12 @@ func SetupMetricsHandler() http.Handler {
 
 		switch status {
 		case "up":
-			siteAvailabilityStatus.WithLabelValues(app, location, source).Set(1)
 			counts.up++
 			totalUp++
 		case "down":
-			siteAvailabilityStatus.WithLabelValues(app, location, source).Set(0)
 			counts.down++
 			totalDown++
 		default:
-			// Unavailable or unknown statuses
 			counts.unavailable++
 			totalUnavailable++
 		}
@@ -185,13 +310,11 @@ func SetupMetricsHandler() http.Handler {
 	siteAvailabilityTotalAppsUp.Set(float64(totalUp))
 	siteAvailabilityTotalAppsDown.Set(float64(totalDown))
 	siteAvailabilityTotalAppsUnavailable.Set(float64(totalUnavailable))
-
-	return promhttp.Handler()
 }
 
 // Init registers all Prometheus metrics
 func Init() {
-	prometheus.MustRegister(siteAvailabilityStatus)
+	// Note: siteAvailabilityStatus is registered dynamically in SetupMetricsHandler
 	prometheus.MustRegister(siteAvailabilityApps)
 	prometheus.MustRegister(siteAvailabilityAppsUp)
 	prometheus.MustRegister(siteAvailabilityAppsDown)

@@ -15,9 +15,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Environment variables for the exporter container
-env:
-  CONFIG_FILE: /app/config.yaml
+# Environment variables
+env: {}
+#  CONFIG_FILE: /app/config.yaml
 
 # Credentials configuration
 credentials:
@@ -30,46 +30,7 @@ extraSecretNameForEnvFrom: []
 # if you want to use the chart for config file
 configFile:
   enabled: true
-  content:
-    server_settings:
-      port: "8080"
-      sync_enable: false
-      custom_ca_path: ""
-
-    scraping:
-      interval: "10s"
-      timeout: "5s"
-      max_parallel: 10
-
-    documentation:
-      title: "DR documentation"
-      url: "https://google.com"
-
-    locations:
-      - name: "Hadera"
-        latitude: 32.446235
-        longitude: 34.903852
-      - name: "Jerusalem"
-        latitude: 31.782904
-        longitude: 35.214774
-      - name: "Beer Sheva"
-        latitude: 31.245381
-        longitude: 34.788745
-
-    sources:
-      - name: "prometheus-main"
-        type: "prometheus"
-        url: "http://prometheus-operated:9090"
-        apps:
-          - name: "app1"
-            location: "Hadera"
-            metric: 'up{job="site-availability"}'
-          - name: "app2"
-            location: "Jerusalem"
-            metric: 'up{container="alertmanager"}'
-          - name: "app3"
-            location: "Beer Sheva"
-            metric: 'up{container="alertmanager"}'
+  content: {}
 
 # Pod annotations for extra metadata
 podAnnotations: {}
@@ -139,8 +100,28 @@ serviceMonitor:
   enabled: true
   scrapeInterval: 10s
 
+# Pod Disruption Budget settings
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: 1
+
 prometheusRules:
   enabled: true
+  # Individual rule enable/disable settings
+  rules:
+    appDown: true
+    appUnavailable: true
+    noMetricsReceived: true
+    siteSyncFailure: true
+    siteSyncHighLatency: true
+    siteSyncDown: true
+  # Alert filtering for AppDown rule
+  appDownAlert:
+    # Filter apps by label (e.g., env=prod, team=backend)
+    # Leave empty to alert for all apps
+    filterLabel: ""
+    filterValue: ""
 
 grafanaDashboards:
   enabled: true

@@ -20,6 +20,7 @@ export const MapComponent = ({ locations, onSiteClick }) => {
   const [currentCenter, setCurrentCenter] = useState(null);
   const [hoveredMarker, setHoveredMarker] = useState(null);
   const hasInitialized = useRef(false);
+  const previousLocations = useRef([]);
 
   const calculateBounds = (locations) => {
     if (!locations.length) return null;
@@ -45,7 +46,6 @@ export const MapComponent = ({ locations, onSiteClick }) => {
     const lonRange = bounds.maxLon - bounds.minLon;
 
     let scaleFactor, zoomFactor, baseSize;
-    console.log("lonRange", lonRange);
     if (lonRange > 200) {
       scaleFactor = 220;
       zoomFactor = 1;
@@ -88,8 +88,35 @@ export const MapComponent = ({ locations, onSiteClick }) => {
     };
   };
 
+  // Helper function to check if locations have actually changed
+  const locationsChanged = (newLocations, oldLocations) => {
+    if (newLocations.length !== oldLocations.length) return true;
+
+    // Create a simple comparison based on location names and coordinates
+    const newLocationSet = new Set(
+      newLocations.map((loc) => `${loc.name}-${loc.latitude}-${loc.longitude}`),
+    );
+    const oldLocationSet = new Set(
+      oldLocations.map((loc) => `${loc.name}-${loc.latitude}-${loc.longitude}`),
+    );
+
+    if (newLocationSet.size !== oldLocationSet.size) return true;
+
+    for (const loc of newLocationSet) {
+      if (!oldLocationSet.has(loc)) return true;
+    }
+
+    return false;
+  };
+
   useEffect(() => {
-    if (locations.length > 0 && !hasInitialized.current) {
+    // Check if locations have actually changed or if this is the initial load
+    const shouldRecalculate =
+      locations.length > 0 &&
+      (!hasInitialized.current ||
+        locationsChanged(locations, previousLocations.current));
+
+    if (shouldRecalculate) {
       const width = window.innerWidth;
       const height = window.innerHeight;
       const bounds = calculateBounds(locations);
@@ -106,6 +133,9 @@ export const MapComponent = ({ locations, onSiteClick }) => {
         setBaseSize(baseSize);
         hasInitialized.current = true;
         setMapReady(true);
+
+        // Update the reference to current locations
+        previousLocations.current = [...locations];
       }
     }
   }, [locations]);

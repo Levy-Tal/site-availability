@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"site-availability/config"
 	"site-availability/handlers"
 	"site-availability/logging"
@@ -16,6 +17,8 @@ import (
 )
 
 func init() {
+	// Set log level to panic to suppress error logs during tests
+	os.Setenv("LOG_LEVEL", "panic")
 	_ = logging.Init() // Initialize logging for tests
 }
 
@@ -1303,8 +1306,25 @@ func TestIntegrationScrapeWithRealScenarios(t *testing.T) {
 	assert.Equal(t, "up", healthStatus.Status)
 	assert.Equal(t, "datacenter-1", healthStatus.Location)
 	assert.Equal(t, "integration-test", healthStatus.Source)
-	assert.Equal(t, "health-api", healthStatus.Labels["service"])
-	assert.Equal(t, "production", healthStatus.Labels["env"])
+	// Find service label
+	var serviceLabel string
+	for _, label := range healthStatus.Labels {
+		if label.Key == "service" {
+			serviceLabel = label.Value
+			break
+		}
+	}
+	assert.Equal(t, "health-api", serviceLabel)
+
+	// Find env label
+	var envLabel string
+	for _, label := range healthStatus.Labels {
+		if label.Key == "env" {
+			envLabel = label.Value
+			break
+		}
+	}
+	assert.Equal(t, "production", envLabel)
 
 	// Verify fast endpoint
 	fastStatus := findAppStatus(statuses, "fast-endpoint")

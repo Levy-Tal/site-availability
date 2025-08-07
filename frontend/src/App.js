@@ -2,13 +2,56 @@ import React, { useState, useEffect, useCallback } from "react";
 import { MapComponent } from "./map";
 import { AppStatusPanel } from "./AppStatusPanel";
 import Sidebar from "./Sidebar";
-import { fetchLocations, fetchApps } from "./api/appStatusAPI";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import SimpleLogin from "./components/SimpleLogin";
+import SimpleUserModal from "./components/SimpleUserModal";
+import { fetchLocations } from "./api/appStatusAPI";
 import { fetchScrapeInterval } from "./api/scrapeIntervalAPI";
 import { fetchDocs } from "./api/docsAPI";
 import { userPreferences } from "./utils/storage";
 import "./styles/main.css";
 
-function App() {
+function AppContent() {
+  const { isInitialized, needsAuthentication, user } = useAuth();
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+
+  // Show login if authentication is required
+  if (isInitialized && needsAuthentication) {
+    return <SimpleLogin />;
+  }
+
+  // Show loading if not initialized
+  if (!isInitialized) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
+  // Render original app with minimal changes
+  return (
+    <>
+      <OriginalApp
+        user={user}
+        onUserInfoClick={() => setIsUserModalOpen(true)}
+      />
+      <SimpleUserModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+      />
+    </>
+  );
+}
+
+function OriginalApp({ user, onUserInfoClick }) {
   const [locations, setLocations] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -48,6 +91,7 @@ function App() {
         console.error("Error initializing app:", error);
       }
     };
+
     initialize();
   }, []);
 
@@ -137,11 +181,14 @@ function App() {
         onStatusFilterChange={handleStatusFilterChange}
         onLabelFilterChange={handleLabelFilterChange}
         onDocsClick={handleDocsClick}
+        onUserInfoClick={user ? onUserInfoClick : undefined}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={handleSidebarToggle}
         selectedStatusFilters={statusFilters}
         selectedLabels={labelFilters}
         docsTitle={docsInfo.docs_title || "Documentation"}
+        user={user}
+        locations={locations}
       />
       <MapComponent locations={locations} onSiteClick={handleSiteClick} />
       {isPanelOpen && selectedSite && (
@@ -155,6 +202,14 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

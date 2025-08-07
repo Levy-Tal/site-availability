@@ -34,7 +34,20 @@ func getMockSourceAndSettings(sourceName string) (config.Source, config.ServerSe
 // Helper function to call UpdateAppStatus with mock parameters
 func updateAppStatusTest(sourceName string, statuses []handlers.AppStatus) {
 	source, serverSettings := getMockSourceAndSettings(sourceName)
-	handlers.UpdateAppStatus(sourceName, statuses, source, serverSettings)
+
+	// Ensure HostURL is set for validation
+	if serverSettings.HostURL == "" {
+		serverSettings.HostURL = "https://test-server.com"
+	}
+
+	// Ensure all test apps have OriginURL set (required for new validation)
+	for i := range statuses {
+		if statuses[i].OriginURL == "" {
+			statuses[i].OriginURL = "https://test-origin.com"
+		}
+	}
+
+	_ = handlers.UpdateAppStatus(sourceName, statuses, source, serverSettings)
 }
 
 // setupServerTest clears the handlers cache for test isolation
@@ -107,6 +120,7 @@ func TestSetupRoutes(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		// Test API routes
@@ -291,6 +305,7 @@ func TestRouteHandlers(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/api/locations", nil)
@@ -309,6 +324,7 @@ func TestRouteHandlers(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/api/scrape-interval", nil)
@@ -328,6 +344,7 @@ func TestRouteHandlers(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/api/docs", nil)
@@ -340,6 +357,7 @@ func TestRouteHandlers(t *testing.T) {
 
 	t.Run("metrics endpoint", func(t *testing.T) {
 		server := NewServer(&config.Config{})
+		server.initAuthentication()
 		server.setupRoutes()
 
 		req := httptest.NewRequest("GET", "/metrics", nil)
@@ -426,6 +444,7 @@ func TestServerBehavior(t *testing.T) {
 		}
 
 		server := NewServer(cfg)
+		server.initAuthentication()
 		server.setupRoutes()
 
 		// Test that specific API paths work correctly
@@ -472,6 +491,7 @@ func TestServerBehavior(t *testing.T) {
 
 	t.Run("method handling for endpoints", func(t *testing.T) {
 		server := NewServer(&config.Config{})
+		server.initAuthentication()
 		server.setupRoutes()
 
 		// Test that endpoints accept different HTTP methods
@@ -502,4 +522,44 @@ func TestServerBehavior(t *testing.T) {
 			assert.Equal(t, http.StatusOK, w.Code)
 		})
 	})
+}
+
+func TestServerInitializationWithMetricsAuth(t *testing.T) {
+	// Create a minimal config with metrics auth enabled
+	cfg := &config.Config{
+		ServerSettings: config.ServerSettings{
+			Port:    "8080",
+			HostURL: "http://localhost:8080",
+			MetricsAuth: config.MetricsAuthConfig{
+				Enabled:  true,
+				Type:     "basic",
+				Username: "prometheus",
+				Password: "secret",
+			},
+		},
+		Locations: []config.Location{
+			{
+				Name:      "Test",
+				Latitude:  0.0,
+				Longitude: 0.0,
+			},
+		},
+		Sources: []config.Source{},
+	}
+
+	// Create server instance
+	server := NewServer(cfg)
+
+	// This should not panic
+	if server == nil {
+		t.Fatal("Server should not be nil")
+	}
+
+	// Initialize authentication components
+	server.initAuthentication()
+
+	// Check that metrics auth middleware is initialized
+	if server.metricsAuthMiddleware == nil {
+		t.Fatal("Metrics auth middleware should be initialized")
+	}
 }

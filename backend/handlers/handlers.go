@@ -15,13 +15,46 @@ import (
 	"time"
 )
 
+// normalizeOriginURL normalizes an origin URL for consistent cache key usage
+func normalizeOriginURL(originURL string) string {
+	if originURL == "" {
+		return ""
+	}
+
+	// Parse the URL to handle normalization
+	parsed, err := url.Parse(originURL)
+	if err != nil {
+		// If URL parsing fails, return as-is but log warning
+		logging.Logger.WithField("origin_url", originURL).Warn("Failed to parse origin URL for normalization")
+		return strings.TrimSpace(strings.ToLower(originURL))
+	}
+
+	// Normalize: lowercase scheme and host, remove default ports, remove trailing slash
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	parsed.Host = strings.ToLower(parsed.Host)
+
+	// Remove default ports
+	if parsed.Scheme == "http" && strings.HasSuffix(parsed.Host, ":80") {
+		parsed.Host = strings.TrimSuffix(parsed.Host, ":80")
+	} else if parsed.Scheme == "https" && strings.HasSuffix(parsed.Host, ":443") {
+		parsed.Host = strings.TrimSuffix(parsed.Host, ":443")
+	}
+
+	// Remove trailing slash from path
+	if parsed.Path == "/" {
+		parsed.Path = ""
+	}
+
+	return parsed.String()
+}
+
 type AppStatus struct {
-	Name      string            `json:"name"`
-	Location  string            `json:"location"`
-	Status    string            `json:"status"`
-	Source    string            `json:"source"`
-	OriginURL string            `json:"origin_url,omitempty"` // URL where app originally came from
-	Labels    map[string]string `json:"labels,omitempty"`     // App labels (merged from app + source + server)
+	Name      string         `json:"name"`
+	Location  string         `json:"location"`
+	Status    string         `json:"status"`
+	Source    string         `json:"source"`
+	OriginURL string         `json:"origin_url,omitempty"` // URL where app originally came from
+	Labels    []labels.Label `json:"labels,omitempty"`     // App labels (merged from app + source + server)
 }
 
 type StatusResponse struct {
@@ -30,11 +63,14 @@ type StatusResponse struct {
 }
 
 type Location struct {
-	Name      string  `yaml:"name" json:"name"`
-	Latitude  float64 `yaml:"latitude" json:"latitude"`
-	Longitude float64 `yaml:"longitude" json:"longitude"`
-	Source    string  `json:"source"`
-	Status    *string `json:"status"` // "up", "down", "unavailable", or nil for no apps
+	Name        string  `yaml:"name" json:"name"`
+	Latitude    float64 `yaml:"latitude" json:"latitude"`
+	Longitude   float64 `yaml:"longitude" json:"longitude"`
+	Source      string  `json:"source"`
+	Status      *string `json:"status"`      // "up", "down", "unavailable", or nil for no apps
+	Up          int     `json:"up"`          // Number of apps that are up
+	Down        int     `json:"down"`        // Number of apps that are down
+	Unavailable int     `json:"unavailable"` // Number of apps that are unavailable
 }
 
 // FilterParams represents both system field and label filters
@@ -45,15 +81,21 @@ type FilterParams struct {
 
 // Simple cache with label manager integration
 var (
-	appStatusCache = make(map[string]map[string]AppStatus)
+	appStatusCache = make(map[string]map[string]map[string]AppStatus) // [origin_url][source][app_name]AppStatus
 	locationCache  = make(map[string][]Location)
 	cacheMutex     sync.RWMutex
 
-	// Global deduplication to prevent circular scraping issues
-	seenApps = make(map[string]bool)
-
 	// Label manager for fast label queries
 	labelManager = labels.NewLabelManager()
+
+	// Performance metrics
+	updateMetrics = struct {
+		totalUpdates     int64
+		totalAppsAdded   int64
+		totalAppsSkipped int64
+		totalErrors      int64
+		avgDurationMs    int64
+	}{}
 )
 
 // GetAppStatusCache returns a copy of the appStatusCache
@@ -62,9 +104,11 @@ func GetAppStatusCache() []AppStatus {
 	defer cacheMutex.RUnlock()
 
 	var apps []AppStatus
-	for _, sourceApps := range appStatusCache {
-		for _, status := range sourceApps {
-			apps = append(apps, status)
+	for _, originApps := range appStatusCache {
+		for _, sourceApps := range originApps {
+			for _, status := range sourceApps {
+				apps = append(apps, status)
+			}
 		}
 	}
 	return apps
@@ -82,8 +126,8 @@ func GetLocationCache() []Location {
 	return locations
 }
 
-// UpdateLocationCache updates the locationCache for a given source
-func UpdateLocationCache(sourceName string, newLocations []Location) {
+// UpdateLocationCache updates the locationCache for a given source with conflict resolution
+func UpdateLocationCache(sourceName string, newLocations []Location, configuredLocations []config.Location) {
 	logging.Logger.WithFields(map[string]interface{}{
 		"count":  len(newLocations),
 		"source": sourceName,
@@ -98,9 +142,38 @@ func UpdateLocationCache(sourceName string, newLocations []Location) {
 		return
 	}
 
+	// Filter out locations that conflict with server's configured locations (applies to all sources)
+	// Create a map of configured location names for O(1) lookup
+	configuredLocationNames := make(map[string]bool)
+	for _, configLoc := range configuredLocations {
+		configuredLocationNames[configLoc.Name] = true
+	}
+
+	// Filter out conflicting locations
+	var locationsToCache []Location
+	locationsDropped := 0
+	for _, loc := range newLocations {
+		if configuredLocationNames[loc.Name] {
+			logging.Logger.WithFields(map[string]interface{}{
+				"location_name": loc.Name,
+				"source":        sourceName,
+			}).Debug("Dropping scraped location that conflicts with server's configured location")
+			locationsDropped++
+			continue
+		}
+		locationsToCache = append(locationsToCache, loc)
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"source":            sourceName,
+		"total_scraped":     len(newLocations),
+		"locations_kept":    len(locationsToCache),
+		"locations_dropped": locationsDropped,
+	}).Info("Applied location conflict filtering for source")
+
 	// Set the source for all locations and update cache
-	locations := make([]Location, len(newLocations))
-	for i, loc := range newLocations {
+	locations := make([]Location, len(locationsToCache))
+	for i, loc := range locationsToCache {
 		locations[i] = Location{
 			Name:      loc.Name,
 			Latitude:  loc.Latitude,
@@ -119,8 +192,33 @@ func UpdateLocationCache(sourceName string, newLocations []Location) {
 	locationCache[sourceName] = locations
 }
 
+// UpdateAppStatusResult contains the result of an update operation
+type UpdateAppStatusResult struct {
+	AppsAdded   int
+	AppsSkipped int
+	Error       error
+}
+
 // UpdateAppStatus updates the appStatusCache for a given source and merges labels
-func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.Source, serverSettings config.ServerSettings) {
+// Returns result with statistics and any errors encountered
+func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.Source, serverSettings config.ServerSettings) UpdateAppStatusResult {
+	start := time.Now()
+
+	// Input validation
+	if sourceName == "" {
+		err := fmt.Errorf("source name cannot be empty")
+		logging.Logger.WithError(err).Error("Invalid input to UpdateAppStatus")
+		updateMetrics.totalErrors++
+		return UpdateAppStatusResult{Error: err}
+	}
+
+	if serverSettings.HostURL == "" {
+		err := fmt.Errorf("server host_url cannot be empty")
+		logging.Logger.WithError(err).Error("Invalid server settings in UpdateAppStatus")
+		updateMetrics.totalErrors++
+		return UpdateAppStatusResult{Error: err}
+	}
+
 	logging.Logger.WithFields(map[string]interface{}{
 		"count":  len(newStatuses),
 		"source": sourceName,
@@ -129,90 +227,203 @@ func UpdateAppStatus(sourceName string, newStatuses []AppStatus, source config.S
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
-	// If no statuses provided, remove the source from cache
+	var result UpdateAppStatusResult
+
+	// If no statuses provided, remove the source from all origin_url caches
 	if len(newStatuses) == 0 {
-		delete(appStatusCache, sourceName)
+		for originURL := range appStatusCache {
+			delete(appStatusCache[originURL], sourceName)
+			// Clean up empty origin_url entries
+			if len(appStatusCache[originURL]) == 0 {
+				delete(appStatusCache, originURL)
+			}
+		}
 		updateLabelManager()
-		return
-	}
+		updateMetrics.totalUpdates++
 
-	if _, ok := appStatusCache[sourceName]; !ok {
-		appStatusCache[sourceName] = make(map[string]AppStatus)
-	} else {
-		// Clear existing statuses for this source
-		appStatusCache[sourceName] = make(map[string]AppStatus)
-
-		// Clear deduplication entries for this source to allow fresh apps
-		// Remove all entries that belong to this source (by origin URL)
-		for dedupKey := range seenApps {
-			// Extract origin URL from dedupKey (format: appName|location|originURL)
-			parts := strings.Split(dedupKey, "|")
-			if len(parts) == 3 {
-				originURL := parts[2]
-				// Check if this origin URL matches any of the apps from this source
-				for _, app := range newStatuses {
-					if app.OriginURL == originURL {
-						delete(seenApps, dedupKey)
-						break
-					}
-				}
-			}
-		}
-	}
-
-	for _, app := range newStatuses {
-		// Only apply deduplication for apps with valid origin URLs to prevent circular scraping
-		// Empty origin URLs are allowed (for direct prometheus scrapers, etc.)
-		if app.OriginURL != "" {
-			dedupKey := app.Name + "|" + app.Location + "|" + app.OriginURL
-
-			// Skip if we've already seen this app from the same origin
-			if seenApps[dedupKey] {
-				logging.Logger.WithFields(map[string]interface{}{
-					"app":        app.Name,
-					"location":   app.Location,
-					"origin_url": app.OriginURL,
-					"source":     sourceName,
-				}).Debug("Skipping duplicate app from circular scraping")
-				continue
-			}
-
-			// Mark as seen
-			seenApps[dedupKey] = true
-		}
-
-		// Merge labels: App labels > Source labels > Server labels
-		app.Labels = labels.MergeLabels(serverSettings.Labels, source.Labels, app.Labels)
+		duration := time.Since(start)
+		updateMetrics.avgDurationMs = (updateMetrics.avgDurationMs + duration.Milliseconds()) / 2
 
 		logging.Logger.WithFields(map[string]interface{}{
-			"app":         app.Name,
-			"status":      app.Status,
-			"location":    app.Location,
-			"source":      app.Source,
-			"origin_url":  app.OriginURL,
-			"label_count": len(app.Labels),
-		}).Debug("Caching app status with merged labels")
-		appStatusCache[sourceName][app.Name] = app
+			"source":      sourceName,
+			"duration_ms": duration.Milliseconds(),
+		}).Info("Removed source from cache (empty status list)")
+
+		return result
+	}
+
+	// Group apps by normalized origin_url
+	appsByOrigin := make(map[string][]AppStatus)
+
+	// Process each app with comprehensive validation and error handling
+	for i, app := range newStatuses {
+		// Validate app data
+		if app.Name == "" {
+			logging.Logger.WithFields(map[string]interface{}{
+				"source":    sourceName,
+				"app_index": i,
+			}).Warn("Skipping app with empty name")
+			result.AppsSkipped++
+			continue
+		}
+
+		if app.Location == "" {
+			logging.Logger.WithFields(map[string]interface{}{
+				"source":   sourceName,
+				"app_name": app.Name,
+			}).Warn("Skipping app with empty location")
+			result.AppsSkipped++
+			continue
+		}
+
+		// Validate origin_url - MANDATORY
+		if app.OriginURL == "" {
+			logging.Logger.WithFields(map[string]interface{}{
+				"source":   sourceName,
+				"app_name": app.Name,
+			}).Error("Skipping app with empty origin_url - this is mandatory")
+			result.AppsSkipped++
+			continue
+		}
+
+		// Validate status
+		validStatuses := map[string]bool{"up": true, "down": true, "unavailable": true}
+		if !validStatuses[app.Status] {
+			logging.Logger.WithFields(map[string]interface{}{
+				"source":   sourceName,
+				"app_name": app.Name,
+				"status":   app.Status,
+			}).Warn("Invalid app status, treating as unavailable")
+			app.Status = "unavailable"
+		}
+
+		// Merge labels with error handling
+		if app.Labels == nil {
+			app.Labels = []labels.Label{}
+		}
+
+		// Convert current app labels to map for merging
+		appLabelsMap := labels.LabelsSliceToMap(app.Labels)
+
+		mergedLabels := labels.MergeLabels(serverSettings.Labels, source.Labels, appLabelsMap)
+		if mergedLabels == nil {
+			logging.Logger.WithFields(map[string]interface{}{
+				"app":    app.Name,
+				"source": sourceName,
+			}).Warn("Label merge failed, using app labels only")
+			mergedLabels = app.Labels
+		}
+		app.Labels = mergedLabels
+
+		// Final validation before caching
+		if len(app.Name) > 255 {
+			logging.Logger.WithFields(map[string]interface{}{
+				"app":         app.Name[:50] + "...",
+				"source":      sourceName,
+				"name_length": len(app.Name),
+			}).Warn("App name is too long, truncating")
+			app.Name = app.Name[:255]
+		}
+
+		// Group by normalized origin_url
+		normalizedOriginURL := normalizeOriginURL(app.OriginURL)
+		appsByOrigin[normalizedOriginURL] = append(appsByOrigin[normalizedOriginURL], app)
+
+		logging.Logger.WithFields(map[string]interface{}{
+			"app":                   app.Name,
+			"status":                app.Status,
+			"location":              app.Location,
+			"source":                app.Source,
+			"origin_url":            app.OriginURL,
+			"normalized_origin_url": normalizedOriginURL,
+			"label_count":           len(app.Labels),
+		}).Debug("Processed app for caching")
+	}
+
+	// Now update the cache: replace entire source for each origin_url
+	for normalizedOriginURL, apps := range appsByOrigin {
+		// Initialize origin_url cache if needed
+		if _, ok := appStatusCache[normalizedOriginURL]; !ok {
+			appStatusCache[normalizedOriginURL] = make(map[string]map[string]AppStatus)
+		}
+
+		// Replace entire source cache for this origin_url
+		appStatusCache[normalizedOriginURL][sourceName] = make(map[string]AppStatus)
+
+		for _, app := range apps {
+			appStatusCache[normalizedOriginURL][sourceName][app.Name] = app
+		}
+
+		logging.Logger.WithFields(map[string]interface{}{
+			"origin_url": normalizedOriginURL,
+			"source":     sourceName,
+			"app_count":  len(apps),
+		}).Debug("Updated cache for origin_url and source")
+
+		result.AppsAdded += len(apps)
 	}
 
 	// Update label manager for fast label queries
 	updateLabelManager()
+
+	// Update metrics
+	updateMetrics.totalUpdates++
+	updateMetrics.totalAppsAdded += int64(result.AppsAdded)
+	updateMetrics.totalAppsSkipped += int64(result.AppsSkipped)
+
+	duration := time.Since(start)
+	updateMetrics.avgDurationMs = (updateMetrics.avgDurationMs + duration.Milliseconds()) / 2
+
+	// Count total apps for this source across all origin_urls
+	totalAppsForSource := 0
+	for _, originApps := range appStatusCache {
+		if sourceApps, exists := originApps[sourceName]; exists {
+			totalAppsForSource += len(sourceApps)
+		}
+	}
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"source":       sourceName,
+		"apps_added":   result.AppsAdded,
+		"apps_skipped": result.AppsSkipped,
+		"duration_ms":  duration.Milliseconds(),
+		"total_apps":   totalAppsForSource,
+	}).Info("Successfully updated app status cache for source")
+
+	return result
+}
+
+// GetUpdateMetrics returns current performance metrics (for monitoring/debugging)
+func GetUpdateMetrics() map[string]interface{} {
+	cacheMutex.RLock()
+	defer cacheMutex.RUnlock()
+
+	return map[string]interface{}{
+		"total_updates":      updateMetrics.totalUpdates,
+		"total_apps_added":   updateMetrics.totalAppsAdded,
+		"total_apps_skipped": updateMetrics.totalAppsSkipped,
+		"total_errors":       updateMetrics.totalErrors,
+		"avg_duration_ms":    updateMetrics.avgDurationMs,
+		"cache_origin_urls":  len(appStatusCache),
+	}
 }
 
 // updateLabelManager updates the label manager with current app data
 func updateLabelManager() {
 	// Get all current apps with full system field information
 	var apps []labels.AppInfo
-	for _, sourceApps := range appStatusCache {
-		for _, app := range sourceApps {
-			apps = append(apps, labels.AppInfo{
-				Name:      app.Name,
-				Location:  app.Location,
-				Status:    app.Status,
-				Source:    app.Source,
-				OriginURL: app.OriginURL,
-				Labels:    app.Labels,
-			})
+	for _, originApps := range appStatusCache {
+		for _, sourceApps := range originApps {
+			for _, app := range sourceApps {
+				apps = append(apps, labels.AppInfo{
+					Name:      app.Name,
+					Location:  app.Location,
+					Status:    app.Status,
+					Source:    app.Source,
+					OriginURL: app.OriginURL,
+					Labels:    app.Labels,
+				})
+			}
 		}
 	}
 
@@ -223,6 +434,32 @@ func updateLabelManager() {
 		"total_apps":   len(apps),
 		"total_fields": len(labelManager.GetLabelKeys()),
 	}).Debug("Updated label manager with system fields and labels")
+}
+
+// calculateLocationStatusCounts calculates the status counts for a location based on its apps
+// Returns: up count, down count, unavailable count
+func calculateLocationStatusCounts(locationName string, apps []AppStatus) (int, int, int) {
+	upCount := 0
+	downCount := 0
+	unavailableCount := 0
+
+	for _, app := range apps {
+		if app.Location == locationName {
+			switch app.Status {
+			case "up":
+				upCount++
+			case "down":
+				downCount++
+			case "unavailable":
+				unavailableCount++
+			default:
+				// Unknown status treated as unavailable
+				unavailableCount++
+			}
+		}
+	}
+
+	return upCount, downCount, unavailableCount
 }
 
 // calculateLocationStatus calculates the status of a location based on its apps
@@ -286,14 +523,18 @@ func GetLocationsWithStatus() []Location {
 	// Get all locations from cache
 	for _, sourceLocations := range locationCache {
 		for _, location := range sourceLocations {
-			// Calculate status for this location
+			// Calculate status and counts for this location
 			status := calculateLocationStatus(location.Name, apps)
+			upCount, downCount, unavailableCount := calculateLocationStatusCounts(location.Name, apps)
 			locationWithStatus := Location{
-				Name:      location.Name,
-				Latitude:  location.Latitude,
-				Longitude: location.Longitude,
-				Source:    location.Source,
-				Status:    status,
+				Name:        location.Name,
+				Latitude:    location.Latitude,
+				Longitude:   location.Longitude,
+				Source:      location.Source,
+				Status:      status,
+				Up:          upCount,
+				Down:        downCount,
+				Unavailable: unavailableCount,
 			}
 			locations = append(locations, locationWithStatus)
 		}
@@ -316,15 +557,19 @@ func convertToHandlersLocation(configLocations []config.Location) []Location {
 			"longitude": loc.Longitude,
 		}).Debug("Processing location")
 
-		// Calculate status for this location
+		// Calculate status and counts for this location
 		status := calculateLocationStatus(loc.Name, apps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(loc.Name, apps)
 
 		locations = append(locations, Location{
-			Name:      loc.Name,
-			Latitude:  loc.Latitude,
-			Longitude: loc.Longitude,
-			Source:    "", // Empty source indicates this server's locations
-			Status:    status,
+			Name:        loc.Name,
+			Latitude:    loc.Latitude,
+			Longitude:   loc.Longitude,
+			Source:      "", // Empty source indicates this server's locations
+			Status:      status,
+			Up:          upCount,
+			Down:        downCount,
+			Unavailable: unavailableCount,
 		})
 	}
 	return locations
@@ -556,10 +801,17 @@ func ResetCacheForTesting() {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
-	appStatusCache = make(map[string]map[string]AppStatus)
+	appStatusCache = make(map[string]map[string]map[string]AppStatus)
 	locationCache = make(map[string][]Location)
-	seenApps = make(map[string]bool) // Reset deduplication map
+
 	labelManager = labels.NewLabelManager()
+
+	// Reset metrics
+	updateMetrics.totalUpdates = 0
+	updateMetrics.totalAppsAdded = 0
+	updateMetrics.totalAppsSkipped = 0
+	updateMetrics.totalErrors = 0
+	updateMetrics.avgDurationMs = 0
 }
 
 // IsAppStatusCacheEmpty checks if the app status cache is empty
@@ -575,10 +827,12 @@ func IsAppStatusCacheEmpty() bool {
 		return true
 	}
 
-	// Count total apps across all sources
+	// Count total apps across all origins and sources
 	totalApps := 0
-	for _, sourceApps := range appStatusCache {
-		totalApps += len(sourceApps)
+	for _, originApps := range appStatusCache {
+		for _, sourceApps := range originApps {
+			totalApps += len(sourceApps)
+		}
 	}
 
 	empty := totalApps == 0
@@ -732,15 +986,23 @@ func GetLocations(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	// Get all locations but calculate status based on filtered apps only
 	locations := GetLocationsWithStatus()
 
-	// Recalculate status for each location based on filtered apps
+	// Recalculate status and counts for each location based on filtered apps
 	for i := range locations {
 		locations[i].Status = calculateLocationStatus(locations[i].Name, filteredApps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(locations[i].Name, filteredApps)
+		locations[i].Up = upCount
+		locations[i].Down = downCount
+		locations[i].Unavailable = unavailableCount
 	}
 
 	// Add server's own locations from config with status calculated from filtered apps
 	serverLocations := convertToHandlersLocation(cfg.Locations)
 	for i := range serverLocations {
 		serverLocations[i].Status = calculateLocationStatus(serverLocations[i].Name, filteredApps)
+		upCount, downCount, unavailableCount := calculateLocationStatusCounts(serverLocations[i].Name, filteredApps)
+		serverLocations[i].Up = upCount
+		serverLocations[i].Down = downCount
+		serverLocations[i].Unavailable = unavailableCount
 	}
 	locations = append(locations, serverLocations...)
 

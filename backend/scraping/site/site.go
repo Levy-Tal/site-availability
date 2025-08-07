@@ -20,10 +20,19 @@ type SiteConfig struct {
 
 // SiteScraper implements the scraping.Source interface for scraping other sites.
 type SiteScraper struct {
+	directScrapedSites []string // URLs of sites directly scraped by this server
 }
 
 func NewSiteScraper() *SiteScraper {
-	return &SiteScraper{}
+	return &SiteScraper{
+		directScrapedSites: []string{},
+	}
+}
+
+// SetDirectScrapedSites sets the list of site URLs that this server directly scrapes
+// This is used for circular scraping prevention
+func (s *SiteScraper) SetDirectScrapedSites(siteURLs []string) {
+	s.directScrapedSites = siteURLs
 }
 
 // ValidateConfig validates the Site-specific configuration
@@ -43,7 +52,13 @@ func (s *SiteScraper) ValidateConfig(source config.Source) error {
 
 // Scrape fetches the status of all apps and locations from a remote site using the /sync endpoint.
 // Since site scraping involves a single request, the maxParallel parameter is not used.
+// Circular prevention is handled automatically using the configured directScrapedSites.
 func (s *SiteScraper) Scrape(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config) ([]handlers.AppStatus, []handlers.Location, error) {
+	return s.ScrapeWithCircularPrevention(source, serverSettings, timeout, maxParallel, tlsConfig, s.directScrapedSites)
+}
+
+// ScrapeWithCircularPrevention is like Scrape but includes circular scraping prevention logic
+func (s *SiteScraper) ScrapeWithCircularPrevention(source config.Source, serverSettings config.ServerSettings, timeout time.Duration, maxParallel int, tlsConfig *tls.Config, directScrapedSites []string) ([]handlers.AppStatus, []handlers.Location, error) {
 	// Decode the source-specific config
 	siteCfg, err := config.DecodeConfig[SiteConfig](source.Config, source.Name)
 	if err != nil {
@@ -127,14 +142,48 @@ func (s *SiteScraper) Scrape(source config.Source, serverSettings config.ServerS
 		"location_count": len(response.Locations),
 	}).Info("Successfully received app statuses and locations from remote site")
 
-	// Process apps: ensure correct source identification and set origin URL
-	for i := range response.Apps {
-		// Set the source name to this scraper's source
-		response.Apps[i].Source = source.Name
-		// Set the origin URL to track where this app came from
-		response.Apps[i].OriginURL = siteCfg.URL
-		// App labels remain as-is - source/server labels added in UpdateAppStatus
+	// Apply circular scraping prevention filters before processing
+	filteredApps := make([]handlers.AppStatus, 0, len(response.Apps))
+	appsSkipped := 0
+
+	// Convert directScrapedSites to map for O(1) lookup
+	directSitesMap := make(map[string]bool)
+	for _, site := range directScrapedSites {
+		if site != "" {
+			directSitesMap[site] = true
+		}
 	}
+
+	for _, app := range response.Apps {
+		// Rule: Drop apps where origin_url matches any site that this server directly scrapes
+		// BUT keep apps where origin_url matches our own host_url (these are legitimate apps from our server)
+		if app.OriginURL != "" && directSitesMap[app.OriginURL] {
+			logging.Logger.WithFields(map[string]interface{}{
+				"app":        app.Name,
+				"location":   app.Location,
+				"origin_url": app.OriginURL,
+				"source":     source.Name,
+			}).Debug("Skipping app from directly scraped site to prevent circular scraping")
+			appsSkipped++
+			continue
+		}
+
+		// Set the source name to this scraper's source
+		app.Source = source.Name
+		// Set OriginURL to the site we're scraping from (for proper tracking and circular prevention)
+		app.OriginURL = siteCfg.URL
+		filteredApps = append(filteredApps, app)
+	}
+
+	// Replace the original apps with filtered apps
+	response.Apps = filteredApps
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"source":       source.Name,
+		"total_apps":   len(response.Apps) + appsSkipped,
+		"kept_apps":    len(response.Apps),
+		"skipped_apps": appsSkipped,
+	}).Debug("Applied circular scraping prevention filters")
 
 	// Set correct source for locations
 	for i := range response.Locations {

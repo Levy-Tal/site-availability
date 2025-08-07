@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"site-availability/config"
 	"site-availability/logging"
 	"testing"
@@ -16,6 +17,8 @@ import (
 
 // setupPrometheusTest initializes logging for tests
 func setupPrometheusTest() {
+	// Set log level to panic to suppress error logs during tests
+	os.Setenv("LOG_LEVEL", "panic")
 	_ = logging.Init()
 }
 
@@ -380,15 +383,24 @@ func TestPrometheusScraper_Scrape(t *testing.T) {
 		assert.Equal(t, "up", app.Status)
 
 		// Verify label merging with correct priority (App > Source > Server)
-		expectedLabels := map[string]string{
-			// Only app labels should be present (merging happens in UpdateAppStatus)
-			"app_version":  "v1.2.3",
-			"app_tier":     "frontend",
-			"common_label": "app_value",
-		}
-
-		assert.Equal(t, expectedLabels, app.Labels)
+		// Only app labels should be present (merging happens in UpdateAppStatus)
 		assert.Len(t, app.Labels, 3) // Only app labels
+
+		// Check specific labels
+		var appVersion, appTier, commonLabel string
+		for _, label := range app.Labels {
+			switch label.Key {
+			case "app_version":
+				appVersion = label.Value
+			case "app_tier":
+				appTier = label.Value
+			case "common_label":
+				commonLabel = label.Value
+			}
+		}
+		assert.Equal(t, "v1.2.3", appVersion)
+		assert.Equal(t, "frontend", appTier)
+		assert.Equal(t, "app_value", commonLabel)
 	})
 }
 

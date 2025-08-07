@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"site-availability/config"
 	"site-availability/handlers"
+	"site-availability/labels"
 	"site-availability/logging"
 	"strconv"
 	"strings"
@@ -303,14 +304,20 @@ func (h *HTTPScraper) Scrape(source config.Source, serverSettings config.ServerS
 				status = "down"
 			}
 
+			// Convert map[string]string labels to []Label format
+			var appLabels []labels.Label
+			for key, value := range app.Labels {
+				appLabels = append(appLabels, labels.Label{Key: key, Value: value})
+			}
+
 			mu.Lock()
 			results[i] = handlers.AppStatus{
 				Name:      app.Name,
 				Location:  app.Location,
 				Status:    status,
 				Source:    source.Name,
-				OriginURL: app.URL,
-				Labels:    app.Labels,
+				OriginURL: serverSettings.HostURL, // Use host URL as origin for deduplication
+				Labels:    appLabels,
 			}
 			mu.Unlock()
 		}(i, app)

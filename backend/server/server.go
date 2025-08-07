@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	authHandlers "site-availability/authentication/handlers"
+	"site-availability/authentication/middleware"
+	"site-availability/authentication/session"
 	"site-availability/config"
-	"site-availability/handlers"
+	appHandlers "site-availability/handlers"
 	"site-availability/logging"
 	"site-availability/metrics"
 	"site-availability/scraping"
@@ -17,8 +20,13 @@ import (
 
 // Server represents the web server instance
 type Server struct {
-	config *config.Config
-	mux    *http.ServeMux
+	config                *config.Config
+	mux                   *http.ServeMux
+	sessionManager        *session.Manager
+	authHandlers          *authHandlers.AuthHandlers
+	authMiddleware        *middleware.AuthMiddleware
+	authzMiddleware       *middleware.AuthzMiddleware
+	metricsAuthMiddleware *middleware.MetricsAuthMiddleware
 }
 
 // NewServer creates a new server instance
@@ -36,32 +44,79 @@ func (s *Server) Start() error {
 	scraping.InitScrapers(s.config)
 	metrics.Init()
 	scraping.Start(s.config)
+
+	// Initialize authentication components
+	s.initAuthentication()
+
 	s.setupRoutes()
 	return s.startServer(s.config.ServerSettings.Port)
 }
 
+// initAuthentication initializes authentication components
+func (s *Server) initAuthentication() {
+	// Parse session timeout
+	sessionTimeout, err := session.ParseTimeout(s.config.ServerSettings.SessionTimeout)
+	if err != nil {
+		logging.Logger.WithError(err).Warn("Invalid session timeout, using default")
+		sessionTimeout = 12 * time.Hour
+	}
+
+	// Initialize session manager
+	s.sessionManager = session.NewManager(sessionTimeout)
+
+	// Initialize auth handlers
+	s.authHandlers, err = authHandlers.NewAuthHandlers(s.config, s.sessionManager)
+	if err != nil {
+		logging.Logger.WithError(err).Fatal("Failed to initialize authentication handlers")
+	}
+
+	// Initialize auth middleware
+	s.authMiddleware = middleware.NewAuthMiddleware(s.config, s.sessionManager)
+
+	// Initialize authorization middleware
+	s.authzMiddleware = middleware.NewAuthzMiddleware(s.config)
+
+	// Initialize metrics auth middleware
+	s.metricsAuthMiddleware = middleware.NewMetricsAuthMiddleware(s.config)
+
+	logging.Logger.Info("Authentication and authorization components initialized")
+}
+
+// requireAuthAndAuthz chains authentication and authorization middleware
+func (s *Server) requireAuthAndAuthz(handler http.HandlerFunc) http.HandlerFunc {
+	return s.authMiddleware.RequireAuth(s.authzMiddleware.RequireAuthz(handler))
+}
+
 // Setup HTTP routes and handlers
 func (s *Server) setupRoutes() {
-	s.mux.HandleFunc("/api/locations", func(w http.ResponseWriter, r *http.Request) {
-		logging.Logger.Debug("Handling /api/locations request")
-		handlers.GetLocations(w, r, s.config)
-	})
-	s.mux.HandleFunc("/api/apps", func(w http.ResponseWriter, r *http.Request) {
-		logging.Logger.Debug("Handling /api/apps request")
-		handlers.GetApps(w, r, s.config)
-	})
-	s.mux.HandleFunc("/api/labels", func(w http.ResponseWriter, r *http.Request) {
-		logging.Logger.Debug("Handling /api/labels request")
-		handlers.GetLabels(w, r, s.config)
-	})
-	s.mux.HandleFunc("/api/scrape-interval", func(w http.ResponseWriter, r *http.Request) {
+	// Authentication endpoints
+	s.mux.HandleFunc("/auth/config", s.authHandlers.HandleAuthConfig)
+	s.mux.HandleFunc("/auth/login", s.authHandlers.HandleLogin)
+	s.mux.HandleFunc("/auth/user", s.authMiddleware.RequireAuth(s.authHandlers.HandleUser))
+	s.mux.HandleFunc("/auth/logout", s.authHandlers.HandleLogout)
+
+	// OIDC endpoints
+	s.mux.HandleFunc("/auth/oidc/login", s.authHandlers.HandleOIDCLogin)
+	s.mux.HandleFunc("/auth/oidc/callback", s.authHandlers.HandleOIDCCallback)
+
+	// Protected API endpoints
+	s.mux.HandleFunc("/api/locations", s.requireAuthAndAuthz(func(w http.ResponseWriter, r *http.Request) {
+		appHandlers.GetLocationsWithAuthz(w, r, s.config)
+	}))
+	s.mux.HandleFunc("/api/apps", s.requireAuthAndAuthz(func(w http.ResponseWriter, r *http.Request) {
+		appHandlers.GetAppsWithAuthz(w, r, s.config)
+	}))
+	s.mux.HandleFunc("/api/labels", s.requireAuthAndAuthz(func(w http.ResponseWriter, r *http.Request) {
+		appHandlers.GetLabelsWithAuthz(w, r, s.config)
+	}))
+	s.mux.HandleFunc("/api/scrape-interval", s.requireAuthAndAuthz(func(w http.ResponseWriter, r *http.Request) {
 		logging.Logger.Debug("Handling /api/scrape-interval request")
-		handlers.GetScrapeInterval(w, r, s.config)
-	})
-	s.mux.HandleFunc("/api/docs", func(w http.ResponseWriter, r *http.Request) {
+		appHandlers.GetScrapeInterval(w, r, s.config)
+	}))
+	s.mux.HandleFunc("/api/docs", s.requireAuthAndAuthz(func(w http.ResponseWriter, r *http.Request) {
 		logging.Logger.Debug("Handling /api/docs request")
-		handlers.GetDocs(w, r, s.config)
-	})
+		appHandlers.GetDocs(w, r, s.config)
+	}))
 	s.mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		logging.Logger.Debug("Handling /healthz probe")
 		s.livenessProbe(w, r)
@@ -70,15 +125,15 @@ func (s *Server) setupRoutes() {
 		logging.Logger.Debug("Handling /readyz probe")
 		s.readinessProbe(w, r)
 	})
-	s.mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("/metrics", s.metricsAuthMiddleware.RequireMetricsAuth(func(w http.ResponseWriter, r *http.Request) {
 		metrics.SetupMetricsHandler().ServeHTTP(w, r)
-	})
+	}))
 
 	// Add sync endpoint if sync is enabled
 	if s.config.ServerSettings.SyncEnable {
 		s.mux.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
 			logging.Logger.Debug("Handling /sync request")
-			handlers.HandleSyncRequest(w, r, s.config)
+			appHandlers.HandleSyncRequest(w, r, s.config)
 		})
 	}
 
@@ -149,7 +204,7 @@ func (s *Server) livenessProbe(w http.ResponseWriter, _ *http.Request) {
 
 // Readiness probe handler
 func (s *Server) readinessProbe(w http.ResponseWriter, _ *http.Request) {
-	if handlers.IsAppStatusCacheEmpty() {
+	if appHandlers.IsAppStatusCacheEmpty() {
 		logging.Logger.Warn("Readiness probe failed: App status cache is empty")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		if _, err := w.Write([]byte("NOT READY")); err != nil {

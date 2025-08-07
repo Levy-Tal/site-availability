@@ -93,13 +93,19 @@ func GetHTTPClient(timeout time.Duration) *http.Client {
 }
 
 func InitScrapers(cfg *config.Config) {
+	// Extract site URLs for circular prevention
+	directScrapedSites := extractSiteURLs(cfg)
+
 	for _, src := range cfg.Sources {
 		var scraper Source
 		switch src.Type {
 		case "prometheus":
 			scraper = prometheus.NewPrometheusScraper()
 		case "site":
-			scraper = site.NewSiteScraper()
+			siteScraper := site.NewSiteScraper()
+			// Configure site scraper with direct scraped sites for circular prevention
+			siteScraper.SetDirectScrapedSites(directScrapedSites)
+			scraper = siteScraper
 		case "http":
 			scraper = http_source.NewHTTPScraper()
 		default:
@@ -132,9 +138,23 @@ func InitScrapers(cfg *config.Config) {
 
 	// Log summary of initialized scrapers
 	logging.Logger.WithFields(map[string]interface{}{
-		"total_sources":       len(cfg.Sources),
-		"initialized_sources": len(Scrapers),
+		"total_sources":        len(cfg.Sources),
+		"initialized_sources":  len(Scrapers),
+		"direct_scraped_sites": directScrapedSites,
 	}).Info("Source scraper initialization completed")
+}
+
+// extractSiteURLs extracts URLs of all site sources for circular prevention
+func extractSiteURLs(cfg *config.Config) []string {
+	var siteURLs []string
+	for _, source := range cfg.Sources {
+		if source.Type == "site" {
+			if url, ok := source.Config["url"].(string); ok {
+				siteURLs = append(siteURLs, url)
+			}
+		}
+	}
+	return siteURLs
 }
 
 func Start(cfg *config.Config) {
@@ -161,7 +181,12 @@ func Start(cfg *config.Config) {
 			defer ticker.Stop()
 
 			// Perform initial scrape immediately
-			statuses, locations, err := scraper.Scrape(source, cfg.ServerSettings, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
+			var statuses []handlers.AppStatus
+			var locations []handlers.Location
+			var err error
+
+			// Generic scrape call - all source-specific logic is handled internally
+			statuses, locations, err = scraper.Scrape(source, cfg.ServerSettings, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
 			if err != nil {
 				logging.Logger.WithError(err).WithField("source", source.Name).Error("Initial scraper failed")
 				// Create unavailable statuses for all configured apps when scraper fails completely
@@ -170,8 +195,11 @@ func Start(cfg *config.Config) {
 			}
 
 			// Always update caches, even on scraper failure
-			handlers.UpdateAppStatus(source.Name, statuses, source, cfg.ServerSettings)
-			handlers.UpdateLocationCache(source.Name, locations)
+			updateResult := handlers.UpdateAppStatus(source.Name, statuses, source, cfg.ServerSettings)
+			if updateResult.Error != nil {
+				logging.Logger.WithError(updateResult.Error).WithField("source", source.Name).Error("Failed to update app status cache")
+			}
+			handlers.UpdateLocationCache(source.Name, locations, cfg.Locations)
 			logging.Logger.WithFields(map[string]interface{}{
 				"source":         source.Name,
 				"app_count":      len(statuses),
@@ -181,7 +209,12 @@ func Start(cfg *config.Config) {
 
 			// Continue scraping at intervals
 			for range ticker.C {
-				statuses, locations, err := scraper.Scrape(source, cfg.ServerSettings, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
+				var statuses []handlers.AppStatus
+				var locations []handlers.Location
+				var err error
+
+				// Generic scrape call - all source-specific logic is handled internally
+				statuses, locations, err = scraper.Scrape(source, cfg.ServerSettings, timeout, cfg.Scraping.MaxParallel, globalTLSConfig)
 				if err != nil {
 					logging.Logger.WithError(err).WithField("source", source.Name).Error("Scraper failed")
 					// Create unavailable statuses for all configured apps when scraper fails completely
@@ -190,8 +223,11 @@ func Start(cfg *config.Config) {
 				}
 
 				// Always update caches, even on scraper failure
-				handlers.UpdateAppStatus(source.Name, statuses, source, cfg.ServerSettings)
-				handlers.UpdateLocationCache(source.Name, locations)
+				updateResult := handlers.UpdateAppStatus(source.Name, statuses, source, cfg.ServerSettings)
+				if updateResult.Error != nil {
+					logging.Logger.WithError(updateResult.Error).WithField("source", source.Name).Error("Failed to update app status cache")
+				}
+				handlers.UpdateLocationCache(source.Name, locations, cfg.Locations)
 				logging.Logger.WithFields(map[string]interface{}{
 					"source":         source.Name,
 					"app_count":      len(statuses),

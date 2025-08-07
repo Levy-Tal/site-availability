@@ -1,5 +1,6 @@
 server_settings:
-  port: 8080
+  port: 8090
+  host_url: "http://localhost:8090"
   sync_enable: true
   labels:
     environment: "staging"

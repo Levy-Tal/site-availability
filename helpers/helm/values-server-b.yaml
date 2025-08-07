@@ -14,11 +14,22 @@ configFile:
     server_settings:
       port: 8080
       sync_enable: true
+      host_url: http://server-b.local
       labels:
         environment: "staging"
         region: "israel"
         datacenter: "backup"
         team: "platform"
+      local_admin:
+        enabled: true
+        username: "admin"
+        password: "admin"
+      session_timeout: "12h"
+      metrics_auth:
+        enabled: true
+        type: "basic"
+        username: "prometheus"
+        password: "prometheus-secret"
 
     scraping:
       interval: "60s"
@@ -40,35 +51,37 @@ configFile:
     sources:
       - name: prom1
         type: prometheus
-        url: http://prometheus-server-b:9090
         labels:
           service: "staging-monitoring"
           tier: "backend"
           criticality: "medium"
-        apps:
-          - name: app3
-            location: Beer Sheva
-            metric: up{instance="app:8080", job="app"}
-            labels:
-              app_type: "web-service"
-              importance: "medium"
-              owner: "backend-team"
-              stage: "testing"
-          - name: b-app4
-            location: Netanya
-            metric: up{instance="localhost:9090", job="prometheus"}
-            labels:
-              app_type: "monitoring"
-              importance: "high"
-              owner: "sre-team"
-              stage: "staging"
+        config:
+          url: http://prometheus-server-b:9090
+          apps:
+            - name: app3
+              location: Beer Sheva
+              metric: up{instance="app:8080", job="app"}
+              labels:
+                app_type: "web-service"
+                importance: "medium"
+                owner: "backend-team"
+                stage: "testing"
+            - name: b-app4
+              location: Netanya
+              metric: up{instance="localhost:9090", job="prometheus"}
+              labels:
+                app_type: "monitoring"
+                importance: "high"
+                owner: "sre-team"
+                stage: "staging"
       - name: Server A
         type: site
-        url: http://site-availability-server-a:8080
         labels:
           service: "remote-monitoring"
           tier: "integration"
           criticality: "low"
+        config:
+          url: http://site-availability-server-a:8080
 
 # Service settings
 service:
@@ -87,6 +100,12 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+
+# Pod Disruption Budget settings
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: 1
 
 # Resource requests and limits
 resources:
@@ -109,6 +128,20 @@ serviceMonitor:
 # Prometheus rules
 prometheusRules:
   enabled: true
+  # Individual rule enable/disable settings
+  rules:
+    appDown: true
+    appUnavailable: true
+    noMetricsReceived: true
+    siteSyncFailure: true
+    siteSyncHighLatency: true
+    siteSyncDown: true
+  # Alert filtering for AppDown rule
+  appDownAlert:
+    # Filter apps by label (e.g., env=prod, team=backend)
+    # Leave empty to alert for all apps
+    filterLabel: ""
+    filterValue: ""
 
 # Grafana dashboards
 grafanaDashboards:
