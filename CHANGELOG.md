@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/Levy-Tal/site-availability/compare/v3.0.0...v3.0.1) (2025-08-07)
+
+
+### Bug Fixes
+
+* **helm:** helm chart dashboard ([2aaead2](https://github.com/Levy-Tal/site-availability/commit/2aaead2e5752e1aa5a5eddea2ba766384f3220d1))
+
 # [3.0.0](https://github.com/Levy-Tal/site-availability/compare/v2.4.1...v3.0.0) (2025-08-07)
 
 
