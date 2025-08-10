@@ -118,6 +118,108 @@ sources:
 - Use `1 - (promql)` to invert results if needed.
 - Store sensitive tokens in `credentials.yaml`.
 
+### Example: Kubernetes Cluster Essentials (kube-prometheus-stack)
+
+The following `config.yaml` monitors core Kubernetes components when you have the kube-prometheus-stack installed. It normalizes availability to a simple up/down signal per component.
+
+```yaml
+server_settings:
+  host_url: "https://your-site-availability.example.com"
+  port: 8080
+  labels:
+    env: "production"
+    cluster: "prod-cluster-1"
+    region: "us-east-1"
+
+scraping:
+  interval: "30s"
+  timeout: "5s"
+  max_parallel: 10
+
+locations:
+  - name: "us-east-1"
+    latitude: 39.0438
+    longitude: -77.4874
+
+sources:
+  - name: "prometheus-kps"
+    type: "prometheus"
+    labels:
+      source: "kube-prometheus-stack"
+    config:
+      url: "http://prometheus-operated:9090"
+      apps:
+        # Control plane
+        - name: "kube-apiserver"
+          location: "us-east-1"
+          metric: 'sum(up{job="apiserver"}) > 0'
+          labels:
+            component: "control-plane"
+
+        - name: "kube-scheduler"
+          location: "us-east-1"
+          metric: 'sum(up{job="kube-scheduler"}) > 0'
+          labels:
+            component: "control-plane"
+
+        - name: "kube-controller-manager"
+          location: "us-east-1"
+          metric: 'sum(up{job="kube-controller-manager"}) > 0'
+          labels:
+            component: "control-plane"
+
+        - name: "etcd"
+          location: "us-east-1"
+          metric: 'sum(up{job="etcd"}) > 0'
+          labels:
+            component: "control-plane"
+
+        # DNS
+        - name: "coredns"
+          location: "us-east-1"
+          metric: 'sum(up{job=~"kube-dns|coredns"}) > 0'
+          labels:
+            component: "dns"
+
+        # Kubernetes metrics services
+        - name: "kube-state-metrics"
+          location: "us-east-1"
+          metric: 'sum(up{job="kube-state-metrics"}) > 0'
+          labels:
+            component: "observability"
+
+        - name: "kubelet-scrape-healthy"
+          location: "us-east-1"
+          metric: 'min(up{job="kubelet"}) == 1'
+          labels:
+            component: "node"
+
+        # Cluster health rollups
+        - name: "all-nodes-ready"
+          location: "us-east-1"
+          metric: 'min(kube_node_status_condition{condition="Ready",status="true"}) == 1'
+          labels:
+            component: "node"
+
+        - name: "no-crashlooping-pods"
+          location: "us-east-1"
+          metric: 'sum(max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[5m])) == 0'
+          labels:
+            component: "workload"
+
+        - name: "no-pending-pods"
+          location: "us-east-1"
+          metric: 'sum(kube_pod_status_phase{phase="Pending"}) == 0'
+          labels:
+            component: "workload"
+```
+
+Notes:
+
+- Adjust `url` to your Prometheus service if it differs from `prometheus-operated:9090` (for example, use the fully-qualified service name if in a different namespace).
+- Job names may vary by distribution and chart version; update the `job=` matchers accordingly.
+- Each PromQL returns 1 (up) or 0 (down) to fit the normalized availability model.
+
 ---
 
 For more details, see the code or your configuration files.

@@ -1,7 +1,5 @@
 <div align="center">
 
-# Site Availability Monitoring
-
 <img src="docs/static/img/logo-full.png" alt="Site Availability Monitor Logo" width="400">
 
 [![CI](https://github.com/Levy-Tal/site-availability/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Levy-Tal/site-availability/actions/workflows/ci.yaml)
@@ -9,239 +7,160 @@
 
 </div>
 
-<div align="center">
+## Site Availability Monitoring
 
-⚠️ **DEVELOPMENT NOTICE** ⚠️
+Site Availability is an open-source, forever-free platform that normalizes your fragmented monitoring into a single, reliable signal: up or down per application, with your labels. Point it at your existing data sources (Prometheus, HTTP endpoints, or another Site Availability instance), and it generates consistent availability metrics, ships an out-of-the-box Grafana dashboard, and gives your team a clear timeline of what changed and when.
 
-**This repository is still under active development and is NOT recommended for production use.**
+This project is designed for SRE and platform teams who want to stop building and maintaining complex, bespoke dashboards for every service and environment. Configure once, standardize everywhere.
 
-Please be aware that this project is in early stages of development. Features may be incomplete, APIs may change, and there may be bugs or stability issues. Use at your own risk.
+### Always open-source, always free
 
-For production environments, we recommend waiting for a stable release or contributing to help us reach production readiness.
+- Licensed under Apache 2.0
+- No paid editions or feature gating
+- Community-driven roadmap
 
----
+## The problem it solves
 
-</div>
+Modern SRE teams juggle many tools and inconsistent definitions of “availability” across hundreds of services:
 
-**Site Availability Monitoring** is an open-source application designed to monitor the availability of applications and services across multiple locations. It provides a visual representation of application statuses on a world map and integrates with Prometheus for metrics collection.
+- Multiple monitoring backends, each with different metrics and labels
+- Inconsistent SLI definitions per team/service
+- Dashboards that are hard to keep consistent across environments
 
-## Features
+Site Availability solves this by:
 
-- Real-time site status monitoring
-- Interactive world map visualization
-- Historical data tracking
-- Alert notifications
-- New feature: Automated status reports generation
+- Unifying data from Prometheus, HTTP checks, and other Site Availability instances
+- Normalizing everything into a single, binary availability metric with rich labels
+- Providing a ready-to-use Grafana dashboard and time-series views of status changes
 
-## 📚 Documentation
+## What you get
 
-For comprehensive documentation, please visit our [**Documentation**](https://levy-tal.github.io/site-availability/).
+- Single source of truth for availability across teams, environments, and regions
+- Simple up/down signal with consistent labels you control (env, team, app, region, etc.)
+- Out-of-the-box Grafana dashboards (see `chart/grafana-dashboards/`)
+- Historical timelines of incidents and recoveries via Prometheus time series
+- Lightweight, stateless backend and a modern web UI with world-map visualization
+- Production-ready Helm chart and Docker Compose examples
+- Optional authentication (local admin or OIDC) and metrics authentication
 
-The documentation includes:
+## How it works
 
-- Getting Started Guide
-- Installation Instructions
-- Configuration Options
-- API Reference
-- Deployment Strategies
-- Development Guide
-- Troubleshooting
+- Backend (Go): Scrapes configured sources on an interval, merges and normalizes results, and exposes REST + Prometheus metrics.
+- Frontend (React): Displays current status on a world map with filters and details.
+- Metrics: Exposes a normalized metric you can alert on and explore over time.
 
-## Development
+Key metric (normalized availability signal):
 
-This project uses semantic versioning for releases. All commits should follow the conventional commit format.
-
----
-
-## 🚀 Features
-
-- **Frontend**: A React-based web interface that displays application statuses on a world map.
-- **Backend**: A Go-based server that fetches application statuses from Prometheus and serves them via REST APIs.
-- **Prometheus Integration**: Collects metrics such as uptime, memory usage, and application availability.
-- **Metrics Authentication**: Secure the `/metrics` endpoint with basic auth or bearer token authentication.
-- **Helm Chart**: Deploys the application to Kubernetes with customizable configurations.
-- **Docker Support**: Easily build and run the application using Docker and Docker Compose.
-- **Grafana Dashboards**: Pre-configured dashboards for visualizing metrics.
-
----
-
-## 📁 Project Structure
-
-```text
-.github/       - GitHub Actions workflows for CI/CD
-backend/       - Go-based backend server
-config/        - Configuration management
-handlers/      - HTTP handlers
-logging/       - Logging utilities
-scraping/      - Prometheus scraping logic
-chart/         - Helm chart for Kubernetes deployment
-frontend/      - React-based frontend application
-release/       - Packaged releases
+```prometheus
+# 1 = up, 0 = down; dynamic labels include name, location, source, origin_url, and your custom labels
+site_availability_status{name="backend-app",location="eu-west-1",source="prometheus-main",env="prod",team="payments"} 1
 ```
 
----
+Additional metrics include scrape duration and request counters. See documentation for details.
 
-## ✅ Prerequisites
+## Quick start
 
-- [Node.js](https://nodejs.org/) (for frontend development)
-- [Go](https://golang.org/) (for backend development)
-- [Docker](https://www.docker.com/) (for containerization)
-- [Helm](https://helm.sh/) (for Kubernetes deployment)
+Pick one of the following deployment options.
 
----
+### Option A: Docker Compose (local demo)
 
-## 🛠️ Getting Started
+1. Create `config.yaml` and `prometheus.yml` using the examples in the documentation.
 
-### 1. Clone the Repository
+2. Start the stack:
 
 ```bash
-git clone https://github.com/your-org/site-availability-monitoring.git
-cd site-availability-monitoring
+docker compose up -d
 ```
 
-### 2. Build and Run Locally
+3. Open the UI at http://localhost:8080 and Prometheus at http://localhost:9090
 
-#### Backend
+Full guide: Documentation › Usage › Quickstart
+
+### Option B: Helm (Kubernetes)
 
 ```bash
-cd backend
-go run main.go
+helm repo add site-availability https://levytal.github.io/site-availability/
+helm install site-availability site-availability/site-availability \
+  --set replicaCount=3
 ```
 
-#### Frontend
+Full guide: Documentation › Usage › Installation › Helm Chart
 
-```bash
-cd frontend
-npm install
-npm start
-```
+## Configuration overview
 
-### 3. Run with Docker Compose
+Configuration is YAML-based and designed to be readable and enforce consistent labels. At minimum, set `server_settings.host_url`, `locations`, and one or more `sources`.
 
-```bash
-docker-compose up --build
-```
-
-### 4. Deploy to Kubernetes with Helm
-
-```bash
-helm upgrade site-availability chart/ -f chart/values.yaml
-```
-
----
-
-## ⚙️ Configuration
-
-### Backend Configuration
-
-The backend reads configuration from `config.yaml`.
-Example:
-
-```yaml
-scrape_interval: 10s
-locations:
-  - name: New York City
-    latitude: 40.712776
-    longitude: -74.005974
-  - name: Los Angeles
-    latitude: 34.052235
-    longitude: -118.243683
-  - name: Chicago
-    latitude: 41.878113
-    longitude: -87.629799
-apps:
-  - name: app1
-    location: New York City
-    metric: up{instance="app:8080", job="app"}
-    prometheus: http://prometheus:9090/
-  - name: app3
-    location: Los Angeles
-    metric: up{instance="localhost:9090", job="prometheus"}
-    prometheus: http://prometheus:9090/
-  - name: app4
-    location: Chicago
-    metric: up{instance="app:8080", job="app"}
-    prometheus: http://prometheus:9090/
-```
-
-### Helm Chart
-
-Customize the deployment by editing `chart/values.yaml`.
-
-### Environment Variables
-
-- `CONFIG_FILE`: Path to the configuration file (default: `config.yaml`)
-
-### Custom CA Certificates
-
-Custom CA certificates can be configured in the `config.yaml` file:
+Example (Prometheus + HTTP sources):
 
 ```yaml
 server_settings:
-  custom_ca_path: /app/ca.crt
+  port: 8080
+  host_url: "http://localhost:8080"
+  labels:
+    env: "production"
+    team: "backend"
+
+locations:
+  - name: "New York"
+    latitude: 40.712776
+    longitude: -74.005974
+  - name: "London"
+    latitude: 51.507351
+    longitude: -0.127758
+
+sources:
+  - name: prometheus-main
+    type: prometheus
+    config:
+      url: http://prometheus:9090
+      apps:
+        - name: users-api
+          location: London
+          metric: 'up{job="users-api"}'
+          labels:
+            app: users-api
+            tier: backend
+
+  - name: basic-http
+    type: http
+    config:
+      apps:
+        - name: website
+          location: New York
+          url: https://example.com
 ```
 
----
+Supported sources today: `prometheus`, `http`, and `site` (scrape another Site Availability instance via `/sync` with HMAC).
 
-## 🧪 Testing
+For full configuration, see Documentation › Usage › Configuration › Server and Sources.
 
-### Backend Tests
+## Dashboards and timelines
 
-```bash
-cd backend
-go test ./...
-```
+- Grafana dashboards are included in the Helm chart (`chart/grafana-dashboards/`).
+- Because availability is exposed as time series, you immediately get a clear timeline of what went down, where, and when.
+- Recording/alerting rules examples are provided in the documentation.
 
-### Frontend Tests
+## Security and access
 
-```bash
-cd frontend
-npm test
-```
+- Local admin or OIDC authentication for the UI and APIs
+- Role-based access using labels to scope what users can see
+- Optional authentication for `/metrics` (basic or bearer)
+- HMAC-protected `/sync` endpoint for cross-site aggregation
 
----
+## Documentation
 
-## 📊 Metrics
+Full documentation is available at the project website: `https://levy-tal.github.io/site-availability/`.
 
-The backend exposes Prometheus metrics at `/metrics`. Example metrics:
+Highlights:
 
-- `server_uptime_seconds`: Total uptime of the server
-- `go_memstats_alloc_bytes`: Memory allocation by the Go runtime
+- Why Site Availability (problem and solution)
+- Quickstart and production installation (Docker Compose, Helm)
+- Configuration reference (server, sources, credentials)
+- Metrics and Grafana setup
+- Authentication and RBAC
 
----
+## License and community
 
-## 📈 Grafana Dashboards
-
-Pre-configured Grafana dashboards are available in:
-`chart/grafana-dashboards/`
-
----
-
-## ⚙️ CI/CD
-
-GitHub Actions workflows are defined in `.github/workflows/`:
-
-- **Test Workflow**: Runs backend and frontend tests
-- **Docker Workflow**: Builds and pushes Docker images
-- **Helm Workflow**: Packages and deploys Helm charts
-- **Security Workflow**: Scans for vulnerabilities using Trivy
-
----
-
-## 📄 License
-
-This project is licensed under the **Apache License 2.0**.
-See the [LICENSE](LICENSE) file for details.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
----
-
-## 📬 Contact
-
-For questions or support, please contact:
-[**your-email@example.com**](mailto:your-email@example.com)
+- License: Apache 2.0 (see `LICENSE`)
+- Issues and discussions: open on the GitHub repository
+- Contributions are welcome via pull requests and issues
