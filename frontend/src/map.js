@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import Spinner from "./components/Spinner";
 import {
   ComposableMap,
   Geographies,
@@ -152,7 +153,11 @@ export const MapComponent = ({ locations, onSiteClick }) => {
   };
 
   if (!mapReady || !currentCenter) {
-    return <div className="map-loading">Loading map...</div>;
+    return (
+      <div className="map-loading">
+        <Spinner label="Loading map" />
+      </div>
+    );
   }
 
   return (
