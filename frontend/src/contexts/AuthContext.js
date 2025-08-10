@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import { authAPI } from "../api/authAPI";
+import Spinner from "../components/Spinner";
 
 const AuthContext = createContext();
 
@@ -312,7 +313,23 @@ export function withAuth(WrappedComponent) {
     const auth = useAuth();
 
     if (!auth.isInitialized) {
-      return <div className="loading">Initializing...</div>;
+      return (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+          }}
+        >
+          <Spinner size="lg" label="Initializing" />
+        </div>
+      );
     }
 
     if (auth.needsAuthentication) {

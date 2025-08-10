@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import SimpleLogin from "./components/SimpleLogin";
 import SimpleUserModal from "./components/SimpleUserModal";
+import Spinner from "./components/Spinner";
 import { fetchLocations } from "./api/appStatusAPI";
 import { fetchScrapeInterval } from "./api/scrapeIntervalAPI";
 import { fetchDocs } from "./api/docsAPI";
@@ -26,12 +27,17 @@ function AppContent() {
       <div
         style={{
           position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 2000,
         }}
       >
-        Loading...
+        <Spinner size="lg" label="Initializing" />
       </div>
     );
   }
