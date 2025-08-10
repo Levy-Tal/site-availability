@@ -1666,8 +1666,9 @@ circle {
 }
 
 .app-label {
-  background-color: #2d2d2d;
-  color: #f5f5f5;
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;
@@ -1681,8 +1682,9 @@ circle {
 }
 
 .app-label-overflow {
-  background-color: #6b7280;
-  color: #f5f5f5;
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;
