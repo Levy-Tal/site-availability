@@ -1,3 +1,16 @@
+# [3.1.0](https://github.com/Levy-Tal/site-availability/compare/v3.0.1...v3.1.0) (2025-08-10)
+
+
+### Bug Fixes
+
+* **style:** lable ([3f4bbfe](https://github.com/Levy-Tal/site-availability/commit/3f4bbfee6e9b27acd1041ab0af0a5eecd93f0ae2))
+
+
+### Features
+
+* **lables:** add to app status ([6b867cc](https://github.com/Levy-Tal/site-availability/commit/6b867ccee04a7c2f6a0d3abb8712c2d9a99e1d6b))
+* **lables:** show lables by app ([b6d2ca3](https://github.com/Levy-Tal/site-availability/commit/b6d2ca37052648d2e805bcf6012df2df6bbdd325))
+
 ## [3.0.1](https://github.com/Levy-Tal/site-availability/compare/v3.0.0...v3.0.1) (2025-08-07)
 
 
