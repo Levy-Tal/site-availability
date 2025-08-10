@@ -6,7 +6,7 @@ sidebar_position: 3
 
 The **Site** source lets you monitor another Site Availability instance. The server will scrape all app statuses and locations from the remote instance by making a request to its `/sync` endpoint.
 
-- The `/sync` endpoint is protected by HMAC authentication. The server uses the `token` from the `server_settings` of the scraped site. (and you put it in the source config) to generate the HMAC signature. See the [HMAC authentication documentation](../../authentication/hmac.md) for details.
+- The `/sync` endpoint is protected by HMAC authentication. The server uses the `token` from the `server_settings` of the scraped site. (and you put it in the source config) to generate the HMAC signature. See the [HMAC authentication documentation](../../../authentication/hmac.md) for details.
 - There is built-in protection against circular scraping: you can safely scrape a site that scrapes from you.
 
 ## How It Works
@@ -62,4 +62,4 @@ sources:
 
 ---
 
-For more details, see the [HMAC authentication documentation](../../authentication/hmac.md) or the codebase.
+For more details, see the [HMAC authentication documentation](../../../authentication/hmac.md) or the codebase.

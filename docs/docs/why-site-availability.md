@@ -83,4 +83,4 @@ Instead of spending hours manually correlating metrics across disparate tools, S
 
 ---
 
-_Ready to simplify your availability monitoring? [Get started with Site Availability](installation.md) and see how it transforms your SRE practice._
+_Ready to simplify your availability monitoring? [Get started with Site Availability](usage/quickstart.md) and see how it transforms your SRE practice._
