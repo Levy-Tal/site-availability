@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/Levy-Tal/site-availability/compare/v3.1.0...v3.2.0) (2025-08-10)
+
+
+### Features
+
+* **ui:** add spinner on loading ([4dab3ce](https://github.com/Levy-Tal/site-availability/commit/4dab3cec7153ec609a1fbc0637c6de1c65f19812))
+
 # [3.1.0](https://github.com/Levy-Tal/site-availability/compare/v3.0.1...v3.1.0) (2025-08-10)
 
 
