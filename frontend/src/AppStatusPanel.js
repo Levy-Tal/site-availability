@@ -227,7 +227,59 @@ export const AppStatusPanel = ({
     if (maxVisibleLabels === 0 && labelsToShow.length > 0) {
       return (
         <div className="app-labels">
-          <div className="app-label-overflow-container">
+          <div
+            className="app-label-overflow-container"
+            onMouseEnter={(e) => {
+              const tooltip =
+                e.currentTarget.querySelector(".app-label-tooltip");
+              if (tooltip) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const leftPos = rect.left + rect.width / 2;
+                const topPos = rect.bottom + 6;
+
+                // PORTAL APPROACH: Move tooltip to document body to escape ALL clipping
+                const tooltipLeft = leftPos - 100; // Center minus half tooltip width
+
+                // Move to document body to escape any container clipping
+                document.body.appendChild(tooltip);
+
+                tooltip.style.position = "fixed";
+                tooltip.style.left = `${tooltipLeft}px`;
+                tooltip.style.top = `${topPos}px`;
+                tooltip.style.transform = "none";
+                tooltip.style.marginTop = "0";
+                tooltip.style.zIndex = "2147483647";
+
+                tooltip.classList.add("show");
+              }
+            }}
+            onMouseLeave={(e) => {
+              // Find tooltip either in container or in document body
+              let tooltip = e.currentTarget.querySelector(".app-label-tooltip");
+              if (!tooltip) {
+                // Tooltip might be in document body, find it by class
+                const tooltips = document.body.querySelectorAll(
+                  ".app-label-tooltip.show",
+                );
+                tooltip = tooltips[tooltips.length - 1]; // Get the last one (most recent)
+              }
+
+              if (tooltip) {
+                tooltip.classList.remove("show");
+
+                // Move tooltip back to its original container if it was moved to body
+                if (tooltip.parentElement === document.body) {
+                  e.currentTarget.appendChild(tooltip);
+                  // Reset positioning
+                  tooltip.style.position = "";
+                  tooltip.style.left = "";
+                  tooltip.style.top = "";
+                  tooltip.style.transform = "";
+                  tooltip.style.zIndex = "";
+                }
+              }
+            }}
+          >
             <span className="app-label-overflow">+{labelsToShow.length}</span>
             <div className="app-label-tooltip">
               {labelsToShow.map((label) => (
@@ -252,7 +304,59 @@ export const AppStatusPanel = ({
           </span>
         ))}
         {hiddenCount > 0 && (
-          <div className="app-label-overflow-container">
+          <div
+            className="app-label-overflow-container"
+            onMouseEnter={(e) => {
+              const tooltip =
+                e.currentTarget.querySelector(".app-label-tooltip");
+              if (tooltip) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const leftPos = rect.left + rect.width / 2;
+                const topPos = rect.bottom + 6;
+
+                // PORTAL APPROACH: Move tooltip to document body to escape ALL clipping
+                const tooltipLeft = leftPos - 100; // Center minus half tooltip width
+
+                // Move to document body to escape any container clipping
+                document.body.appendChild(tooltip);
+
+                tooltip.style.position = "fixed";
+                tooltip.style.left = `${tooltipLeft}px`;
+                tooltip.style.top = `${topPos}px`;
+                tooltip.style.transform = "none";
+                tooltip.style.marginTop = "0";
+                tooltip.style.zIndex = "2147483647";
+
+                tooltip.classList.add("show");
+              }
+            }}
+            onMouseLeave={(e) => {
+              // Find tooltip either in container or in document body
+              let tooltip = e.currentTarget.querySelector(".app-label-tooltip");
+              if (!tooltip) {
+                // Tooltip might be in document body, find it by class
+                const tooltips = document.body.querySelectorAll(
+                  ".app-label-tooltip.show",
+                );
+                tooltip = tooltips[tooltips.length - 1]; // Get the last one (most recent)
+              }
+
+              if (tooltip) {
+                tooltip.classList.remove("show");
+
+                // Move tooltip back to its original container if it was moved to body
+                if (tooltip.parentElement === document.body) {
+                  e.currentTarget.appendChild(tooltip);
+                  // Reset positioning
+                  tooltip.style.position = "";
+                  tooltip.style.left = "";
+                  tooltip.style.top = "";
+                  tooltip.style.transform = "";
+                  tooltip.style.zIndex = "";
+                }
+              }
+            }}
+          >
             <span className="app-label-overflow">+{hiddenCount}</span>
             <div className="app-label-tooltip">
               {labelsToShow.slice(maxVisibleLabels).map((label) => (
@@ -323,6 +427,17 @@ export const AppStatusPanel = ({
         ? prev.filter((key) => key !== labelKey)
         : [...prev, labelKey];
       return newLabels;
+    });
+  };
+
+  // Handle toggle all labels
+  const toggleAllLabels = () => {
+    setSelectedShowLabels((prev) => {
+      // If all labels are selected, deselect all; otherwise, select all
+      const allSelected = availableLabels.every((label) =>
+        prev.includes(label),
+      );
+      return allSelected ? [] : [...availableLabels];
     });
   };
 
@@ -516,6 +631,22 @@ export const AppStatusPanel = ({
           </button>
           {showLabelOptions && (
             <ul className="show-labels-options">
+              <li key="all" className="all-option">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={
+                      availableLabels.length > 0 &&
+                      availableLabels.every((label) =>
+                        selectedShowLabels.includes(label),
+                      )
+                    }
+                    onChange={toggleAllLabels}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="label-text label-text-all">All</span>
+                </label>
+              </li>
               {availableLabels
                 .slice()
                 .sort((a, b) => a.localeCompare(b))
