@@ -4,6 +4,7 @@ import {
   FaSearch,
   FaChevronDown,
   FaChevronUp,
+  FaCheck,
 } from "react-icons/fa";
 import { fetchApps, fetchLabels } from "./api/appStatusAPI";
 import { userPreferences } from "./utils/storage";
@@ -19,7 +20,10 @@ export const AppStatusPanel = ({
   const panelRef = useRef(null);
   const groupDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
+  const showLabelsDropdownRef = useRef(null);
   const resizeHandleRef = useRef(null);
+
+  const [panelWidth, setPanelWidth] = useState(400);
 
   const [apps, setApps] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
@@ -39,6 +43,12 @@ export const AppStatusPanel = ({
   const [filteredLabels, setFilteredLabels] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [groupedApps, setGroupedApps] = useState({});
+
+  // Show labels state
+  const [showLabelOptions, setShowLabelOptions] = useState(false);
+  const [selectedShowLabels, setSelectedShowLabels] = useState(
+    userPreferences.loadShowLabels(),
+  );
 
   // Fetch apps for this location and refresh locations simultaneously
   const refreshApps = useCallback(async () => {
@@ -96,6 +106,12 @@ export const AppStatusPanel = ({
         !groupDropdownRef.current.contains(e.target)
       ) {
         setShowGroupOptions(false);
+      }
+      if (
+        showLabelsDropdownRef.current &&
+        !showLabelsDropdownRef.current.contains(e.target)
+      ) {
+        setShowLabelOptions(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -179,6 +195,182 @@ export const AppStatusPanel = ({
     </li>
   );
 
+  // Function to render app labels
+  const renderAppLabels = (app, containerWidth = 400) => {
+    if (!selectedShowLabels.length || !app.labels) return null;
+
+    const labelsToShow = app.labels
+      .filter((label) => selectedShowLabels.includes(label.key))
+      .sort((a, b) => a.key.localeCompare(b.key)); // Sort labels by name
+
+    if (!labelsToShow.length) return null;
+
+    // Calculate how many labels can fit based on container width
+    // Estimate label width: 10px per character + 16px padding + 4px gap
+    const estimateLabelWidth = (label) =>
+      (label.key.length + label.value.length + 2) * 7 + 20; // +2 for ": "
+
+    const availableWidth = Math.max(containerWidth - 200, 100); // Reserve space for name and status
+    let totalWidth = 0;
+    let maxVisibleLabels = 0;
+
+    for (let i = 0; i < labelsToShow.length; i++) {
+      const labelWidth = estimateLabelWidth(labelsToShow[i]);
+      if (totalWidth + labelWidth > availableWidth) {
+        break;
+      }
+      totalWidth += labelWidth + 4; // +4 for gap
+      maxVisibleLabels++;
+    }
+
+    // Always show at least 1 label if there are any, but collapse if no space
+    if (maxVisibleLabels === 0 && labelsToShow.length > 0) {
+      return (
+        <div className="app-labels">
+          <div
+            className="app-label-overflow-container"
+            onMouseEnter={(e) => {
+              const tooltip =
+                e.currentTarget.querySelector(".app-label-tooltip");
+              if (tooltip) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const leftPos = rect.left + rect.width / 2;
+                const topPos = rect.bottom + 6;
+
+                // PORTAL APPROACH: Move tooltip to document body to escape ALL clipping
+                const tooltipLeft = leftPos - 100; // Center minus half tooltip width
+
+                // Move to document body to escape any container clipping
+                document.body.appendChild(tooltip);
+
+                tooltip.style.position = "fixed";
+                tooltip.style.left = `${tooltipLeft}px`;
+                tooltip.style.top = `${topPos}px`;
+                tooltip.style.transform = "none";
+                tooltip.style.marginTop = "0";
+                tooltip.style.zIndex = "2147483647";
+
+                tooltip.classList.add("show");
+              }
+            }}
+            onMouseLeave={(e) => {
+              // Find tooltip either in container or in document body
+              let tooltip = e.currentTarget.querySelector(".app-label-tooltip");
+              if (!tooltip) {
+                // Tooltip might be in document body, find it by class
+                const tooltips = document.body.querySelectorAll(
+                  ".app-label-tooltip.show",
+                );
+                tooltip = tooltips[tooltips.length - 1]; // Get the last one (most recent)
+              }
+
+              if (tooltip) {
+                tooltip.classList.remove("show");
+
+                // Move tooltip back to its original container if it was moved to body
+                if (tooltip.parentElement === document.body) {
+                  e.currentTarget.appendChild(tooltip);
+                  // Reset positioning
+                  tooltip.style.position = "";
+                  tooltip.style.left = "";
+                  tooltip.style.top = "";
+                  tooltip.style.transform = "";
+                  tooltip.style.zIndex = "";
+                }
+              }
+            }}
+          >
+            <span className="app-label-overflow">+{labelsToShow.length}</span>
+            <div className="app-label-tooltip">
+              {labelsToShow.map((label) => (
+                <div key={label.key} className="tooltip-label">
+                  {label.key}: {label.value}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const visibleLabels = labelsToShow.slice(0, maxVisibleLabels);
+    const hiddenCount = labelsToShow.length - maxVisibleLabels;
+
+    return (
+      <div className="app-labels">
+        {visibleLabels.map((label) => (
+          <span key={label.key} className="app-label">
+            {label.key}: {label.value}
+          </span>
+        ))}
+        {hiddenCount > 0 && (
+          <div
+            className="app-label-overflow-container"
+            onMouseEnter={(e) => {
+              const tooltip =
+                e.currentTarget.querySelector(".app-label-tooltip");
+              if (tooltip) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const leftPos = rect.left + rect.width / 2;
+                const topPos = rect.bottom + 6;
+
+                // PORTAL APPROACH: Move tooltip to document body to escape ALL clipping
+                const tooltipLeft = leftPos - 100; // Center minus half tooltip width
+
+                // Move to document body to escape any container clipping
+                document.body.appendChild(tooltip);
+
+                tooltip.style.position = "fixed";
+                tooltip.style.left = `${tooltipLeft}px`;
+                tooltip.style.top = `${topPos}px`;
+                tooltip.style.transform = "none";
+                tooltip.style.marginTop = "0";
+                tooltip.style.zIndex = "2147483647";
+
+                tooltip.classList.add("show");
+              }
+            }}
+            onMouseLeave={(e) => {
+              // Find tooltip either in container or in document body
+              let tooltip = e.currentTarget.querySelector(".app-label-tooltip");
+              if (!tooltip) {
+                // Tooltip might be in document body, find it by class
+                const tooltips = document.body.querySelectorAll(
+                  ".app-label-tooltip.show",
+                );
+                tooltip = tooltips[tooltips.length - 1]; // Get the last one (most recent)
+              }
+
+              if (tooltip) {
+                tooltip.classList.remove("show");
+
+                // Move tooltip back to its original container if it was moved to body
+                if (tooltip.parentElement === document.body) {
+                  e.currentTarget.appendChild(tooltip);
+                  // Reset positioning
+                  tooltip.style.position = "";
+                  tooltip.style.left = "";
+                  tooltip.style.top = "";
+                  tooltip.style.transform = "";
+                  tooltip.style.zIndex = "";
+                }
+              }
+            }}
+          >
+            <span className="app-label-overflow">+{hiddenCount}</span>
+            <div className="app-label-tooltip">
+              {labelsToShow.slice(maxVisibleLabels).map((label) => (
+                <div key={label.key} className="tooltip-label">
+                  {label.key}: {label.value}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Handle group label input changes
   const handleGroupLabelInput = (e) => {
     const value = e.target.value;
@@ -216,6 +408,39 @@ export const AppStatusPanel = ({
     setShowGroupOptions(false);
   };
 
+  // Handle show labels dropdown toggle
+  const toggleShowLabelOptions = async () => {
+    if (showLabelOptions) {
+      setShowLabelOptions(false);
+    } else {
+      if (availableLabels.length === 0) {
+        await loadAvailableLabels();
+      }
+      setShowLabelOptions(true);
+    }
+  };
+
+  // Handle label selection for show labels
+  const toggleShowLabel = (labelKey) => {
+    setSelectedShowLabels((prev) => {
+      const newLabels = prev.includes(labelKey)
+        ? prev.filter((key) => key !== labelKey)
+        : [...prev, labelKey];
+      return newLabels;
+    });
+  };
+
+  // Handle toggle all labels
+  const toggleAllLabels = () => {
+    setSelectedShowLabels((prev) => {
+      // If all labels are selected, deselect all; otherwise, select all
+      const allSelected = availableLabels.every((label) =>
+        prev.includes(label),
+      );
+      return allSelected ? [] : [...availableLabels];
+    });
+  };
+
   // Handle group label input key press
   const handleGroupLabelKeyPress = (e) => {
     if (e.key === "Enter" && groupLabelInput.trim()) {
@@ -245,12 +470,40 @@ export const AppStatusPanel = ({
     userPreferences.saveGroupByLabel(selectedGroupLabel);
   }, [selectedGroupLabel]);
 
+  // Save show labels whenever they change
+  useEffect(() => {
+    userPreferences.saveShowLabels(selectedShowLabels);
+  }, [selectedShowLabels]);
+
   // Update filtered labels when available labels change and dropdown is open
   useEffect(() => {
     if (showGroupOptions && availableLabels.length > 0) {
       setFilteredLabels(availableLabels);
     }
   }, [availableLabels, showGroupOptions]);
+
+  // Track panel width changes
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    // Set initial width
+    const initialWidth = panel.getBoundingClientRect().width;
+    setPanelWidth(initialWidth);
+
+    // Use ResizeObserver to track width changes
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setPanelWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(panel);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Resizable panel
   useEffect(() => {
@@ -278,6 +531,7 @@ export const AppStatusPanel = ({
       const delta = startX - e.clientX;
       const newWidth = Math.max(300, Math.min(800, startWidth + delta));
       panel.style.width = `${newWidth}px`;
+      setPanelWidth(newWidth);
     };
 
     const onMouseUp = () => {
@@ -367,6 +621,52 @@ export const AppStatusPanel = ({
           )}
         </div>
 
+        <div className="show-labels-dropdown" ref={showLabelsDropdownRef}>
+          <button
+            className="sort-icon-button"
+            onClick={toggleShowLabelOptions}
+            aria-label="Show label options"
+          >
+            <FaCheck className="sort-icon" aria-hidden="true" />
+          </button>
+          {showLabelOptions && (
+            <ul className="show-labels-options">
+              <li key="all" className="all-option">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={
+                      availableLabels.length > 0 &&
+                      availableLabels.every((label) =>
+                        selectedShowLabels.includes(label),
+                      )
+                    }
+                    onChange={toggleAllLabels}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="label-text label-text-all">All</span>
+                </label>
+              </li>
+              {availableLabels
+                .slice()
+                .sort((a, b) => a.localeCompare(b))
+                .map((label) => (
+                  <li key={label}>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedShowLabels.includes(label)}
+                        onChange={() => toggleShowLabel(label)}
+                      />
+                      <span className="checkbox-custom"></span>
+                      <span className="label-text">{label}</span>
+                    </label>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+
         <div className="sort-dropdown" ref={sortDropdownRef}>
           <button
             className="sort-icon-button"
@@ -435,7 +735,10 @@ export const AppStatusPanel = ({
 
                       return (
                         <li key={app.name}>
-                          <div className="app-name">{app.name}</div>
+                          <div className="app-info">
+                            <div className="app-name">{app.name}</div>
+                            {renderAppLabels(app, panelWidth)}
+                          </div>
                           <div className={`status-indicator ${statusClass}`}>
                             {label}
                           </div>
@@ -467,7 +770,10 @@ export const AppStatusPanel = ({
 
             return (
               <li key={app.name}>
-                <div className="app-name">{app.name}</div>
+                <div className="app-info">
+                  <div className="app-name">{app.name}</div>
+                  {renderAppLabels(app, panelWidth)}
+                </div>
                 <div className={`status-indicator ${statusClass}`}>{label}</div>
               </li>
             );

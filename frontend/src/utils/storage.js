@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   GROUP_BY_LABEL: "site-availability-group-by-label",
   SORT_ORDER: "site-availability-sort-order",
   SIDEBAR_COLLAPSED: "site-availability-sidebar-collapsed",
+  SHOW_LABELS: "site-availability-show-labels",
 };
 
 const storage = {
@@ -73,6 +74,14 @@ export const userPreferences = {
 
   loadSidebarCollapsed: () => {
     return storage.load(STORAGE_KEYS.SIDEBAR_COLLAPSED, false);
+  },
+
+  saveShowLabels: (labels) => {
+    storage.save(STORAGE_KEYS.SHOW_LABELS, labels);
+  },
+
+  loadShowLabels: () => {
+    return storage.load(STORAGE_KEYS.SHOW_LABELS, []);
   },
 
   clearAll: () => {
