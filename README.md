@@ -9,7 +9,7 @@
 
 ## Site Availability Monitoring
 
-Site Availability is an open-source, forever-free platform that normalizes your fragmented monitoring into a single, reliable signal: up or down per application, with your labels. Point it at your existing data sources (Prometheus, HTTP endpoints, or another Site Availability instance), and it generates consistent availability metrics, ships an out-of-the-box Grafana dashboard, and gives your team a clear timeline of what changed and when.
+Site Availability is an open-source platform that helps SRE teams organize the availability of company resources to ensure they meet the company SLOs. In this app, you define the rules and queries that determine whether your services are up or down. It generates consistent availability metrics, shows a live status of all your services around the world in the UI for fast response, ships an out-of-the-box Grafana dashboard to track availability and SLOs, and gives your team a clear timeline of what changed and when.
 
 This project is designed for SRE and platform teams who want to stop building and maintaining complex, bespoke dashboards for every service and environment. Configure once, standardize everywhere.
 
@@ -39,9 +39,9 @@ Site Availability solves this by:
 - Simple up/down signal with consistent labels you control (env, team, app, region, etc.)
 - Out-of-the-box Grafana dashboards (see `chart/grafana-dashboards/`)
 - Historical timelines of incidents and recoveries via Prometheus time series
-- Lightweight, stateless backend and a modern web UI with world-map visualization
+- Lightweight, stateless backend and a modern web UI with a world-map visualization
 - Production-ready Helm chart and Docker Compose examples
-- Optional authentication (local admin or OIDC) and metrics authentication
+- Optional authentication (local admin or OIDC) and metrics protection
 
 ## How it works
 
@@ -56,9 +56,9 @@ Key metric (normalized availability signal):
 site_availability_status{name="backend-app",location="eu-west-1",source="prometheus-main",env="prod",team="payments"} 1
 ```
 
-Additional metrics include scrape duration and request counters. See documentation for details.
+Additional metrics include scrape duration and request counters. See the documentation for details.
 
-## Quick start
+## Quickstart
 
 Pick one of the following deployment options.
 
@@ -72,7 +72,7 @@ Pick one of the following deployment options.
 docker compose up -d
 ```
 
-3. Open the UI at http://localhost:8080 and Prometheus at http://localhost:9090
+3. Open the UI at http://localhost:8080 and Prometheus at http://localhost:9090.
 
 Full guide: Documentation › Usage › Quickstart
 
@@ -88,7 +88,7 @@ Full guide: Documentation › Usage › Installation › Helm Chart
 
 ## Configuration overview
 
-Configuration is YAML-based and designed to be readable and enforce consistent labels. At minimum, set `server_settings.host_url`, `locations`, and one or more `sources`.
+Configuration is YAML-based and designed to be readable and to enforce consistent labels. At a minimum, set `server_settings.host_url`, `locations`, and one or more `sources`.
 
 Example (Prometheus + HTTP sources):
 
@@ -138,7 +138,7 @@ For full configuration, see Documentation › Usage › Configuration › Server
 
 - Grafana dashboards are included in the Helm chart (`chart/grafana-dashboards/`).
 - Because availability is exposed as time series, you immediately get a clear timeline of what went down, where, and when.
-- Recording/alerting rules examples are provided in the documentation.
+- Recording/alerting rule examples are provided in the documentation.
 
 ## Security and access
 

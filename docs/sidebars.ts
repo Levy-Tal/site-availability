@@ -49,6 +49,11 @@ const sidebars = {
     },
     {
       type: "category",
+      label: "Authentication",
+      items: ["authentication/hmac"],
+    },
+    {
+      type: "category",
       label: "Development",
       items: [
         "development/architecture",
