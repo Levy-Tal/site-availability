@@ -445,6 +445,29 @@ tbody tr:hover {
   opacity: 0.9;
 }
 
+/* Ensure mobile navbar menu appears above content */
+.navbar-sidebar__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2999;
+}
+
+.navbar-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  max-height: 100vh;
+  z-index: 3000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.navbar-sidebar__items {
+  max-height: calc(100vh - var(--ifm-navbar-height));
+  overflow-y: auto;
+}
+
 /* Status Indicators (for custom usage) */
 .status-indicator {
   display: inline-block;
@@ -484,6 +507,12 @@ tbody tr:hover {
 
   h2 {
     font-size: 1.5rem;
+  }
+
+  /* Make hero title more prominent on small screens */
+  .hero__title {
+    font-size: 2.2rem;
+    margin-top: 0.5rem;
   }
 }
 
