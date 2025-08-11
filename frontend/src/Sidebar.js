@@ -296,7 +296,7 @@ const Sidebar = ({
         <div className="sidebar__header">
           {!isCollapsed && (
             <>
-              <img src="/logo.png" alt="Logo" className="sidebar__logo-image" />
+              <img src="/logo.svg" alt="Logo" className="sidebar__logo-image" />
               <div className="sidebar__logo">
                 <div className="sidebar__logo-text">
                   <div>Site</div>
