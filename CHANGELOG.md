@@ -1,3 +1,10 @@
+## [3.2.1](https://github.com/Levy-Tal/site-availability/compare/v3.2.0...v3.2.1) (2025-08-11)
+
+
+### Bug Fixes
+
+* **logo:** format from png to svg ([de1981b](https://github.com/Levy-Tal/site-availability/commit/de1981b89a963833f1836a5fff63c41d5d5abfbc))
+
 # [3.2.0](https://github.com/Levy-Tal/site-availability/compare/v3.1.0...v3.2.0) (2025-08-10)
 
 
