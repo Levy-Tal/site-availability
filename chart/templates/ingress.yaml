@@ -8,6 +8,10 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "site-availability.labels" . | nindent 4 }}
+  {{- if .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+  {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className | quote }}
   rules:
