@@ -48,14 +48,14 @@ func TestSiteScraper_Scrape(t *testing.T) {
 				Location:  "location1",
 				Status:    "up",
 				Source:    "",
-				OriginURL: "http://test-origin.com", // Will be set by scraper
+				OriginURL: "http://test-origin.com", // Should be preserved by scraper
 			},
 			{
 				Name:      "app2",
 				Location:  "location2",
 				Status:    "down",
 				Source:    "",
-				OriginURL: "http://test-origin.com", // Will be set by scraper
+				OriginURL: "http://test-origin.com", // Should be preserved by scraper
 			},
 		}
 
@@ -92,13 +92,13 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, results, 2)
 
-		// Verify the source and origin URL were set correctly
+		// Verify the source was set correctly and origin URL was preserved
 		assert.Equal(t, "app1", results[0].Name)
 		assert.Equal(t, "test-site", results[0].Source)
-		assert.Equal(t, server.URL, results[0].OriginURL)
+		assert.Equal(t, "http://test-origin.com", results[0].OriginURL) // Should preserve original origin URL
 		assert.Equal(t, "app2", results[1].Name)
 		assert.Equal(t, "test-site", results[1].Source)
-		assert.Equal(t, server.URL, results[1].OriginURL)
+		assert.Equal(t, "http://test-origin.com", results[1].OriginURL) // Should preserve original origin URL
 	})
 
 	t.Run("successful scrape with HMAC authentication", func(t *testing.T) {
@@ -442,14 +442,14 @@ func TestSiteScraper_Scrape(t *testing.T) {
 				Location:  "location1",
 				Status:    "up",
 				Source:    "original-source",
-				OriginURL: "http://test-origin.com", // This should be overridden
+				OriginURL: "http://test-origin.com", // This should be preserved
 			},
 			{
 				Name:      "app2",
 				Location:  "location2",
 				Status:    "down",
 				Source:    "another-source",
-				OriginURL: "http://test-origin.com", // This should also be overridden
+				OriginURL: "http://test-origin.com", // This should also be preserved
 			},
 		}
 
@@ -541,7 +541,7 @@ func TestSiteScraper_Scrape(t *testing.T) {
 				Location:  "remote-location",
 				Status:    "up",
 				Source:    "original-remote-source",
-				OriginURL: "http://test-origin.com", // Will be overridden
+				OriginURL: "http://test-origin.com", // Should be preserved
 				Labels: []labels.Label{
 					{Key: "remote_version", Value: "v2.1.0"},
 					{Key: "remote_tier", Value: "backend"},

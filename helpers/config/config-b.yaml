@@ -1,7 +1,7 @@
 server_settings:
   port: 8090
   host_url: "http://localhost:8090"
-  sync_enable: true
+  sync_enable: false
   labels:
     environment: "staging"
     region: "israel"

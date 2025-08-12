@@ -170,8 +170,8 @@ func (s *SiteScraper) ScrapeWithCircularPrevention(source config.Source, serverS
 
 		// Set the source name to this scraper's source
 		app.Source = source.Name
-		// Set OriginURL to the site we're scraping from (for proper tracking and circular prevention)
-		app.OriginURL = siteCfg.URL
+		// Preserve the original OriginURL from the remote site (don't override it)
+		// The OriginURL should indicate where the app originally came from, not where we scraped it from
 		filteredApps = append(filteredApps, app)
 	}
 
