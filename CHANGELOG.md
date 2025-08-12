@@ -1,3 +1,10 @@
+## [3.2.2](https://github.com/Levy-Tal/site-availability/compare/v3.2.1...v3.2.2) (2025-08-12)
+
+
+### Bug Fixes
+
+* **site:** bug origin url is not currect ([0945060](https://github.com/Levy-Tal/site-availability/commit/0945060ca4a968584c1558b31dbca7603c156cab))
+
 ## [3.2.1](https://github.com/Levy-Tal/site-availability/compare/v3.2.0...v3.2.1) (2025-08-11)
 
 
