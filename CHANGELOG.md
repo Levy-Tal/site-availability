@@ -1,3 +1,10 @@
+## [3.2.3](https://github.com/Levy-Tal/site-availability/compare/v3.2.2...v3.2.3) (2025-08-12)
+
+
+### Bug Fixes
+
+* **site:** fix site dropes ([6c1aff4](https://github.com/Levy-Tal/site-availability/commit/6c1aff4f593ac9787084dce1e4071f151e4acb34))
+
 ## [3.2.2](https://github.com/Levy-Tal/site-availability/compare/v3.2.1...v3.2.2) (2025-08-12)
 
 
