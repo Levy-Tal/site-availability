@@ -156,14 +156,26 @@ func (s *SiteScraper) ScrapeWithCircularPrevention(source config.Source, serverS
 
 	for _, app := range response.Apps {
 		// Rule: Drop apps where origin_url matches any site that this server directly scrapes
-		// BUT keep apps where origin_url matches our own host_url (these are legitimate apps from our server)
-		if app.OriginURL != "" && directSitesMap[app.OriginURL] {
+		// BUT keep apps where origin_url matches the site we're currently scraping from (siteCfg.URL)
+		// ALSO drop apps where origin_url matches our own host_url (these are stale copies of our own apps)
+
+		isDirectScraped := directSitesMap[app.OriginURL]
+		isCurrentSite := app.OriginURL == siteCfg.URL
+		isOwnServer := app.OriginURL == serverSettings.HostURL
+
+		if app.OriginURL != "" && ((isDirectScraped && !isCurrentSite) || isOwnServer) {
+			reason := "third-party directly scraped site"
+			if isOwnServer {
+				reason = "own server (stale copy)"
+			}
 			logging.Logger.WithFields(map[string]interface{}{
-				"app":        app.Name,
-				"location":   app.Location,
-				"origin_url": app.OriginURL,
-				"source":     source.Name,
-			}).Debug("Skipping app from directly scraped site to prevent circular scraping")
+				"app":          app.Name,
+				"location":     app.Location,
+				"origin_url":   app.OriginURL,
+				"source":       source.Name,
+				"scraped_from": siteCfg.URL,
+				"reason":       reason,
+			}).Debug("Skipping app to prevent circular scraping")
 			appsSkipped++
 			continue
 		}

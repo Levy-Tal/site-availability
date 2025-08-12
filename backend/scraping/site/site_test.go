@@ -611,4 +611,121 @@ func TestSiteScraper_Scrape(t *testing.T) {
 		assert.Equal(t, "backend", remoteTier)
 		assert.Equal(t, "remote_value", commonLabel)
 	})
+
+	t.Run("circular prevention keeps apps from scraped site but drops third-party and own apps", func(t *testing.T) {
+		// Scenario: Server A scrapes both Server B and Server C directly
+		// When Server A scrapes Server B, it gets apps from B, C, A, and external sites
+		// It should keep apps from B (the site being scraped) and external sites
+		// It should drop apps from C (third-party directly scraped) and A (stale copies of own apps)
+
+		// Create test server first to get the real URL
+		var testServerURL string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			response := handlers.StatusResponse{Apps: []handlers.AppStatus{
+				{
+					Name:      "app-from-b",
+					Location:  "location-b",
+					Status:    "up",
+					Source:    "original-source-b",
+					OriginURL: testServerURL, // This is the site we're scraping from - should KEEP
+				},
+				{
+					Name:      "app-from-c",
+					Location:  "location-c",
+					Status:    "down",
+					Source:    "original-source-c",
+					OriginURL: "http://server-c:8100", // This is a third-party site we also scrape - should DROP
+				},
+				{
+					Name:      "app-from-a-stale",
+					Location:  "location-a",
+					Status:    "up",
+					Source:    "original-source-a",
+					OriginURL: "http://server-a:8080", // This is our own server (stale copy) - should DROP
+				},
+				{
+					Name:      "app-from-external",
+					Location:  "location-external",
+					Status:    "up",
+					Source:    "external-source",
+					OriginURL: "http://external:9000", // This is external site we don't scrape - should KEEP
+				},
+			}, Locations: []handlers.Location{}}
+			_ = json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+		testServerURL = server.URL
+
+		scraper := NewSiteScraper()
+
+		// Simulate that Server A directly scrapes both Server B and Server C
+		directScrapedSites := []string{
+			testServerURL,          // The site we're currently scraping (matches app origin)
+			"http://server-c:8100", // Third-party site we also scrape directly
+		}
+
+		source := config.Source{
+			Name: "server-b-source",
+			Type: "site",
+			Config: map[string]interface{}{
+				"url": testServerURL, // We're scraping server B (test server)
+			},
+		}
+
+		serverSettings := config.ServerSettings{
+			HostURL: "http://server-a:8080", // This is Server A's own host URL
+		}
+
+		results, _, err := scraper.ScrapeWithCircularPrevention(
+			source,
+			serverSettings,
+			5*time.Second,
+			1,
+			nil,
+			directScrapedSites,
+		)
+		require.NoError(t, err)
+
+		// Should have 2 apps: one from server B (kept) and one external (kept)
+		// The app from server C and the stale app from server A should be dropped
+		if len(results) != 2 {
+			t.Logf("Expected 2 apps, got %d apps:", len(results))
+			for i, app := range results {
+				t.Logf("  App %d: name=%s, origin_url=%s", i, app.Name, app.OriginURL)
+			}
+		}
+		require.Len(t, results, 2)
+
+		// Verify we kept the app from server B (the site we're scraping)
+		appFromB := findAppByName(results, "app-from-b")
+		require.NotNil(t, appFromB, "Should keep app from the site being scraped")
+		assert.Equal(t, testServerURL, appFromB.OriginURL)
+		assert.Equal(t, "server-b-source", appFromB.Source)
+
+		// Verify we kept the external app (not directly scraped)
+		appFromExternal := findAppByName(results, "app-from-external")
+		require.NotNil(t, appFromExternal, "Should keep app from external site")
+		assert.Equal(t, "http://external:9000", appFromExternal.OriginURL)
+		assert.Equal(t, "server-b-source", appFromExternal.Source)
+
+		// Verify we dropped the app from server C (third-party directly scraped)
+		appFromC := findAppByName(results, "app-from-c")
+		assert.Nil(t, appFromC, "Should drop app from third-party directly scraped site")
+
+		// Verify we dropped the stale app from our own server A
+		appFromAStale := findAppByName(results, "app-from-a-stale")
+		assert.Nil(t, appFromAStale, "Should drop stale app from our own server")
+	})
+}
+
+// Helper function to find an app by name in results
+func findAppByName(apps []handlers.AppStatus, name string) *handlers.AppStatus {
+	for _, app := range apps {
+		if app.Name == name {
+			return &app
+		}
+	}
+	return nil
 }

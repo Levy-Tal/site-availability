@@ -1,6 +1,6 @@
 server_settings:
   port: 8080
-  host_url: "http://localhost:8080"
+  host_url: "http://server-a:8080"
   sync_enable: true
   labels:
     environment: "production"
