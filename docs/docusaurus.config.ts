@@ -1,4 +1,5 @@
 import { themes as prismThemes } from "prism-react-renderer";
+import type { Config } from "@docusaurus/types";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -37,10 +38,10 @@ const config = {
 
   presets: [
     [
-      "classic",
+      "@docusaurus/preset-classic",
       {
         docs: {
-          sidebarPath: "./sidebars.ts",
+          sidebarPath: require.resolve("./sidebars.js"),
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
@@ -62,8 +63,20 @@ const config = {
           onUntruncatedBlogPosts: "warn",
         },
         theme: {
-          customCss: "./src/css/custom.css",
+          customCss: require.resolve("./src/css/custom.css"),
         },
+      },
+    ],
+  ],
+
+  themes: [
+    [
+      require.resolve("@easyops-cn/docusaurus-search-local"),
+      {
+        hashed: true,
+        language: ["en"],
+        highlightSearchTermsOnTargetPage: true,
+        explicitSearchResultPath: true,
       },
     ],
   ],
@@ -79,12 +92,28 @@ const config = {
       },
       items: [
         {
-          type: "docSidebar",
-          sidebarId: "tutorialSidebar",
+          type: "doc",
+          docId: "introduction",
+          activeBaseRegex: "docs/(?!api|development)",
           position: "left",
           label: "Documentation",
         },
         { to: "/blog", label: "Blog", position: "left" },
+        //        {
+        //          label: 'More',
+        //          position: 'left',
+        //          items: [
+        //            {
+        //              to: '/docs/api/overview',
+        //              label: 'API Reference',
+        //            },
+        //            {
+        //              to: '/docs/development/contributing',
+        //              label: 'Contributing',
+        //            },
+        //
+        //          ],
+        //        },
         {
           href: "https://github.com/Levy-Tal/site-availability",
           label: "GitHub",
@@ -136,8 +165,31 @@ const config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: [
+        "diff",
+        "json",
+        "docker",
+        "javascript",
+        "css",
+        "bash",
+        "nginx",
+        "ini",
+        "yaml",
+        "go",
+      ],
+    },
+    tableOfContents: {
+      minHeadingLevel: 2,
+      maxHeadingLevel: 4,
+    },
+    colorMode: {
+      respectPrefersColorScheme: false,
     },
   } as const,
-};
+
+  markdown: {
+    format: "detect",
+  },
+} satisfies Config;
 
 export default config;

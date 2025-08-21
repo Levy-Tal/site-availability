@@ -206,7 +206,6 @@ h2 {
 }
 
 .menu__link:hover {
-  transform: translateX(4px);
   box-shadow: 0 2px 8px var(--sa-shadow);
 }
 
@@ -231,8 +230,14 @@ h2 {
     var(--sa-white) 0%,
     var(--sa-light-bg) 100%
   );
-  min-height: calc(100vh - 60px);
   color: var(--sa-text-dark);
+}
+
+/* Apply min-height only to documentation pages */
+article .main-wrapper,
+.docs-wrapper .main-wrapper,
+.blog-wrapper .main-wrapper {
+  min-height: calc(100vh - 60px);
 }
 
 .container {
@@ -445,27 +450,15 @@ tbody tr:hover {
   opacity: 0.9;
 }
 
-/* Ensure mobile navbar menu appears above content */
-.navbar-sidebar__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 2999;
-}
-
+/* Minimal mobile menu height fix - only fix what's broken */
 .navbar-sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
   height: 100vh;
-  max-height: 100vh;
-  z-index: 3000;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .navbar-sidebar__items {
-  max-height: calc(100vh - var(--ifm-navbar-height));
-  overflow-y: auto;
+  height: 100vh;
+
+  box-sizing: border-box;
 }
 
 /* Status Indicators (for custom usage) */
@@ -514,6 +507,26 @@ tbody tr:hover {
     font-size: 2.2rem;
     margin-top: 0.5rem;
   }
+}
+
+/* Dark theme code blocks - simple background and text inversion */
+[data-theme="dark"] .prism-code {
+  background-color: var(--sa-dark-bg) !important;
+  color: var(--sa-light-text) !important;
+  border: 1px solid var(--sa-light-text) !important;
+  border-radius: var(--sa-radius-lg) !important;
+}
+
+[data-theme="dark"] pre {
+  border: 1px solid var(--sa-light-text) !important;
+  border-radius: var(--sa-radius-lg) !important;
+}
+
+[data-theme="dark"] code {
+  background-color: #404040 !important;
+  color: var(--sa-light-text) !important;
+  border: 1px solid var(--sa-light-text) !important;
+  border-radius: var(--sa-radius-lg) !important;
 }
 
 /* Dark theme content adjustments */
