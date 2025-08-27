@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[7472],{5513:i=>{i.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"Introducing Site Availability - Next-Gen Monitoring for SRE Teams","permalink":"/site-availability/blog/introducing-site-availability","unlisted":false,"date":"2025-01-09T00:00:00.000Z"}]}')}}]);
