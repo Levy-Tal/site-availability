@@ -127,7 +127,7 @@ func (lm *LabelManager) UpdateAppLabels(apps []AppInfo) {
 	for _, app := range apps {
 		uniqueID := app.getUniqueID()
 
-		// Index system fields for direct filtering (e.g., ?location=Hadera)
+		// Index system fields for direct filtering (e.g., ?location=Houston)
 		systemFields := map[string]string{
 			"name":       app.Name,
 			"location":   app.Location,

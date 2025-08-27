@@ -4,7 +4,7 @@ server_settings:
   sync_enable: false
   labels:
     environment: "staging"
-    region: "israel"
+    region: "usa"
     datacenter: "backup"
     team: "platform"
 
@@ -18,12 +18,12 @@ documentation:
   url: "https://server-b.example.com/docs"
 
 locations:
-  - name: Beer Sheva
-    latitude: 31.245381
-    longitude: 34.788745
-  - name: Netanya
-    latitude: 33.04198
-    longitude: 35.51537
+  - name: Los Angeles
+    latitude: 34.0522
+    longitude: -118.2437
+  - name: Chicago
+    latitude: 41.8781
+    longitude: -87.6298
 
 sources:
   - name: prom1
@@ -36,7 +36,7 @@ sources:
       url: http://prometheus-b:9090
       apps:
         - name: app3
-          location: Beer Sheva
+          location: Los Angeles
           metric: up{instance="app:8080", job="app"}
           labels:
             app_type: "web-service"
@@ -44,7 +44,7 @@ sources:
             owner: "backend-team"
             stage: "testing"
         - name: b-app4
-          location: Netanya
+          location: Chicago
           metric: up{instance="localhost:9090", job="prometheus"}
           labels:
             app_type: "monitoring"

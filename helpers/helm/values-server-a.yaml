@@ -8,7 +8,7 @@ configFile:
       host_url: http://server-a.local
       labels:
         environment: "production"
-        region: "israel"
+        region: "usa"
         datacenter: "main"
         team: "platform"
       local_admin:
@@ -27,21 +27,18 @@ configFile:
       url: "https://server-a.example.com/docs"
 
     locations:
-      - name: Hadera
-        latitude: 32.446235
-        longitude: 34.903852
-      - name: Jerusalem
-        latitude: 31.782904
-        longitude: 35.214774
-      - name: Beer Sheva
-        latitude: 31.245381
-        longitude: 34.788745
-      - name: Netanya
-        latitude: 33.04198
-        longitude: 35.51537
-      - name: negev
-        latitude: 29.96649
-        longitude: 34.89450
+      - name: Houston
+        latitude: 29.7604
+        longitude: -95.3698
+      - name: New York
+        latitude: 40.7128
+        longitude: -74.0060
+      - name: Los Angeles
+        latitude: 34.0522
+        longitude: -118.2437
+      - name: Chicago
+        latitude: 41.8781
+        longitude: -87.6298
 
     sources:
       - name: prom1
@@ -51,46 +48,46 @@ configFile:
           tier: "backend"
           criticality: "high"
         config:
-          url: http://prometheus-server-a:9090
+          url: http://kube-prometheus-stack-prometheus.default.svc.cluster.local:9090
           apps:
             - name: a-app1
-              location: Hadera
-              metric: up{instance="app:8080", job="app"}
+              location: Houston
+              metric: up{job="kubelet",metrics_path="/metrics"}
               labels:
                 app_type: "web-service"
                 importance: "critical"
                 owner: "backend-team"
             - name: a-app2
-              location: Jerusalem
-              metric: up{instance="localhost:9090", job="prometheus"}
+              location: New York
+              metric: up{job="kubelet",metrics_path="/metrics"}
               labels:
                 app_type: "monitoring"
                 importance: "critical"
                 owner: "sre-team"
             - name: app3
-              location: Beer Sheva
-              metric: up{instance="localhost:9090", job="prometheus"}
+              location: Los Angeles
+              metric: up{job="kubelet",metrics_path="/metrics"}
               labels:
                 app_type: "monitoring"
                 importance: "high"
                 owner: "sre-team"
             - name: a-app4
-              location: Beer Sheva
-              metric: up{instance="app:8080", job="app"}
+              location: Los Angeles
+              metric: up{job="kubelet",metrics_path="/metrics"}
               labels:
                 app_type: "web-service"
                 importance: "medium"
                 owner: "backend-team"
             - name: a-app5
-              location: Netanya
-              metric: 1 - up{instance="localhost:9090", job="prometheus"}
+              location: Chicago
+              metric: up{endpoint="http-metrics", instance="172.18.0.2:10257", job="kube-controller-manager", namespace="kube-system", pod="kube-controller-manager-site-availability-control-plane", service="kube-prometheus-stack-kube-controller-manager"}
               labels:
                 app_type: "test-service"
                 importance: "low"
                 owner: "qa-team"
                 inverted: "true"
             - name: a-app6
-              location: Beer Sheva
+              location: Los Angeles
               metric: up{instance="app:8080", job="app"}
               labels:
                 app_type: "web-service"

@@ -12,21 +12,18 @@ documentation:
   url: "https://site-a.example.com/docs"
 
 locations:
-  - name: Hadera
-    latitude: 32.446235
-    longitude: 34.903852
-  - name: Jerusalem
-    latitude: 31.782904
-    longitude: 35.214774
-  - name: Beer Sheva
-    latitude: 31.245381
-    longitude: 34.788745
-  - name: Netanya
-    latitude: 33.04198
-    longitude: 35.51537
-  - name: negev
-    latitude: 29.96649
-    longitude: 34.89450
+  - name: Houston
+    latitude: 29.7604
+    longitude: -95.3698
+  - name: New York
+    latitude: 40.7128
+    longitude: -74.0060
+  - name: Los Angeles
+    latitude: 34.0522
+    longitude: -118.2437
+  - name: Chicago
+    latitude: 41.8781
+    longitude: -87.6298
 
 sources:
   - name: prom1
@@ -35,19 +32,19 @@ sources:
       url: http://nginx:9090
       apps:
         - name: app1
-          location: Hadera
+          location: Houston
           metric: up{instance="app:8080", job="app"}
         - name: app3
-          location: Jerusalem
+          location: New York
           metric: up{instance="localhost:9090", job="prometheus"}
         - name: app4
-          location: Beer Sheva
+          location: Los Angeles
           metric: up{instance="app:8080", job="app"}
         - name: app5
-          location: Netanya
+          location: Chicago
           metric: 1 - up{instance="localhost:9090", job="prometheus"}
         - name: app6
-          location: Beer Sheva
+          location: Los Angeles
           metric: up{instance="app:8080", job="app"}
   - name: prom2
     type: prometheus
@@ -55,10 +52,10 @@ sources:
       url: http://nginx:9090
       apps:
         - name: app2
-          location: Hadera
+          location: Houston
           metric: up{instance="app:8080", job="app"}
         - name: app7
-          location: Hadera
+          location: Houston
           metric: 1 - up{instance="localhost:9090", job="prometheus"}
   - name: basic-http
     type: http
@@ -68,8 +65,8 @@ sources:
     config:
       apps:
         - name: prom1
-          location: Netanya
+          location: Chicago
           url: "http://nginx:9090"
         - name: prom2
-          location: Beer Sheva
+          location: Los Angeles
           url: "http://nginx:9090"

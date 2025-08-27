@@ -42,28 +42,28 @@ configFile:
       title: "DR documentation"
       url: "https://google.com"
     locations:
-      - name: "Hadera"
-        latitude: 32.446235
-        longitude: 34.903852
-      - name: "Jerusalem"
-        latitude: 31.782904
-        longitude: 35.214774
-      - name: "Beer Sheva"
-        latitude: 31.245381
-        longitude: 34.788745
+      - name: "Houston"
+        latitude: 29.7604
+        longitude: -95.3698
+      - name: "New York"
+        latitude: 40.7128
+        longitude: -74.0060
+      - name: "Los Angeles"
+        latitude: 34.0522
+        longitude: -118.2437
     sources:
       - name: "prometheus-main"
         type: "prometheus"
         url: "http://prometheus-operated:9090"
         apps:
           - name: "app1"
-            location: "Hadera"
+            location: "Houston"
             metric: 'up{job="site-availability"}'
           - name: "app2"
-            location: "Jerusalem"
+            location: "New York"
             metric: 'up{container="alertmanager"}'
           - name: "app3"
-            location: "Beer Sheva"
+            location: "Los Angeles"
             metric: 'up{container="alertmanager"}'
 ```
 
