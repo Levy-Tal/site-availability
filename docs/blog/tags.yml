@@ -1,19 +1,29 @@
-facebook:
-  label: Facebook
-  permalink: /facebook
-  description: Facebook tag description
+announcement:
+  label: Announcements
+  permalink: /announcements
+  description: Product announcements and major updates
 
-hello:
-  label: Hello
-  permalink: /hello
-  description: Hello tag description
+sre:
+  label: SRE
+  permalink: /sre
+  description: Site Reliability Engineering best practices and insights
 
-docusaurus:
-  label: Docusaurus
-  permalink: /docusaurus
-  description: Docusaurus tag description
+monitoring:
+  label: Monitoring
+  permalink: /monitoring
+  description: Application and service monitoring techniques
 
-hola:
-  label: Hola
-  permalink: /hola
-  description: Hola tag description
+availability:
+  label: Availability
+  permalink: /availability
+  description: Service availability and uptime monitoring
+
+tutorial:
+  label: Tutorials
+  permalink: /tutorials
+  description: Step-by-step guides and how-to articles
+
+best-practices:
+  label: Best Practices
+  permalink: /best-practices
+  description: Industry best practices and recommendations

@@ -892,10 +892,24 @@ func GetDocs(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 
 // HandleSyncRequest handles the /sync endpoint
 func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+
+	logging.Logger.WithFields(map[string]interface{}{
+		"method":       r.Method,
+		"url":          r.URL.String(),
+		"remote_addr":  r.RemoteAddr,
+		"user_agent":   r.UserAgent(),
+		"headers":      r.Header,
+		"query_params": r.URL.Query(),
+	}).Debug("Incoming sync request details")
+
 	logging.Logger.Debug("Handling /sync request")
 
 	// Check if sync is enabled
 	if !cfg.ServerSettings.SyncEnable {
+		logging.Logger.WithFields(map[string]interface{}{
+			"remote_addr": r.RemoteAddr,
+			"reason":      "sync_disabled",
+		}).Debug("Rejecting sync request - sync is disabled")
 		http.Error(w, "Sync is disabled", http.StatusForbidden)
 		return
 	}
@@ -904,9 +918,19 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 	if cfg.ServerSettings.Token != "" {
 		validator := hmac.NewValidator(cfg.ServerSettings.Token)
 		if !validator.ValidateRequest(r) {
+			logging.Logger.WithFields(map[string]interface{}{
+				"remote_addr":   r.RemoteAddr,
+				"reason":        "hmac_validation_failed",
+				"timestamp":     r.Header.Get("X-Site-Sync-Timestamp"),
+				"has_signature": r.Header.Get("X-Site-Sync-Signature") != "",
+			}).Debug("Rejecting sync request - HMAC validation failed")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+		logging.Logger.WithFields(map[string]interface{}{
+			"remote_addr": r.RemoteAddr,
+			"timestamp":   r.Header.Get("X-Site-Sync-Timestamp"),
+		}).Debug("HMAC validation successful for sync request")
 	}
 
 	// Parse query parameters for both system field and label filtering
@@ -929,6 +953,20 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
+	// Log detailed response information at debug level
+	logging.Logger.WithFields(map[string]interface{}{
+		"response_type":    "StatusResponse",
+		"apps_count":       len(response.Apps),
+		"locations_count":  len(response.Locations),
+		"apps":             response.Apps,
+		"locations":        response.Locations,
+		"system_filters":   filters,
+		"filtered_count":   filteredCount,
+		"response_headers": w.Header(),
+		"remote_addr":      r.RemoteAddr,
+	}).Debug("Sync response details")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logging.Logger.WithError(err).Error("Failed to encode sync response")
 		http.Error(w, "Failed to encode sync response", http.StatusInternalServerError)
@@ -940,7 +978,8 @@ func HandleSyncRequest(w http.ResponseWriter, r *http.Request, cfg *config.Confi
 		"locations":      len(response.Locations),
 		"system_filters": filters,
 		"filtered_count": filteredCount,
-	}).Debug("Sync response sent")
+		"remote_addr":    r.RemoteAddr,
+	}).Debug("Sync response sent successfully")
 }
 
 // LocationStatusResponse represents the response for /api/locations

@@ -853,7 +853,7 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 	testApps := []AppStatus{
 		{
 			Name:      "app1",
-			Location:  "Hadera",
+			Location:  "Houston",
 			Status:    "unavailable",
 			Source:    "prom1",
 			OriginURL: "http://prometheus:9090",
@@ -873,7 +873,7 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 		},
 		{
 			Name:      "app2",
-			Location:  "Hadera",
+			Location:  "Houston",
 			Status:    "unavailable",
 			Source:    "prom2",
 			OriginURL: "http://prometheus2:9090",
@@ -894,7 +894,7 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 		},
 		{
 			Name:      "app7",
-			Location:  "Hadera",
+			Location:  "Houston",
 			Status:    "unavailable",
 			Source:    "prom2",
 			OriginURL: "http://prometheus2:9090",
@@ -920,21 +920,21 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 	_ = UpdateAppStatus("prom1", []AppStatus{testApps[0]}, config.Source{}, config.ServerSettings{HostURL: "https://test-server.com"})
 	_ = UpdateAppStatus("prom2", []AppStatus{testApps[1], testApps[2]}, config.Source{}, config.ServerSettings{HostURL: "https://test-server.com"})
 
-	t.Run("filter by location=Hadera and labels.version=v1.0 should only return app1", func(t *testing.T) {
+	t.Run("filter by location=Houston and labels.version=v1.0 should only return app1", func(t *testing.T) {
 		filters := map[string]string{
-			"location":       "Hadera",
+			"location":       "Houston",
 			"labels.version": "v1.0",
 		}
 
 		allApps := GetAppStatusCache()
 		filteredApps, _ := filterApps(allApps, filters)
 
-		// Should only return app1 which has both location=Hadera AND version=v1.0
-		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with location=Hadera AND version=v1.0")
+		// Should only return app1 which has both location=Houston AND version=v1.0
+		assert.Equal(t, 1, len(filteredApps), "Should only return 1 app with location=Houston AND version=v1.0")
 		assert.Equal(t, "app1", filteredApps[0].Name, "Should return only app1")
 
 		// Verify the returned app has the correct labels
-		assert.Equal(t, "Hadera", filteredApps[0].Location, "Returned app should have location=Hadera")
+		assert.Equal(t, "Houston", filteredApps[0].Location, "Returned app should have location=Houston")
 
 		// Find version label
 		var version string
@@ -959,16 +959,16 @@ func TestRealWorldBug_VersionLabelFiltering(t *testing.T) {
 		}
 	})
 
-	t.Run("filter by only location=Hadera should return all 3 apps", func(t *testing.T) {
+	t.Run("filter by only location=Houston should return all 3 apps", func(t *testing.T) {
 		filters := map[string]string{
-			"location": "Hadera",
+			"location": "Houston",
 		}
 
 		allApps := GetAppStatusCache()
 		filteredApps, _ := filterApps(allApps, filters)
 
-		// Should return all 3 apps in Hadera
-		assert.Equal(t, 3, len(filteredApps), "Should return all 3 apps in Hadera")
+		// Should return all 3 apps in Houston
+		assert.Equal(t, 3, len(filteredApps), "Should return all 3 apps in Houston")
 	})
 
 	t.Run("filter by only labels.version=v1.0 should return only app1", func(t *testing.T) {
